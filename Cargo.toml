@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/mc-protocol",
+    "crates/mc-cache",
+    "crates/mc-motd",
+    "crates/mc-api",
+    "crates/mc-mojang",
+    "crates/mc-skin",
+]

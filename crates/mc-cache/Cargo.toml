@@ -1,0 +1,8 @@
+[package]
+name = "mc-cache"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+moka = { version = "0.12", features = ["future"] }
+serde = { version = "1", features = ["derive"] }
