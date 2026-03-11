@@ -30,6 +30,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(routes::health::health))
+        .route("/api/docs", get(routes::docs::api_docs))
         .route("/api/v1/server/{address}", get(routes::server::get_server))
         .route(
             "/api/v1/player/{identifier}",
