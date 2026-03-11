@@ -2,20 +2,20 @@
   import { goto } from '$app/navigation';
   import { env } from '$env/dynamic/public';
   import SkinTile from '$lib/components/ui/SkinTile.svelte';
+  import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
+  import SearchInputRow from '$lib/components/ui/SearchInputRow.svelte';
 
   const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
   let query = $state('');
 
-  const featuredSkins = [
-    { username: 'Notch', tag: 'Classic legend' },
-    { username: 'Dream', tag: 'Iconic profile' },
-    { username: 'Technoblade', tag: 'Community favorite' },
-    { username: 'Skeppy', tag: 'PvP style' },
-    { username: 'Hypixel', tag: 'Brand skin' },
-    { username: 'jeb_', tag: 'Mojang team' },
-    { username: 'Dinnerbone', tag: 'Mojang team' },
-    { username: 'Herobrine', tag: 'Myth sample' }
+  // Popular skins from NameMC weekly chart (actual Minecraft usernames, no emoji)
+  const popularSkins = [
+    'hiruai', 'sweetily', 'Mxodz', 'saphyras', 'cakeycat', 'Hamazushi14422',
+    'marlowwwwwww', '1441', 'Sumugi', 'Sunlity', 'dhfjdhfjkhgdkhs', 'menuchah',
+    'ee9e', 'Xekial_', 'Vietnamesin', 'tempvrance', 'ccquetel', 'quiet',
+    'Sucie', 'Alesitu', 'ciubun', 'coldreason', 'Transgenres',
+    'DeadbyTuesday0', 'Voilta_', 'MochiBud'
   ];
 
   function submitSearch(event: SubmitEvent) {
@@ -25,8 +25,8 @@
     goto(`/player/${encodeURIComponent(clean)}`);
   }
 
-  function headUrl(username: string): string {
-    return `${apiBase}/api/v1/render/${encodeURIComponent(username)}?type=head&size=160&overlay=true`;
+  function render3dUrl(username: string): string {
+    return `${apiBase}/api/v1/render3d/${encodeURIComponent(username)}?width=240&height=360&theta=30&phi=21`;
   }
 </script>
 
@@ -34,58 +34,73 @@
   <section class="hero hero-skins">
     <div class="hero-copy">
       <p class="eyebrow">Skin Explorer</p>
-      <h2>Recherche skin facon NameMC, avec une DA unifiee.</h2>
-      <p>
-        Galerie rapide + acces detail joueur. Les cartes reprennent la meme DA que
-        les pages server: memes boutons, memes surfaces, meme hierarchie.
-      </p>
+      <h2>Skins Minecraft populaires</h2>
+      <p>Galerie 3D générée par notre API Rust. Clique sur un skin pour voir le détail, le viewer interactif et les capes.</p>
       <div class="hero-tags">
-        <span class="status neutral">Head Render</span>
-        <span class="status neutral">Face Render</span>
-        <span class="status neutral">Profile Metadata</span>
+        <span class="status neutral">Rendu 3D</span>
+        <span class="status neutral">Cape detection</span>
+        <span class="status neutral">Viewer interactif</span>
       </div>
     </div>
     <div class="hero-media hero-media-skins">
       <div class="hero-overlay">
-        <p>Player skins</p>
-        <h3>Browse popular profiles</h3>
+        <p>Skins populaires</p>
+        <h3>Top hebdomadaire NameMC</h3>
       </div>
     </div>
   </section>
 
-  <section class="surface lookup-panel" style="margin-top: 1rem;">
-    <div class="section-title">
-      <div>
-        <h3>Recherche joueur</h3>
-        <p>Entre un pseudo pour ouvrir la page détail skin.</p>
-      </div>
-    </div>
-
+  <section class="surface lookup-panel">
+    <SectionHeading
+      title="Recherche joueur"
+      description="Entre un pseudo pour ouvrir la page détail skin avec viewer 3D."
+      light={true}
+    />
     <form class="lookup-form" onsubmit={submitSearch}>
-      <div class="input-row">
-        <input class="input" bind:value={query} placeholder="Ex: Notch, Dream" required />
-        <button class="btn btn-primary" type="submit">Voir le skin</button>
-      </div>
+      <SearchInputRow bind:value={query} placeholder="Notch, Dream, hiruai..." actionLabel="Voir le skin" />
     </form>
   </section>
 
-  <section class="surface lookup-panel" style="margin-top: 1rem;">
-    <div class="section-title">
-      <div>
-        <h3>Skins populaires</h3>
-        <p>Cartes rapides pour explorer les profils.</p>
-      </div>
-    </div>
+  <section class="surface lookup-panel">
+    <SectionHeading
+      title="Skins populaires"
+      description="Top hebdomadaire — rendus 3D générés par l'API en temps réel."
+      light={true}
+    />
 
-    <div class="gallery-grid">
-      {#each featuredSkins as item}
+    <div class="gallery-grid skin-gallery">
+      {#each popularSkins as username, i}
         <SkinTile
-          username={item.username}
-          tag={item.tag}
-          image={headUrl(item.username)}
-          href={`/player/${encodeURIComponent(item.username)}`}
+          {username}
+          rank={i + 1}
+          image={render3dUrl(username)}
+          href={`/player/${encodeURIComponent(username)}`}
         />
       {/each}
     </div>
   </section>
 </main>
+
+<style>
+  /* Portrait 3D renders — override global 1/1 aspect ratio */
+  :global(.skin-gallery .skin-card img) {
+    aspect-ratio: 2 / 3;
+    background: linear-gradient(180deg, #e8f0f7 0%, #d4e4f0 100%);
+  }
+
+  .skin-gallery {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  @media (max-width: 980px) {
+    .skin-gallery {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 600px) {
+    .skin-gallery {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

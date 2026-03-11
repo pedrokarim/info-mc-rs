@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { browser } from '$app/environment';
   import GameChip from '$lib/components/ui/GameChip.svelte';
   import KeyValueGrid from '$lib/components/ui/KeyValueGrid.svelte';
   import NoticeBanner from '$lib/components/ui/NoticeBanner.svelte';
@@ -30,6 +31,14 @@
   }
 
   const isSlim = $derived(data.player?.skin?.model === 'slim');
+
+  let viewMode = $state<'3d' | '2d'>('3d');
+
+  // Reset to 3D when player changes
+  $effect(() => {
+    data.username;
+    viewMode = '3d';
+  });
 
   const playerDetails = $derived(
     data.player
@@ -89,9 +98,24 @@
   {#if data.player}
     <section class="player-layout section-strip">
 
-      <!-- 3D viewer -->
+      <!-- Viewer column -->
       <div class="viewer-col">
         {#if data.player.skin?.url}
+          <div class="view-toggle" role="group" aria-label="Mode viewer">
+            <button
+              class="view-btn"
+              class:active={viewMode === '3d'}
+              onclick={() => (viewMode = '3d')}
+            >3D</button>
+            <button
+              class="view-btn"
+              class:active={viewMode === '2d'}
+              onclick={() => (viewMode = '2d')}
+            >2D</button>
+          </div>
+        {/if}
+
+        {#if viewMode === '3d' && browser && data.player.skin?.url}
           {#key data.player.skin.url}
             <SkinViewer3D
               skinUrl={data.player.skin.url}
@@ -101,6 +125,12 @@
               height={360}
             />
           {/key}
+        {:else if viewMode === '2d' && data.player.skin?.url}
+          <img
+            class="skin-preview head-2d"
+            src={renderUrl('head', 256)}
+            alt={`Tête 2D ${data.player.username}`}
+          />
         {:else}
           <img
             class="skin-preview"
@@ -248,6 +278,40 @@
     text-decoration: none;
   }
   .cape-link:hover { text-decoration: underline; }
+
+  /* View toggle */
+  .view-toggle {
+    display: inline-flex;
+    border-radius: 8px;
+    border: 1px solid rgba(76, 120, 176, 0.38);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.18rem;
+    gap: 0.18rem;
+    margin-bottom: 0.6rem;
+  }
+  .view-btn {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    border-radius: 5px;
+    padding: 0.28rem 0.76rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ink-1);
+    transition: background 120ms, color 120ms;
+  }
+  .view-btn.active {
+    color: #fff;
+    background: linear-gradient(180deg, var(--blue-0), var(--blue-1));
+    box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset;
+  }
+  .head-2d {
+    width: 200px;
+    height: 200px;
+    border-radius: 12px;
+  }
 
   @media (max-width: 760px) {
     .player-layout {
