@@ -37,7 +37,7 @@
           { key: 'Username', value: data.player.username },
           { key: 'UUID', value: data.player.uuid },
           { key: 'Model', value: data.player.skin?.model ?? 'unknown' },
-          { key: 'Cape', value: data.player.cape ? 'Officielle' : (data.player.optifine_cape ? 'OptiFine' : 'Aucune') }
+          { key: 'Cape', value: [data.player.cape && 'Officielle', data.player.optifine_cape && 'OptiFine', data.player.labymod_cape && 'LabyMod'].filter(Boolean).join(', ') || 'Aucune' }
         ]
       : []
   );

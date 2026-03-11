@@ -57,6 +57,7 @@ export interface PlayerApiResponse {
   skin?: SkinResponse;
   cape?: CapeResponse;
   optifine_cape?: CapeResponse;
+  labymod_cape?: CapeResponse;
   retrieved_at: string;
 }
 
