@@ -92,13 +92,15 @@
       <!-- 3D viewer -->
       <div class="viewer-col">
         {#if data.player.skin?.url}
-          <SkinViewer3D
-            skinUrl={data.player.skin.url}
-            capeUrl={data.player.cape?.url}
-            slim={isSlim}
-            width={240}
-            height={360}
-          />
+          {#key data.player.skin.url}
+            <SkinViewer3D
+              skinUrl={data.player.skin.url}
+              capeUrl={data.player.cape?.url}
+              slim={isSlim}
+              width={240}
+              height={360}
+            />
+          {/key}
         {:else}
           <img
             class="skin-preview"
