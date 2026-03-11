@@ -29,10 +29,6 @@ async fn main() {
         .allow_headers(Any);
 
     let app = Router::new()
-        .route("/", get(routes::web::index))
-        .route("/app.css", get(routes::web::css))
-        .route("/app.js", get(routes::web::js))
-        .route("/assets/{name}", get(routes::web::asset))
         .route("/health", get(routes::health::health))
         .route("/api/v1/server/{address}", get(routes::server::get_server))
         .route(
