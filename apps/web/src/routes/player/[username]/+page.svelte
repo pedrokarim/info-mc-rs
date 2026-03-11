@@ -93,6 +93,7 @@
         {#if data.player.skin?.url}
           <SkinViewer3D
             skinUrl={data.player.skin.url}
+            capeUrl={data.player.cape?.url}
             slim={isSlim}
             width={240}
             height={360}
