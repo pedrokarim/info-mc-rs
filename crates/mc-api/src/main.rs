@@ -43,6 +43,10 @@ async fn main() {
             "/api/v1/render/{identifier}",
             get(routes::render::render_skin),
         )
+        .route(
+            "/api/v1/render3d/{identifier}",
+            get(routes::render3d::render_skin_3d),
+        )
         .layer(cors)
         .with_state(state);
 

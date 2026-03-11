@@ -13,6 +13,7 @@ mc-cache = { path = "../mc-cache" }
 mc-motd = { path = "../mc-motd" }
 mc-mojang = { path = "../mc-mojang" }
 mc-skin = { path = "../mc-skin" }
+mc-render3d = { path = "../mc-render3d" }
 
 image = "0.25"
 

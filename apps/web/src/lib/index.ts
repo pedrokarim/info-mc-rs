@@ -11,5 +11,6 @@ export { default as ProgressMeter } from './components/ui/ProgressMeter.svelte';
 export { default as SearchInputRow } from './components/ui/SearchInputRow.svelte';
 export { default as SectionHeading } from './components/ui/SectionHeading.svelte';
 export { default as SkinTile } from './components/ui/SkinTile.svelte';
+export { default as SkinViewer3D } from './components/ui/SkinViewer3D.svelte';
 export { default as StatusPill } from './components/ui/StatusPill.svelte';
 export { default as TogglePills } from './components/ui/TogglePills.svelte';

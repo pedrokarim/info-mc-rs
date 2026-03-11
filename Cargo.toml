@@ -7,4 +7,5 @@ members = [
     "crates/mc-api",
     "crates/mc-mojang",
     "crates/mc-skin",
+    "crates/mc-render3d",
 ]

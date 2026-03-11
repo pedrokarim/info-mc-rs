@@ -21,6 +21,12 @@ pub enum ApiError {
 
     #[error("internal error: {0}")]
     Internal(String),
+
+    #[error("not found: {0}")]
+    NotFound(String),
+
+    #[error("internal error: {0}")]
+    InternalError(String),
 }
 
 #[derive(Serialize)]
@@ -38,6 +44,8 @@ impl IntoResponse for ApiError {
             ApiError::Timeout => (StatusCode::GATEWAY_TIMEOUT, "timeout"),
             ApiError::RateLimited => (StatusCode::TOO_MANY_REQUESTS, "rate_limit_exceeded"),
             ApiError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
+            ApiError::NotFound(_) => (StatusCode::NOT_FOUND, "not_found"),
+            ApiError::InternalError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
         };
 
         let body = ErrorResponse {
@@ -46,6 +54,18 @@ impl IntoResponse for ApiError {
         };
 
         (status, axum::Json(body)).into_response()
+    }
+}
+
+impl From<mc_mojang::MojangError> for ApiError {
+    fn from(err: mc_mojang::MojangError) -> Self {
+        ApiError::Internal(err.to_string())
+    }
+}
+
+impl From<mc_skin::SkinError> for ApiError {
+    fn from(err: mc_skin::SkinError) -> Self {
+        ApiError::Internal(err.to_string())
     }
 }
 
