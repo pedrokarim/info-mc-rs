@@ -123,107 +123,137 @@ pub fn build_box(
     (vertices, indices)
 }
 
-/// Build the full Minecraft character mesh (all 6 body parts).
+/// Build the full Minecraft character mesh (base + overlay layers).
 /// Returns a list of `Part` with their world transforms.
+/// Face order: +x, -x, +y, -y, +z, -z  (right, left, top, bottom, front, back)
+/// Side faces of arms (+x/-x) always use depth=4, not aw.
 pub fn build_character(slim: bool) -> Vec<Part> {
     const TW: f32 = 64.0;
     const TH: f32 = 64.0;
 
-    let arm_w: f32 = if slim { 3.0 } else { 4.0 };
+    let aw: f32 = if slim { 3.0 } else { 4.0 }; // arm width
     let arm_off: f32 = if slim { 5.5 } else { 6.0 };
 
-    // UV tables: [right, left, top, bottom, front, back] in px coords
-    // (x, y, w, h) — negative w/h = flip
-
+    // ── Base layer UV tables ──────────────────────────────────────────
     let head_uv: [[f32; 4]; 6] = [
-        [16.0,8.0,8.0,8.0], [0.0,8.0,8.0,8.0],
-        [8.0,0.0,8.0,8.0], [16.0,0.0,8.0,8.0],
-        [8.0,8.0,8.0,8.0], [24.0,8.0,8.0,8.0],
+        [16.0,8.0,8.0,8.0],  [0.0,8.0,8.0,8.0],
+        [8.0,0.0,8.0,8.0],   [16.0,0.0,8.0,8.0],
+        [8.0,8.0,8.0,8.0],   [24.0,8.0,8.0,8.0],
     ];
     let body_uv: [[f32; 4]; 6] = [
         [28.0,20.0,4.0,12.0], [16.0,20.0,4.0,12.0],
-        [20.0,16.0,8.0,4.0], [28.0,16.0,8.0,4.0],
+        [20.0,16.0,8.0,4.0],  [28.0,16.0,8.0,4.0],
         [20.0,20.0,8.0,12.0], [32.0,20.0,8.0,12.0],
     ];
     let rarm_uv: [[f32; 4]; 6] = [
-        [48.0,20.0,arm_w,12.0], [40.0,20.0,arm_w,12.0],
-        [44.0,16.0,arm_w,4.0], [48.0,16.0,arm_w,4.0],
-        [44.0,20.0,arm_w,12.0], [52.0,20.0,arm_w,12.0],
+        [44.0+aw,20.0,4.0,12.0], [40.0,20.0,4.0,12.0],
+        [44.0,16.0,aw,4.0],       [44.0+aw,16.0,aw,4.0],
+        [44.0,20.0,aw,12.0],      [44.0+aw+4.0,20.0,aw,12.0],
     ];
     let larm_uv: [[f32; 4]; 6] = [
-        [40.0,52.0,arm_w,12.0], [32.0,52.0,arm_w,12.0],
-        [36.0,48.0,arm_w,4.0], [40.0,48.0,arm_w,4.0],
-        [36.0,52.0,arm_w,12.0], [44.0,52.0,arm_w,12.0],
+        [36.0+aw,52.0,4.0,12.0], [32.0,52.0,4.0,12.0],
+        [36.0,48.0,aw,4.0],       [36.0+aw,48.0,aw,4.0],
+        [36.0,52.0,aw,12.0],      [36.0+aw+4.0,52.0,aw,12.0],
     ];
     let rleg_uv: [[f32; 4]; 6] = [
-        [8.0,20.0,4.0,12.0], [0.0,20.0,4.0,12.0],
-        [4.0,16.0,4.0,4.0], [8.0,16.0,4.0,4.0],
-        [4.0,20.0,4.0,12.0], [12.0,20.0,4.0,12.0],
+        [8.0,20.0,4.0,12.0],  [0.0,20.0,4.0,12.0],
+        [4.0,16.0,4.0,4.0],   [8.0,16.0,4.0,4.0],
+        [4.0,20.0,4.0,12.0],  [12.0,20.0,4.0,12.0],
     ];
     let lleg_uv: [[f32; 4]; 6] = [
         [24.0,52.0,4.0,12.0], [16.0,52.0,4.0,12.0],
-        [20.0,48.0,4.0,4.0], [24.0,48.0,4.0,4.0],
+        [20.0,48.0,4.0,4.0],  [24.0,48.0,4.0,4.0],
         [20.0,52.0,4.0,12.0], [28.0,52.0,4.0,12.0],
     ];
 
+    // ── Overlay layer UV tables ───────────────────────────────────────
+    let hat_uv: [[f32; 4]; 6] = [
+        [48.0,8.0,8.0,8.0],  [32.0,8.0,8.0,8.0],
+        [40.0,0.0,8.0,8.0],  [48.0,0.0,8.0,8.0],
+        [40.0,8.0,8.0,8.0],  [56.0,8.0,8.0,8.0],
+    ];
+    let jacket_uv: [[f32; 4]; 6] = [
+        [28.0,36.0,4.0,12.0], [16.0,36.0,4.0,12.0],
+        [20.0,32.0,8.0,4.0],  [28.0,32.0,8.0,4.0],
+        [20.0,36.0,8.0,12.0], [32.0,36.0,8.0,12.0],
+    ];
+    let rsleeve_uv: [[f32; 4]; 6] = [
+        [44.0+aw,36.0,4.0,12.0], [40.0,36.0,4.0,12.0],
+        [44.0,32.0,aw,4.0],       [44.0+aw,32.0,aw,4.0],
+        [44.0,36.0,aw,12.0],      [44.0+aw+4.0,36.0,aw,12.0],
+    ];
+    let lsleeve_uv: [[f32; 4]; 6] = [
+        [52.0+aw,52.0,4.0,12.0], [48.0,52.0,4.0,12.0],
+        [52.0,48.0,aw,4.0],       [52.0+aw,48.0,aw,4.0],
+        [52.0,52.0,aw,12.0],      [52.0+aw+4.0,52.0,aw,12.0],
+    ];
+    let rpant_uv: [[f32; 4]; 6] = [
+        [8.0,36.0,4.0,12.0],  [0.0,36.0,4.0,12.0],
+        [4.0,32.0,4.0,4.0],   [8.0,32.0,4.0,4.0],
+        [4.0,36.0,4.0,12.0],  [12.0,36.0,4.0,12.0],
+    ];
+    let lpant_uv: [[f32; 4]; 6] = [
+        [8.0,52.0,4.0,12.0],  [0.0,52.0,4.0,12.0],
+        [4.0,48.0,4.0,4.0],   [8.0,48.0,4.0,4.0],
+        [4.0,52.0,4.0,12.0],  [12.0,52.0,4.0,12.0],
+    ];
+
+    // Overlay boxes are 0.5 larger than base (0.25 per face, matches MC client)
+    const OV: f32 = 0.5;
+
     let mut parts = Vec::new();
 
-    // Head — center at neck top (y=8 from waist, waist=0)
+    // ── Head + Hat ───────────────────────────────────────────────────
+    let head_t = Mat4::from_translation(Vec3::new(0.0, 12.0, 0.0));
+    let (v, i) = build_box(8.0, 8.0, 8.0, &head_uv, TW, TH);
+    parts.push(Part { vertices: v, indices: i, transform: head_t });
+    let (v, i) = build_box(8.0+OV, 8.0+OV, 8.0+OV, &hat_uv, TW, TH);
+    parts.push(Part { vertices: v, indices: i, transform: head_t });
+
+    // ── Body + Jacket ────────────────────────────────────────────────
+    let (v, i) = build_box(8.0, 12.0, 4.0, &body_uv, TW, TH);
+    parts.push(Part { vertices: v, indices: i, transform: Mat4::IDENTITY });
+    let (v, i) = build_box(8.0+OV, 12.0+OV, 4.0+OV, &jacket_uv, TW, TH);
+    parts.push(Part { vertices: v, indices: i, transform: Mat4::IDENTITY });
+
+    // ── Right arm + Sleeve ───────────────────────────────────────────
     {
-        let (v, i) = build_box(8.0, 8.0, 8.0, &head_uv, TW, TH);
-        parts.push(Part {
-            vertices: v, indices: i,
-            transform: Mat4::from_translation(Vec3::new(0.0, 12.0, 0.0)),
-        });
+        let t = Mat4::from_translation(Vec3::new(-arm_off, 6.0, 0.0))
+              * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
+        let (v, i) = build_box(aw, 12.0, 4.0, &rarm_uv, TW, TH);
+        parts.push(Part { vertices: v, indices: i, transform: t });
+        let (v, i) = build_box(aw+OV, 12.0+OV, 4.0+OV, &rsleeve_uv, TW, TH);
+        parts.push(Part { vertices: v, indices: i, transform: t });
     }
-    // Body
+
+    // ── Left arm + Sleeve ────────────────────────────────────────────
     {
-        let (v, i) = build_box(8.0, 12.0, 4.0, &body_uv, TW, TH);
-        parts.push(Part {
-            vertices: v, indices: i,
-            transform: Mat4::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-        });
+        let t = Mat4::from_translation(Vec3::new(arm_off, 6.0, 0.0))
+              * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
+        let (v, i) = build_box(aw, 12.0, 4.0, &larm_uv, TW, TH);
+        parts.push(Part { vertices: v, indices: i, transform: t });
+        let (v, i) = build_box(aw+OV, 12.0+OV, 4.0+OV, &lsleeve_uv, TW, TH);
+        parts.push(Part { vertices: v, indices: i, transform: t });
     }
-    // Right arm — shoulder at (-arm_off, 6, 0), pivot at top of arm
+
+    // ── Right leg + Pants ────────────────────────────────────────────
     {
-        let (v, i) = build_box(arm_w, 12.0, 4.0, &rarm_uv, TW, TH);
-        // Translate pivot to top: arm center is at y=0, top is at +6
-        let mesh_offset = Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
-        let shoulder = Mat4::from_translation(Vec3::new(-(arm_off + arm_w / 2.0 - arm_w / 2.0), 6.0, 0.0));
-        parts.push(Part {
-            vertices: v, indices: i,
-            transform: shoulder * mesh_offset,
-        });
-    }
-    // Left arm
-    {
-        let (v, i) = build_box(arm_w, 12.0, 4.0, &larm_uv, TW, TH);
-        let mesh_offset = Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
-        let shoulder = Mat4::from_translation(Vec3::new(arm_off + arm_w / 2.0 - arm_w / 2.0, 6.0, 0.0));
-        parts.push(Part {
-            vertices: v, indices: i,
-            transform: shoulder * mesh_offset,
-        });
-    }
-    // Right leg
-    {
+        let t = Mat4::from_translation(Vec3::new(-2.0, -6.0, 0.0))
+              * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
         let (v, i) = build_box(4.0, 12.0, 4.0, &rleg_uv, TW, TH);
-        let mesh_offset = Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
-        let hip = Mat4::from_translation(Vec3::new(-2.0, -6.0, 0.0));
-        parts.push(Part {
-            vertices: v, indices: i,
-            transform: hip * mesh_offset,
-        });
+        parts.push(Part { vertices: v, indices: i, transform: t });
+        let (v, i) = build_box(4.0+OV, 12.0+OV, 4.0+OV, &rpant_uv, TW, TH);
+        parts.push(Part { vertices: v, indices: i, transform: t });
     }
-    // Left leg
+
+    // ── Left leg + Pants ─────────────────────────────────────────────
     {
+        let t = Mat4::from_translation(Vec3::new(2.0, -6.0, 0.0))
+              * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
         let (v, i) = build_box(4.0, 12.0, 4.0, &lleg_uv, TW, TH);
-        let mesh_offset = Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
-        let hip = Mat4::from_translation(Vec3::new(2.0, -6.0, 0.0));
-        parts.push(Part {
-            vertices: v, indices: i,
-            transform: hip * mesh_offset,
-        });
+        parts.push(Part { vertices: v, indices: i, transform: t });
+        let (v, i) = build_box(4.0+OV, 12.0+OV, 4.0+OV, &lpant_uv, TW, TH);
+        parts.push(Part { vertices: v, indices: i, transform: t });
     }
 
     parts
