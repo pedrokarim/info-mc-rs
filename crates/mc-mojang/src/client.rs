@@ -48,9 +48,7 @@ impl MojangClient {
     pub async fn get_profile(&self, uuid: &str) -> Result<SessionProfile> {
         let clean_uuid = uuid.replace('-', "");
 
-        let url = format!(
-            "{SESSION_SERVER}/session/minecraft/profile/{clean_uuid}"
-        );
+        let url = format!("{SESSION_SERVER}/session/minecraft/profile/{clean_uuid}");
         let resp = self.http.get(&url).send().await?;
 
         match resp.status().as_u16() {
@@ -83,18 +81,14 @@ impl MojangClient {
         let profile = self.get_profile(&uuid_hex).await?;
         let textures = decode_textures(&profile)?;
 
-        let formatted_uuid = format_uuid(&uuid_hex)
-            .unwrap_or_else(|_| uuid_hex.clone());
+        let formatted_uuid = format_uuid(&uuid_hex).unwrap_or_else(|_| uuid_hex.clone());
 
         let skin = textures.textures.skin.map(|s| {
             let model = match s.metadata.and_then(|m| m.model) {
                 Some(m) if m == "slim" => SkinModel::Slim,
                 _ => SkinModel::Classic,
             };
-            SkinInfo {
-                url: s.url,
-                model,
-            }
+            SkinInfo { url: s.url, model }
         });
 
         let cape = textures.textures.cape.map(|c| CapeInfo { url: c.url });

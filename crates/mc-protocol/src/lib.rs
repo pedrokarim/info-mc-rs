@@ -6,8 +6,8 @@ pub mod slp;
 pub mod types;
 
 // Re-export primary API at crate root
-pub use bedrock::{ping_bedrock, BedrockConfig, BedrockResponse};
-pub use dns::{resolve_address, ResolvedAddress};
+pub use bedrock::{BedrockConfig, BedrockResponse, ping_bedrock};
+pub use dns::{ResolvedAddress, resolve_address};
 pub use error::{McProtocolError, Result};
-pub use query::{query_basic, query_full, BasicStat, FullStat, QueryConfig};
-pub use slp::{ping_java, MotdComponent, SlpConfig, SlpResponse};
+pub use query::{BasicStat, FullStat, QueryConfig, query_basic, query_full};
+pub use slp::{MotdComponent, SlpConfig, SlpResponse, ping_java};

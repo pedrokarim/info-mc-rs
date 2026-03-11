@@ -149,10 +149,7 @@ async fn handshake(socket: &UdpSocket, session_id: i32, dur: Duration) -> Result
     }
 
     let token_bytes = &buf[5..len];
-    let token_str = token_bytes
-        .split(|&b| b == 0)
-        .next()
-        .unwrap_or(token_bytes);
+    let token_str = token_bytes.split(|&b| b == 0).next().unwrap_or(token_bytes);
 
     let token_str = std::str::from_utf8(token_str)
         .map_err(|e| McProtocolError::InvalidResponse(format!("invalid challenge token: {e}")))?;

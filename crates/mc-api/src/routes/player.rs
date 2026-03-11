@@ -1,5 +1,5 @@
-use axum::extract::{Path, State};
 use axum::Json;
+use axum::extract::{Path, State};
 use serde::Serialize;
 
 use crate::error::ApiError;
@@ -66,10 +66,7 @@ pub async fn get_player(
         retrieved_at: now,
     };
 
-    state
-        .player_cache
-        .insert(cache_key, response.clone())
-        .await;
+    state.player_cache.insert(cache_key, response.clone()).await;
 
     Ok(Json(response))
 }

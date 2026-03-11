@@ -2,7 +2,7 @@ mod fetch;
 mod render2d;
 
 pub use fetch::fetch_skin;
-pub use render2d::{render_face, render_head, render_full_body, RenderOptions};
+pub use render2d::{RenderOptions, render_face, render_full_body, render_head};
 
 #[derive(Debug, thiserror::Error)]
 pub enum SkinError {

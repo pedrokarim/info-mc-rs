@@ -7,8 +7,7 @@ use tokio::time::timeout;
 use crate::error::{McProtocolError, Result};
 
 pub const RAKNET_MAGIC: [u8; 16] = [
-    0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56,
-    0x78,
+    0x00, 0xff, 0xff, 0x00, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd, 0xfd, 0xfd, 0xfd, 0x12, 0x34, 0x56, 0x78,
 ];
 
 const UNCONNECTED_PING: u8 = 0x01;
@@ -105,8 +104,7 @@ fn parse_pong(data: &[u8], latency_ms: u64) -> Result<BedrockResponse> {
     }
 
     let str_len_offset = 1 + 8 + 8 + 16; // 33
-    let str_len =
-        u16::from_be_bytes([data[str_len_offset], data[str_len_offset + 1]]) as usize;
+    let str_len = u16::from_be_bytes([data[str_len_offset], data[str_len_offset + 1]]) as usize;
 
     let str_start = str_len_offset + 2;
     let str_end = (str_start + str_len).min(data.len());

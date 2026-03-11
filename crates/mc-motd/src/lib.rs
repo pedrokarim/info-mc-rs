@@ -1,12 +1,12 @@
-mod parser;
-mod types;
 mod html;
+mod parser;
 mod plain;
+mod types;
 
-pub use parser::parse_motd;
-pub use types::{MotdNode, MotdStyle, McColor};
 pub use html::to_html;
+pub use parser::parse_motd;
 pub use plain::to_plain_text;
+pub use types::{McColor, MotdNode, MotdStyle};
 
 /// Parse a MOTD from raw MC protocol data (can be a string or Chat Component JSON).
 /// Returns HTML, plain text, and raw representations.
@@ -28,5 +28,9 @@ pub fn render_motd(value: &serde_json::Value) -> MotdRendered {
         other => other.to_string(),
     };
 
-    MotdRendered { raw, clean, html: html_str }
+    MotdRendered {
+        raw,
+        clean,
+        html: html_str,
+    }
 }

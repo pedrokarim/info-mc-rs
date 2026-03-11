@@ -48,9 +48,9 @@ pub async fn resolve_address(address: &str) -> Result<ResolvedAddress> {
     };
 
     // Resolve the target hostname to an IP
-    let ip = resolve_ip(&resolver, &target).await.map_err(|_| {
-        McProtocolError::DnsFailure(format!("failed to resolve {target}"))
-    })?;
+    let ip = resolve_ip(&resolver, &target)
+        .await
+        .map_err(|_| McProtocolError::DnsFailure(format!("failed to resolve {target}")))?;
 
     Ok(ResolvedAddress {
         hostname: hostname.to_string(),
@@ -96,10 +96,7 @@ async fn resolve_srv(resolver: &TokioResolver, hostname: &str) -> Option<(String
     Some((target, port))
 }
 
-async fn resolve_ip(
-    resolver: &TokioResolver,
-    hostname: &str,
-) -> std::result::Result<String, ()> {
+async fn resolve_ip(resolver: &TokioResolver, hostname: &str) -> std::result::Result<String, ()> {
     // Try A record first, then AAAA
     if let Ok(lookup) = resolver.lookup_ip(hostname).await {
         if let Some(ip) = lookup.iter().next() {
@@ -115,7 +112,10 @@ mod tests {
 
     #[test]
     fn test_parse_address() {
-        assert_eq!(parse_address("play.hypixel.net"), ("play.hypixel.net", None));
+        assert_eq!(
+            parse_address("play.hypixel.net"),
+            ("play.hypixel.net", None)
+        );
         assert_eq!(
             parse_address("play.hypixel.net:25565"),
             ("play.hypixel.net", Some(25565))

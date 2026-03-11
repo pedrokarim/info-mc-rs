@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
-use axum::extract::{Path, Query, State};
 use axum::Json;
+use axum::extract::{Path, Query, State};
 use serde::{Deserialize, Serialize};
 
 use mc_protocol::{SlpConfig, SlpResponse};
@@ -160,14 +158,14 @@ async fn ping_bedrock(
     address_info: AddressInfo,
     now: &str,
 ) -> ServerResponse {
-    let port = if resolved.port == 25565 { 19132 } else { resolved.port };
+    let port = if resolved.port == 25565 {
+        19132
+    } else {
+        resolved.port
+    };
 
-    match mc_protocol::ping_bedrock(
-        &resolved.ip,
-        port,
-        &mc_protocol::BedrockConfig::default(),
-    )
-    .await
+    match mc_protocol::ping_bedrock(&resolved.ip, port, &mc_protocol::BedrockConfig::default())
+        .await
     {
         Ok(bedrock) => ServerResponse {
             online: true,

@@ -1,6 +1,6 @@
 use image::RgbaImage;
 
-use crate::{SkinError, Result};
+use crate::{Result, SkinError};
 
 /// Fetch a skin PNG from a URL and return it as an RGBA image.
 pub async fn fetch_skin(url: &str) -> Result<RgbaImage> {

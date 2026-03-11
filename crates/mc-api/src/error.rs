@@ -52,9 +52,7 @@ impl IntoResponse for ApiError {
 impl From<mc_protocol::McProtocolError> for ApiError {
     fn from(err: mc_protocol::McProtocolError) -> Self {
         match err {
-            mc_protocol::McProtocolError::ConnectionRefused(addr) => {
-                ApiError::ServerOffline(addr)
-            }
+            mc_protocol::McProtocolError::ConnectionRefused(addr) => ApiError::ServerOffline(addr),
             mc_protocol::McProtocolError::Timeout(_) => ApiError::Timeout,
             mc_protocol::McProtocolError::DnsFailure(msg) => ApiError::DnsFailure(msg),
             mc_protocol::McProtocolError::InvalidResponse(msg) => {

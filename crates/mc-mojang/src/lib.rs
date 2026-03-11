@@ -4,4 +4,4 @@ pub mod types;
 
 pub use client::MojangClient;
 pub use error::{MojangError, Result};
-pub use types::{PlayerProfile, SkinInfo, SkinModel, CapeInfo};
+pub use types::{CapeInfo, PlayerProfile, SkinInfo, SkinModel};

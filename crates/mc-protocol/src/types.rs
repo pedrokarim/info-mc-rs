@@ -235,7 +235,17 @@ mod tests {
 
     #[test]
     fn test_varlong_encode_decode_roundtrip() {
-        let cases: &[i64] = &[0, 1, -1, 127, 128, 2147483647, -2147483648, i64::MAX, i64::MIN];
+        let cases: &[i64] = &[
+            0,
+            1,
+            -1,
+            127,
+            128,
+            2147483647,
+            -2147483648,
+            i64::MAX,
+            i64::MIN,
+        ];
 
         for &value in cases {
             let encoded = write_varlong(value);

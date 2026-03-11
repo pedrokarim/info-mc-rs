@@ -50,10 +50,7 @@ pub async fn rate_limit_middleware(
     next: Next,
 ) -> Response {
     // Access the rate limiter from extensions
-    let limiter = request
-        .extensions()
-        .get::<RateLimiter>()
-        .cloned();
+    let limiter = request.extensions().get::<RateLimiter>().cloned();
 
     if let Some(limiter) = limiter {
         if !limiter.check(addr.ip()).await {
@@ -61,11 +58,7 @@ pub async fn rate_limit_middleware(
                 "error": "rate_limit_exceeded",
                 "message": "Too many requests. Please try again later."
             });
-            return (
-                StatusCode::TOO_MANY_REQUESTS,
-                axum::Json(body),
-            )
-                .into_response();
+            return (StatusCode::TOO_MANY_REQUESTS, axum::Json(body)).into_response();
         }
     }
 

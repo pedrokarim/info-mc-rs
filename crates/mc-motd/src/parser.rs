@@ -1,4 +1,4 @@
-use crate::types::{code_to_color, McColor, MotdNode, MotdStyle};
+use crate::types::{McColor, MotdNode, MotdStyle, code_to_color};
 
 /// Parse a MOTD from a serde_json::Value (either a plain string or a Chat Component).
 pub fn parse_motd(value: &serde_json::Value) -> Vec<MotdNode> {

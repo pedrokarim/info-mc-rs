@@ -22,5 +22,32 @@ Thumbs.db
 *.log
 
 # Reference assets
-.reference/
+.reference
 docs/ref-*
+
+# Node / frontend
+node_modules/
+apps/*/node_modules/
+
+# SvelteKit build outputs
+.svelte-kit/
+apps/*/.svelte-kit/
+build/
+apps/*/build/
+dist/
+apps/*/dist/
+
+# Storybook
+storybook-static/
+apps/*/storybook-static/
+
+# Vite
+*.local
+apps/*/*.local
+
+# Bun
+bun.lockb
+
+# Test coverage
+coverage/
+apps/*/coverage/

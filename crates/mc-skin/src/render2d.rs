@@ -1,6 +1,6 @@
 use image::{RgbaImage, imageops};
 
-use crate::{SkinError, Result};
+use crate::{Result, SkinError};
 
 pub struct RenderOptions {
     pub size: u32,
