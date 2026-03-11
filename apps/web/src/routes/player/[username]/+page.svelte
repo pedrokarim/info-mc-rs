@@ -5,6 +5,7 @@
   import NoticeBanner from '$lib/components/ui/NoticeBanner.svelte';
   import SearchInputRow from '$lib/components/ui/SearchInputRow.svelte';
   import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
+  import CapePreview from '$lib/components/ui/CapePreview.svelte';
   import SkinViewer3D from '$lib/components/ui/SkinViewer3D.svelte';
   import StatusPill from '$lib/components/ui/StatusPill.svelte';
   import type { PageData } from './$types';
@@ -36,7 +37,7 @@
           { key: 'Username', value: data.player.username },
           { key: 'UUID', value: data.player.uuid },
           { key: 'Model', value: data.player.skin?.model ?? 'unknown' },
-          { key: 'Cape', value: data.player.cape ? 'Yes' : 'No' }
+          { key: 'Cape', value: data.player.cape ? 'Officielle' : (data.player.optifine_cape ? 'OptiFine' : 'Aucune') }
         ]
       : []
   );
@@ -145,11 +146,31 @@
           {#if data.player.skin?.url}
             <GameChip label="Skin PNG" href={data.player.skin.url} target="_blank" rel="noreferrer" />
           {/if}
-          {#if data.player.cape?.url}
-            <GameChip label="Cape PNG" href={data.player.cape.url} target="_blank" rel="noreferrer" />
-          {/if}
           <GameChip label="Voir un serveur" href="/server/play.hypixel.net" />
         </div>
+
+        <!-- Cape section -->
+        {#if data.player.cape?.url || data.player.optifine_cape?.url}
+          <div class="card" style="margin-top: 1rem;">
+            <div class="card-head"><h4>Capes</h4></div>
+            <div class="card-body capes-row">
+              {#if data.player.cape?.url}
+                <div class="cape-tile">
+                  <div class="cape-badge cape-badge--mojang">Officielle Mojang</div>
+                  <CapePreview url={data.player.cape.url} scale={8} />
+                  <a class="cape-link" href={data.player.cape.url} target="_blank" rel="noreferrer">PNG ↗</a>
+                </div>
+              {/if}
+              {#if data.player.optifine_cape?.url}
+                <div class="cape-tile">
+                  <div class="cape-badge cape-badge--optifine">OptiFine</div>
+                  <CapePreview url={data.player.optifine_cape.url} scale={8} />
+                  <a class="cape-link" href={data.player.optifine_cape.url} target="_blank" rel="noreferrer">PNG ↗</a>
+                </div>
+              {/if}
+            </div>
+          </div>
+        {/if}
       </div>
 
     </section>
@@ -190,6 +211,42 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
+  /* Cape section */
+  .capes-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .cape-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .cape-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2em 0.6em;
+    border-radius: 4px;
+  }
+  .cape-badge--mojang {
+    background: #1a6b3c;
+    color: #7fffc2;
+  }
+  .cape-badge--optifine {
+    background: #3b2a6b;
+    color: #b89fff;
+  }
+  .cape-link {
+    font-size: 0.75rem;
+    color: var(--ink-2);
+    text-decoration: none;
+  }
+  .cape-link:hover { text-decoration: underline; }
+
   @media (max-width: 760px) {
     .player-layout {
       grid-template-columns: 1fr;

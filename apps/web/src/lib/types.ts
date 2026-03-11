@@ -56,6 +56,7 @@ export interface PlayerApiResponse {
   username: string;
   skin?: SkinResponse;
   cape?: CapeResponse;
+  optifine_cape?: CapeResponse;
   retrieved_at: string;
 }
 

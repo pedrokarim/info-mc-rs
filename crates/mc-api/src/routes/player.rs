@@ -11,6 +11,7 @@ pub struct PlayerResponse {
     pub username: String,
     pub skin: Option<SkinResponse>,
     pub cape: Option<CapeResponse>,
+    pub optifine_cape: Option<CapeResponse>,
     pub retrieved_at: String,
 }
 
@@ -53,6 +54,9 @@ pub async fn get_player(
             other => ApiError::Internal(other.to_string()),
         })?;
 
+    // Check OptiFine cape concurrently (best-effort, 3s timeout already on client)
+    let optifine_cape = check_optifine_cape(&state.http, &profile.username).await;
+
     let now = chrono::Utc::now().to_rfc3339();
 
     let response = PlayerResponse {
@@ -63,10 +67,22 @@ pub async fn get_player(
             model: format!("{:?}", s.model).to_lowercase(),
         }),
         cape: profile.cape.map(|c| CapeResponse { url: c.url }),
+        optifine_cape,
         retrieved_at: now,
     };
 
     state.player_cache.insert(cache_key, response.clone()).await;
 
     Ok(Json(response))
+}
+
+/// HEAD `https://optifine.net/capes/{username}.png` — returns Some if the cape exists.
+async fn check_optifine_cape(http: &reqwest::Client, username: &str) -> Option<CapeResponse> {
+    let url = format!("https://optifine.net/capes/{username}.png");
+    let resp = http.head(&url).send().await.ok()?;
+    if resp.status().is_success() {
+        Some(CapeResponse { url })
+    } else {
+        None
+    }
 }
