@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mc-motd — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html">API</a>
+      <a href="../crates/index.html" class="active">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../crates/index.html">Crates</a>
+        <span class="sep">/</span>
+        <span>mc-motd</span>
+      </nav>
+      <article class="prose">
+        <h1>mc-motd</h1>
+        <p>Minecraft <strong>MOTD (Message of the Day) parser and renderer</strong>. Handles both legacy section-sign (<code>&sect;</code>) color codes and modern Chat Component JSON format, converting them to HTML or plain text.</p>
+
+        <table>
+          <tbody>
+            <tr><td><strong>Standalone</strong></td><td>Yes</td></tr>
+            <tr><td><strong>Path</strong></td><td><code>crates/mc-motd</code></td></tr>
+          </tbody>
+        </table>
+
+        <h2>Source Structure</h2>
+        <table>
+          <thead>
+            <tr><th>File</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>parser.rs</code></td><td>Parses legacy color codes and Chat Component JSON into <code>MotdNode</code> trees</td></tr>
+            <tr><td><code>types.rs</code></td><td>Core types: MotdNode, McColor, MotdStyle</td></tr>
+            <tr><td><code>html.rs</code></td><td>Renders MotdNode trees to styled HTML with inline CSS</td></tr>
+            <tr><td><code>plain.rs</code></td><td>Strips all formatting to produce plain text</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Key Types</h2>
+<pre><code class="language-rust">/// A node in the parsed MOTD tree.
+pub struct MotdNode {
+    pub text: String,
+    pub style: MotdStyle,
+    pub children: Vec&lt;MotdNode&gt;,
+}
+
+/// Minecraft color codes (0-9, a-f).
+pub enum McColor {
+    Black,       // &sect;0
+    DarkBlue,    // &sect;1
+    DarkGreen,   // &sect;2
+    DarkAqua,    // &sect;3
+    DarkRed,     // &sect;4
+    DarkPurple,  // &sect;5
+    Gold,        // &sect;6
+    Gray,        // &sect;7
+    DarkGray,    // &sect;8
+    Blue,        // &sect;9
+    Green,       // &sect;a
+    Aqua,        // &sect;b
+    Red,         // &sect;c
+    LightPurple, // &sect;d
+    Yellow,      // &sect;e
+    White,       // &sect;f
+    Hex(String), // Custom hex color (1.16+)
+}
+
+/// Text styling flags.
+pub struct MotdStyle {
+    pub color: Option&lt;McColor&gt;,
+    pub bold: bool,
+    pub italic: bool,
+    pub underlined: bool,
+    pub strikethrough: bool,
+    pub obfuscated: bool,
+}
+</code></pre>
+
+        <h2>Exported Functions</h2>
+
+        <h3>parse_motd</h3>
+        <p>Parses a raw MOTD string (either legacy format or JSON) into a tree of <code>MotdNode</code> values:</p>
+<pre><code class="language-rust">use mc_motd::{parse_motd, to_html, to_plain_text};
+
+// Legacy format with section signs
+let nodes = parse_motd("&sect;aWelcome to &sect;b&sect;lMyServer&sect;r&sect;7!");
+
+// Chat Component JSON format
+let json_motd = r#"{"text":"","extra":[{"text":"Welcome","color":"green"},{"text":" to ","color":"gray"},{"text":"MyServer","color":"aqua","bold":true}]}"#;
+let nodes = parse_motd(json_motd);
+</code></pre>
+
+        <h3>to_html</h3>
+        <p>Renders a parsed MOTD to HTML with inline CSS for colors and styles:</p>
+<pre><code class="language-rust">use mc_motd::{parse_motd, to_html};
+
+let nodes = parse_motd("&sect;aWelcome to &sect;b&sect;lMyServer");
+let html = to_html(&amp;nodes);
+// Output: &lt;span style="color:#55FF55"&gt;Welcome to &lt;/span&gt;
+//         &lt;span style="color:#55FFFF;font-weight:bold"&gt;MyServer&lt;/span&gt;
+println!("{}", html);
+</code></pre>
+
+        <h3>to_plain_text</h3>
+        <p>Strips all formatting codes and returns the raw text content:</p>
+<pre><code class="language-rust">use mc_motd::{parse_motd, to_plain_text};
+
+let nodes = parse_motd("&sect;aWelcome to &sect;b&sect;lMyServer");
+let plain = to_plain_text(&amp;nodes);
+assert_eq!(plain, "Welcome to MyServer");
+</code></pre>
+
+        <h3>render_motd</h3>
+        <p>Convenience function that auto-detects the format and directly returns HTML:</p>
+<pre><code class="language-rust">use mc_motd::render_motd;
+
+// Works with both legacy and JSON formats
+let html = render_motd("&sect;6&sect;lHypixel Network &sect;7[1.8-1.20]");
+println!("{}", html);
+</code></pre>
+
+        <h2>Format Detection</h2>
+        <p>The parser automatically detects whether the input is:</p>
+        <ul>
+          <li><strong>Legacy format</strong> &mdash; Contains <code>&sect;</code> (section sign) followed by color/formatting codes</li>
+          <li><strong>Chat Component JSON</strong> &mdash; Starts with <code>{</code> or <code>[</code>, parsed as a structured JSON tree with <code>text</code>, <code>extra</code>, <code>color</code>, <code>bold</code>, etc. fields</li>
+          <li><strong>Plain text</strong> &mdash; No formatting detected, returned as-is</li>
+        </ul>
+
+        <h2>Dependencies</h2>
+<pre><code class="language-toml">[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+</code></pre>
+
+        <h2>Design Notes</h2>
+        <ul>
+          <li>The parser handles <strong>nested Chat Components</strong> recursively, supporting deeply nested <code>extra</code> arrays as used by servers like Hypixel.</li>
+          <li>Hex color support (<code>&sect;x&sect;R&sect;R&sect;G&sect;G&sect;B&sect;B</code>) covers the custom color format introduced in Minecraft 1.16.</li>
+          <li>The HTML renderer sanitizes text content to prevent XSS when displaying server MOTDs in browsers.</li>
+          <li>Obfuscated text (<code>&sect;k</code>) is rendered with a CSS class that can be animated client-side.</li>
+        </ul>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

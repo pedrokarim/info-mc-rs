@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mc-cache — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html">API</a>
+      <a href="../crates/index.html" class="active">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../crates/index.html">Crates</a>
+        <span class="sep">/</span>
+        <span>mc-cache</span>
+      </nav>
+      <article class="prose">
+        <h1>mc-cache</h1>
+        <p>A <strong>generic async TTL cache</strong> built on top of the <a href="https://github.com/moka-rs/moka">moka</a> caching library. Provides a simple, type-safe wrapper for caching expensive computations and API responses with automatic time-based expiration.</p>
+
+        <table>
+          <tbody>
+            <tr><td><strong>Standalone</strong></td><td>Yes</td></tr>
+            <tr><td><strong>Path</strong></td><td><code>crates/mc-cache</code></td></tr>
+            <tr><td><strong>Structure</strong></td><td>Single file: <code>lib.rs</code></td></tr>
+          </tbody>
+        </table>
+
+        <h2>Key Type</h2>
+<pre><code class="language-rust">use std::time::Duration;
+
+/// A generic async cache with time-to-live expiration.
+///
+/// Backed by moka's concurrent cache, which is lock-free and
+/// suitable for high-concurrency server workloads.
+pub struct TtlCache&lt;K, V&gt; {
+    inner: moka::future::Cache&lt;K, V&gt;,
+}
+
+impl&lt;K, V&gt; TtlCache&lt;K, V&gt;
+where
+    K: std::hash::Hash + Eq + Send + Sync + Clone + 'static,
+    V: Clone + Send + Sync + 'static,
+{
+    /// Creates a new cache with the given TTL and max capacity.
+    pub fn new(ttl: Duration, max_capacity: u64) -> Self;
+
+    /// Returns the cached value for the key, or computes and inserts it.
+    pub async fn get_or_insert_with&lt;F, Fut&gt;(&amp;self, key: K, f: F) -> V
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future&lt;Output = V&gt;;
+
+    /// Like get_or_insert_with, but the closure can return a Result.
+    pub async fn get_or_try_insert_with&lt;F, Fut, E&gt;(
+        &amp;self, key: K, f: F
+    ) -> Result&lt;V, E&gt;
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future&lt;Output = Result&lt;V, E&gt;&gt;;
+
+    /// Manually removes an entry from the cache.
+    pub fn invalidate(&amp;self, key: &amp;K);
+
+    /// Returns the number of entries currently in the cache.
+    pub fn entry_count(&amp;self) -> u64;
+}
+</code></pre>
+
+        <h2>Usage Examples</h2>
+
+        <h3>Basic cache usage</h3>
+<pre><code class="language-rust">use mc_cache::TtlCache;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() {
+    // Cache entries expire after 5 minutes, max 10,000 entries
+    let cache: TtlCache&lt;String, String&gt; = TtlCache::new(
+        Duration::from_secs(300),
+        10_000,
+    );
+
+    // First call computes the value
+    let value = cache.get_or_insert_with("key".to_string(), || async {
+        println!("Computing value...");
+        "expensive_result".to_string()
+    }).await;
+
+    // Second call returns the cached value (no recomputation)
+    let cached = cache.get_or_insert_with("key".to_string(), || async {
+        println!("This won't print!");
+        "won't be used".to_string()
+    }).await;
+
+    assert_eq!(value, cached);
+    println!("Entries in cache: {}", cache.entry_count());
+}
+</code></pre>
+
+        <h3>Caching fallible operations</h3>
+<pre><code class="language-rust">use mc_cache::TtlCache;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let cache: TtlCache&lt;String, String&gt; = TtlCache::new(
+        Duration::from_secs(60),
+        1_000,
+    );
+
+    // Only caches successful results; errors are not cached
+    let result = cache.get_or_try_insert_with(
+        "player_uuid".to_string(),
+        || async {
+            // Simulate an API call that might fail
+            reqwest::get("https://api.example.com/profile")
+                .await?
+                .text()
+                .await
+        },
+    ).await?;
+
+    println!("Profile: {}", result);
+    Ok(())
+}
+</code></pre>
+
+        <h3>Using in application state</h3>
+<pre><code class="language-rust">use mc_cache::TtlCache;
+use std::time::Duration;
+
+#[derive(Clone)]
+struct AppState {
+    server_cache: TtlCache&lt;String, ServerResponse&gt;,
+    profile_cache: TtlCache&lt;String, PlayerProfile&gt;,
+}
+
+impl AppState {
+    fn new() -> Self {
+        Self {
+            // Server pings: short TTL (30 seconds)
+            server_cache: TtlCache::new(Duration::from_secs(30), 5_000),
+            // Player profiles: longer TTL (10 minutes)
+            profile_cache: TtlCache::new(Duration::from_secs(600), 50_000),
+        }
+    }
+}
+</code></pre>
+
+        <h3>Manual invalidation</h3>
+<pre><code class="language-rust">use mc_cache::TtlCache;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() {
+    let cache: TtlCache&lt;String, i32&gt; = TtlCache::new(
+        Duration::from_secs(300),
+        100,
+    );
+
+    cache.get_or_insert_with("counter".to_string(), || async { 42 }).await;
+    println!("Before: {}", cache.entry_count()); // 1
+
+    cache.invalidate(&amp;"counter".to_string());
+    println!("After: {}", cache.entry_count());  // 0
+}
+</code></pre>
+
+        <h2>Configuration</h2>
+        <p>The cache accepts two configuration parameters at construction time:</p>
+        <table>
+          <thead>
+            <tr><th>Parameter</th><th>Description</th><th>Typical Values</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>ttl</code></td><td>Time-to-live for each entry after insertion</td><td>30s (server pings), 5-10min (profiles), 1h (skins)</td></tr>
+            <tr><td><code>max_capacity</code></td><td>Maximum number of entries before eviction</td><td>1,000 - 100,000 depending on value size</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Dependencies</h2>
+<pre><code class="language-toml">[dependencies]
+moka = { version = "0.12", features = ["future"] }
+</code></pre>
+
+        <h2>Design Notes</h2>
+        <ul>
+          <li>The cache is <strong>thread-safe</strong> and designed for high-concurrency scenarios &mdash; moka uses lock-free data structures internally.</li>
+          <li><code>get_or_try_insert_with</code> ensures that <strong>failed lookups are not cached</strong>, so transient errors (network timeouts, API rate limits) will be retried on the next request.</li>
+          <li>The <code>Clone</code> bound on values means the cache returns owned copies. For large values, consider wrapping them in <code>Arc</code> to avoid expensive clones.</li>
+          <li>Eviction is handled automatically by moka using a combination of TTL expiration and LRU-like policies when the max capacity is reached.</li>
+          <li>This crate intentionally provides a <strong>minimal API surface</strong> &mdash; just the methods needed by <code>mc-api</code> &mdash; rather than exposing the full moka interface.</li>
+        </ul>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

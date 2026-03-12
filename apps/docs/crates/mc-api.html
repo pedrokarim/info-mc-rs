@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mc-api — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html">API</a>
+      <a href="../crates/index.html" class="active">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../crates/index.html">Crates</a>
+        <span class="sep">/</span>
+        <span>mc-api</span>
+      </nav>
+      <article class="prose">
+        <h1>mc-api</h1>
+        <p>The main REST API server that orchestrates all other crates. Built with <strong>Axum</strong>, it exposes HTTP endpoints for querying Minecraft servers, looking up player profiles, and rendering skins. The API runs on <strong>port 3001</strong> by default.</p>
+
+        <table>
+          <tbody>
+            <tr><td><strong>Type</strong></td><td>Binary + Library</td></tr>
+            <tr><td><strong>Standalone</strong></td><td>No (depends on all other crates)</td></tr>
+            <tr><td><strong>Path</strong></td><td><code>crates/mc-api</code></td></tr>
+            <tr><td><strong>Default Port</strong></td><td><code>3001</code></td></tr>
+          </tbody>
+        </table>
+
+        <h2>Source Structure</h2>
+        <table>
+          <thead>
+            <tr><th>Path</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>main.rs</code></td><td>Entry point &mdash; initializes state, builds the router, starts the server</td></tr>
+            <tr><td><code>state.rs</code></td><td>Shared application state (caches, HTTP clients, configuration)</td></tr>
+            <tr><td><code>error.rs</code></td><td>Unified error type implementing <code>IntoResponse</code></td></tr>
+            <tr><td><code>routes/server.rs</code></td><td>Server ping &amp; query endpoints</td></tr>
+            <tr><td><code>routes/player.rs</code></td><td>Player profile &amp; UUID lookup endpoints</td></tr>
+            <tr><td><code>routes/render.rs</code></td><td>Skin rendering endpoints (2D &amp; 3D)</td></tr>
+            <tr><td><code>routes/health.rs</code></td><td>Health check endpoint</td></tr>
+            <tr><td><code>services/</code></td><td>Business logic layer between routes and crates</td></tr>
+            <tr><td><code>middleware/rate_limit.rs</code></td><td>Per-IP rate limiting middleware</td></tr>
+            <tr><td><code>middleware/cors.rs</code></td><td>CORS configuration for browser clients</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Running the Server</h2>
+<pre><code class="language-bash"># Development
+cargo run -p mc-api
+
+# Release build
+cargo build --release -p mc-api
+./target/release/mc-api
+</code></pre>
+        <p>The server starts listening on <code>0.0.0.0:3001</code>. You can verify it is running with:</p>
+<pre><code class="language-bash">curl http://localhost:3001/health
+</code></pre>
+
+        <h2>Router Setup</h2>
+        <p>Routes are organized by domain and composed using Axum's nested router pattern:</p>
+<pre><code class="language-rust">use axum::{Router, routing::get};
+
+fn build_router(state: AppState) -> Router {
+    Router::new()
+        .nest("/server", server_routes())
+        .nest("/player", player_routes())
+        .nest("/render", render_routes())
+        .route("/health", get(health_check))
+        .layer(cors_layer())
+        .layer(rate_limit_layer())
+        .with_state(state)
+}
+</code></pre>
+
+        <h2>Application State</h2>
+        <p>The <code>AppState</code> struct holds shared resources that are injected into handlers via Axum's state extraction:</p>
+<pre><code class="language-rust">use mc_cache::TtlCache;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub http_client: reqwest::Client,
+    pub server_cache: TtlCache&lt;String, ServerResponse&gt;,
+    pub profile_cache: TtlCache&lt;String, PlayerProfile&gt;,
+    pub skin_cache: TtlCache&lt;String, Vec&lt;u8&gt;&gt;,
+}
+</code></pre>
+
+        <h2>Error Handling</h2>
+        <p>All errors are funneled through a unified <code>ApiError</code> type that automatically maps to appropriate HTTP status codes and JSON error bodies:</p>
+<pre><code class="language-rust">use axum::response::IntoResponse;
+
+pub enum ApiError {
+    NotFound(String),
+    BadRequest(String),
+    Upstream(String),
+    Internal(String),
+    RateLimited,
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response {
+        // Maps to 404, 400, 502, 500, 429 respectively
+        // Returns JSON: { "error": "...", "status": N }
+    }
+}
+</code></pre>
+
+        <h2>Dependencies</h2>
+<pre><code class="language-toml">[dependencies]
+# Workspace crates
+mc-protocol = { path = "../mc-protocol" }
+mc-mojang = { path = "../mc-mojang" }
+mc-motd = { path = "../mc-motd" }
+mc-skin = { path = "../mc-skin" }
+mc-render3d = { path = "../mc-render3d" }
+mc-cache = { path = "../mc-cache" }
+
+# External
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+</code></pre>
+
+        <h2>Design Notes</h2>
+        <ul>
+          <li>The API is designed as a <strong>thin orchestration layer</strong> &mdash; all heavy lifting happens in the individual crates.</li>
+          <li>Each route module is self-contained with its own sub-router, making it easy to add or remove endpoint groups.</li>
+          <li>Caching is handled at the service layer using <code>mc-cache</code>, with different TTLs for server pings (short) vs. player profiles (longer).</li>
+          <li>Rate limiting is applied globally via middleware to prevent abuse.</li>
+          <li>CORS is configured to allow browser-based frontends to call the API directly.</li>
+        </ul>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skin Rendering — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html" class="active">API</a>
+      <a href="../crates/index.html">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../api/index.html">API Reference</a>
+        <span class="sep">/</span>
+        <span>Skin Rendering</span>
+      </nav>
+      <article class="prose">
+        <h1>Skin Rendering</h1>
+
+        <p>The rendering endpoint generates 2D rendered images of Minecraft player skins. It supports multiple render types, custom sizes, and output formats.</p>
+
+        <!-- ========== Render Skin ========== -->
+        <h2>Render Skin</h2>
+
+        <div class="endpoint">
+          <span class="badge-get">GET</span>
+          <code>/api/v1/render/{username}</code>
+        </div>
+
+        <p>Generates a 2D rendered image of a player's skin. The render is created server-side and returned as a PNG or WebP image.</p>
+
+        <h3>Path Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>username</code></td>
+              <td><code>string</code></td>
+              <td>Minecraft username (3&ndash;16 characters) or UUID.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Query Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>type</code></td>
+              <td><code>string</code></td>
+              <td><code>bust</code></td>
+              <td>Render type. One of: <code>head</code> (face only), <code>bust</code> (head + torso + arms), <code>full</code> (full body), <code>face</code> (flat face, no perspective).</td>
+            </tr>
+            <tr>
+              <td><code>size</code></td>
+              <td><code>integer</code></td>
+              <td><code>256</code></td>
+              <td>Output image size in pixels. Range: <code>8</code> to <code>512</code>. The image is always square.</td>
+            </tr>
+            <tr>
+              <td><code>overlay</code></td>
+              <td><code>boolean</code></td>
+              <td><code>true</code></td>
+              <td>When <code>true</code>, renders the overlay layers (hat, jacket, sleeves, pants) on top of the base skin.</td>
+            </tr>
+            <tr>
+              <td><code>format</code></td>
+              <td><code>string</code></td>
+              <td><code>png</code></td>
+              <td>Output image format. One of: <code>png</code>, <code>webp</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Response</h3>
+        <p>Returns the rendered skin image with the appropriate <code>Content-Type</code> header (<code>image/png</code> or <code>image/webp</code>). The image has a transparent background.</p>
+
+        <div class="tip">
+          <strong>Performance:</strong> Rendered images are cached for 1 hour. Subsequent requests for the same player and parameters will be served from cache with minimal latency.
+        </div>
+
+        <h3>Render Types</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Typical Use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>face</code></td>
+              <td>Flat front face of the skin, no 3D perspective</td>
+              <td>Avatars, chat icons</td>
+            </tr>
+            <tr>
+              <td><code>head</code></td>
+              <td>3D isometric head render</td>
+              <td>Profile pictures, leaderboards</td>
+            </tr>
+            <tr>
+              <td><code>bust</code></td>
+              <td>Head, torso, and arms</td>
+              <td>Player cards, social embeds</td>
+            </tr>
+            <tr>
+              <td><code>full</code></td>
+              <td>Full body from head to feet</td>
+              <td>Profile pages, galleries</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Example URLs</h3>
+        <pre><code class="language-bash"># Default bust render (256px PNG)
+curl http://localhost:3001/api/v1/render/Notch -o notch.png
+
+# Full body, 512px
+curl "http://localhost:3001/api/v1/render/Notch?type=full&size=512" -o notch_full.png
+
+# Head only, 64px, WebP format
+curl "http://localhost:3001/api/v1/render/Notch?type=head&size=64&format=webp" -o notch_head.webp
+
+# Face without overlay layers
+curl "http://localhost:3001/api/v1/render/Notch?type=face&size=128&overlay=false" -o notch_face.png</code></pre>
+
+        <h3>Usage in HTML</h3>
+        <p>You can use render URLs directly in <code>&lt;img&gt;</code> tags:</p>
+        <pre><code class="language-bash">&lt;img src="http://localhost:3001/api/v1/render/Notch?type=head&amp;size=64" alt="Notch"&gt;
+&lt;img src="http://localhost:3001/api/v1/render/Notch?type=full&amp;size=256" alt="Notch full body"&gt;</code></pre>
+
+        <div class="warning">
+          <strong>Size limits:</strong> The minimum size is 8px and the maximum is 512px. Requests outside this range will return a <code>400</code> error.
+        </div>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

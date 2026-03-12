@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Endpoints — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html" class="active">API</a>
+      <a href="../crates/index.html">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../api/index.html">API Reference</a>
+        <span class="sep">/</span>
+        <span>Server Endpoints</span>
+      </nav>
+      <article class="prose">
+        <h1>Server Endpoints</h1>
+
+        <p>These endpoints allow you to ping Minecraft servers and retrieve their current status, MOTD, player counts, and historical data.</p>
+
+        <!-- ========== Ping Server ========== -->
+        <h2>Ping Server</h2>
+
+        <div class="endpoint">
+          <span class="badge-get">GET</span>
+          <code>/api/v1/server/{address}</code>
+        </div>
+
+        <p>Pings a Minecraft server and returns its current status, including version, player count, MOTD, favicon, and latency.</p>
+
+        <h3>Path Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>address</code></td>
+              <td><code>string</code></td>
+              <td>Server IP address or domain name. Supports optional port (e.g., <code>mc.example.com:25565</code>). SRV records are resolved automatically.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Query Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>type</code></td>
+              <td><code>string</code></td>
+              <td><code>auto</code></td>
+              <td>Server type to ping. One of: <code>java</code>, <code>bedrock</code>, or <code>auto</code> (tries Java first, then Bedrock).</td>
+            </tr>
+            <tr>
+              <td><code>query</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>When <code>true</code>, performs a full query (requires the server to have <code>enable-query=true</code> in its properties).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Response</h3>
+
+        <details>
+          <summary>200 OK &mdash; Server Online</summary>
+          <pre><code class="language-json">{
+  "online": true,
+  "host": "mc.hypixel.net",
+  "port": 25565,
+  "version": {
+    "name": "1.8 - 1.21.4",
+    "protocol": 47
+  },
+  "players": {
+    "online": 42389,
+    "max": 200000,
+    "sample": [
+      {
+        "name": "Steve",
+        "uuid": "8667ba71-b85a-4004-af54-457a9734eed7"
+      }
+    ]
+  },
+  "motd": {
+    "raw": "\u00a76\u00a7lHypixel Network \u00a7c[1.8-1.21]",
+    "clean": "Hypixel Network [1.8-1.21]",
+    "html": "&lt;span style=\"color:#FFAA00;font-weight:bold\"&gt;Hypixel Network&lt;/span&gt; &lt;span style=\"color:#FF5555\"&gt;[1.8-1.21]&lt;/span&gt;"
+  },
+  "favicon": "data:image/png;base64,iVBORw0KGgo...",
+  "latency": 34,
+  "srv": {
+    "host": "mc.hypixel.net",
+    "port": 25565
+  },
+  "cached": false,
+  "timestamp": "2026-03-12T14:30:00Z"
+}</code></pre>
+        </details>
+
+        <details>
+          <summary>200 OK &mdash; Server Offline</summary>
+          <pre><code class="language-json">{
+  "online": false,
+  "host": "offline.example.com",
+  "port": 25565,
+  "error": "connection_refused",
+  "cached": false,
+  "timestamp": "2026-03-12T14:30:00Z"
+}</code></pre>
+        </details>
+
+        <h3>Errors</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Code</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>400</code></td>
+              <td><code>invalid_address</code></td>
+              <td>The server address format is invalid.</td>
+            </tr>
+            <tr>
+              <td><code>422</code></td>
+              <td><code>dns_resolution_failed</code></td>
+              <td>The domain could not be resolved via DNS.</td>
+            </tr>
+            <tr>
+              <td><code>429</code></td>
+              <td><code>rate_limit_exceeded</code></td>
+              <td>Too many requests. See <a href="../api/errors.html">Rate Limiting</a>.</td>
+            </tr>
+            <tr>
+              <td><code>504</code></td>
+              <td><code>timeout</code></td>
+              <td>The server did not respond within the timeout period.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Example</h3>
+        <pre><code class="language-bash">curl http://localhost:3001/api/v1/server/mc.hypixel.net</code></pre>
+        <pre><code class="language-bash">curl "http://localhost:3001/api/v1/server/play.example.com:25565?type=java&query=true"</code></pre>
+
+        <!-- ========== Server History ========== -->
+        <h2>Server History</h2>
+
+        <div class="endpoint">
+          <span class="badge-get">GET</span>
+          <code>/api/v1/server/{address}/history</code>
+        </div>
+
+        <p>Returns historical player count data for a server over a specified time period. Data points are aggregated based on the chosen period.</p>
+
+        <h3>Path Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>address</code></td>
+              <td><code>string</code></td>
+              <td>Server IP address or domain name (same format as the ping endpoint).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Query Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>period</code></td>
+              <td><code>string</code></td>
+              <td><code>24h</code></td>
+              <td>Time period for the history. One of: <code>1h</code>, <code>6h</code>, <code>24h</code>, <code>7d</code>, <code>30d</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Response</h3>
+
+        <details>
+          <summary>200 OK &mdash; History Data</summary>
+          <pre><code class="language-json">{
+  "host": "mc.hypixel.net",
+  "period": "24h",
+  "data": [
+    {
+      "timestamp": "2026-03-11T14:00:00Z",
+      "players_online": 38420,
+      "online": true
+    },
+    {
+      "timestamp": "2026-03-11T15:00:00Z",
+      "players_online": 41205,
+      "online": true
+    },
+    {
+      "timestamp": "2026-03-11T16:00:00Z",
+      "players_online": 43891,
+      "online": true
+    }
+  ],
+  "stats": {
+    "min": 28103,
+    "max": 48721,
+    "avg": 39456
+  }
+}</code></pre>
+        </details>
+
+        <div class="tip">
+          <strong>Data resolution:</strong> The number of data points returned depends on the period. <code>1h</code> returns per-minute data, <code>24h</code> returns hourly data, and <code>30d</code> returns daily aggregates.
+        </div>
+
+        <h3>Example</h3>
+        <pre><code class="language-bash">curl "http://localhost:3001/api/v1/server/mc.hypixel.net/history?period=7d"</code></pre>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

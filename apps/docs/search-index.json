@@ -1,0 +1,110 @@
+[
+  {
+    "title": "Getting Started",
+    "url": "guide/index.html",
+    "section": "Guide",
+    "content": "Prerequisites Rust stable toolchain Bun runtime for the frontend. Run the backend API server on port 3001 with cargo run -p mc-api. Run the frontend with cd apps/web and bun install then bun run dev. The frontend connects to http://127.0.0.1:3001 by default."
+  },
+  {
+    "title": "Architecture",
+    "url": "guide/architecture.html",
+    "section": "Guide",
+    "content": "MCInfo-RS is a self-contained Minecraft intelligence platform. Cargo workspace with 7 crates mc-protocol mc-api mc-mojang mc-motd mc-skin mc-render3d mc-cache. Architecture separates protocol layer API layer and frontend. mc-api depends on all other crates. mc-protocol mc-mojang mc-motd mc-cache are standalone. SvelteKit frontend communicates via REST API."
+  },
+  {
+    "title": "Protocol Implementation",
+    "url": "guide/protocol.html",
+    "section": "Guide",
+    "content": "Minecraft protocol implementation. VarInt VarLong variable-length integer encoding LEB128. MC String UTF-8 prefixed by VarInt length. MC Packet format with total_length packet_id payload. Server List Ping SLP Java Edition TCP port 25565. Handshake Status Request Status Response Ping Pong. Query Protocol UDP port 25565 handshake challenge token basic stat full stat plugins player list. Bedrock Raknet Ping UDP port 19132 unconnected ping pong. DNS SRV resolution _minecraft._tcp record. Latency calculation timeout handling."
+  },
+  {
+    "title": "Skin Rendering",
+    "url": "guide/skin-rendering.html",
+    "section": "Guide",
+    "content": "3D skin viewer Three.js wgpu server-side rendering. Model composed of 6 groups Head Torso Right Arm Left Arm Right Leg Left Leg Cape. Overlay layers hat jacket sleeves pants with epsilon z-fighting prevention. UV mapping 64x64 texture right left top bottom front back faces. Slim vs classic arm models 3px vs 4px width. Animation sinusoidal swing arms legs cape. Interactive drag rotation theta phi. Lighting ambient directional. Camera PerspectiveCamera fov 38. Per-pixel face coloring technique."
+  },
+  {
+    "title": "Frontend Development",
+    "url": "guide/frontend.html",
+    "section": "Guide",
+    "content": "SvelteKit frontend with gaming UI. Design system dark theme emerald green primary violet accent. Glassmorphism cards animated particles hero section. MOTD renderer parses color codes section sign formatting. Skin 3D viewer Three.js interactive rotation idle animation. Responsive mobile-first breakpoints 640 768 1024 1280 1536. SEO OpenGraph meta tags. Performance SSR lazy loading code splitting."
+  },
+  {
+    "title": "API Overview",
+    "url": "api/index.html",
+    "section": "API Reference",
+    "content": "REST API base URL http://localhost:3001/api/v1. Server lookup endpoints player lookup endpoints skin rendering endpoints. Rate limiting per-endpoint limits. Cache TTL strategy. JSON error format. All data obtained directly from MC servers and official Mojang API. No third-party services."
+  },
+  {
+    "title": "Server Endpoints",
+    "url": "api/servers.html",
+    "section": "API Reference",
+    "content": "GET /api/v1/server/{address} ping a Minecraft server. Parameters type java bedrock auto, query true false. Response online address version players motd favicon latency edition. Supports IP domain hostname with port. DNS SRV resolution automatic. GET /api/v1/server/{address}/history server uptime and player history. Period 1h 6h 24h 7d 30d. Response data_points timestamp online players_online latency summary uptime_percent avg_players peak_players."
+  },
+  {
+    "title": "Player Endpoints",
+    "url": "api/players.html",
+    "section": "API Reference",
+    "content": "GET /api/v1/player/{username} player profile lookup via Mojang API. Response uuid username skin url model slim classic cape name_history skin_history. Username 3-16 characters or UUID. GET /api/v1/player/{username}/skin raw skin PNG file download. Parameters download true false. Content-Type image/png 64x64 or 64x32 legacy."
+  },
+  {
+    "title": "Skin Rendering Endpoints",
+    "url": "api/rendering.html",
+    "section": "API Reference",
+    "content": "GET /api/v1/render/{username} server-side 2D skin rendering. Parameters type head bust full face. Size 8 to 512 pixels. Overlay true false include overlay layer. Format png webp. Returns rendered image. Example URLs render/Dream?type=head&size=64 render/Dream?type=full&size=256&overlay=true."
+  },
+  {
+    "title": "Errors & Rate Limiting",
+    "url": "api/errors.html",
+    "section": "API Reference",
+    "content": "Error format JSON error message details. Error codes invalid_address dns_resolution_failed connection_refused timeout player_not_found rate_limit_exceeded internal_error. Rate limits server 30 req/min player 60 req/min render 60 req/min. Headers X-RateLimit-Limit X-RateLimit-Remaining X-RateLimit-Reset. Cache TTL server ping 60s player profile 5min skin PNG 1h skin render 1h DNS SRV 5min."
+  },
+  {
+    "title": "Crates Overview",
+    "url": "crates/index.html",
+    "section": "Crates",
+    "content": "Cargo workspace with 7 Rust crates. Dependency graph mc-api depends on mc-protocol mc-mojang mc-motd mc-skin mc-render3d mc-cache. mc-skin depends on mc-mojang. mc-protocol mc-mojang mc-motd mc-cache are standalone with no internal dependencies. Benefits separation of concerns reusability incremental compilation isolated testing."
+  },
+  {
+    "title": "mc-protocol",
+    "url": "crates/mc-protocol.html",
+    "section": "Crates",
+    "content": "Minecraft protocol implementation crate. Modules types.rs VarInt VarLong MC String Packet. slp.rs Server List Ping Java TCP. query.rs Query Protocol UDP. bedrock.rs Bedrock Raknet Ping. dns.rs DNS SRV resolution. error.rs protocol errors. Dependencies tokio serde hickory-resolver bytes rand. Standalone no internal dependencies. Can be published to crates.io independently."
+  },
+  {
+    "title": "mc-api",
+    "url": "crates/mc-api.html",
+    "section": "Crates",
+    "content": "REST API server crate built with Axum. Binary and library. Modules routes server player render health. services business logic. middleware rate limiting CORS. state.rs AppState database caches clients. error.rs JSON error responses. Dependencies all other crates plus axum tokio tower-http. Runs on port 3001."
+  },
+  {
+    "title": "mc-mojang",
+    "url": "crates/mc-mojang.html",
+    "section": "Crates",
+    "content": "Mojang API client crate. HTTP client for api.mojang.com. Modules client.rs HTTP client UUID resolution profile fetching. types.rs PlayerProfile SkinInfo CapeInfo SkinModel. error.rs Mojang-specific errors. Dependencies reqwest serde. Standalone no internal dependencies."
+  },
+  {
+    "title": "mc-motd",
+    "url": "crates/mc-motd.html",
+    "section": "Crates",
+    "content": "MOTD parser and renderer crate. Parses Minecraft color codes section sign and Chat Component JSON format. Modules parser.rs parse_motd function. types.rs MotdNode McColor MotdStyle. html.rs render to HTML with span color styles. plain.rs render to plain text. Exports parse_motd to_html to_plain_text render_motd. Standalone no internal dependencies."
+  },
+  {
+    "title": "mc-skin",
+    "url": "crates/mc-skin.html",
+    "section": "Crates",
+    "content": "Skin manipulation crate. Download cache and render Minecraft skins. Modules fetch.rs download skins from Mojang CDN. model.rs detect slim classic models. render2d.rs 2D isometric rendering head bust full body face. cache.rs local PNG caching. Dependencies mc-mojang reqwest image tokio."
+  },
+  {
+    "title": "mc-render3d",
+    "url": "crates/mc-render3d.html",
+    "section": "Crates",
+    "content": "Server-side 3D skin rendering crate using wgpu. Generates 2D PNG previews from 3D skin models. Used for OpenGraph thumbnails. Modules mesh.rs 3D mesh construction from skin texture. renderer.rs wgpu rendering pipeline. error.rs rendering errors. Exports render_skin_png RenderParams. Dependencies wgpu glam bytemuck image."
+  },
+  {
+    "title": "mc-cache",
+    "url": "crates/mc-cache.html",
+    "section": "Crates",
+    "content": "Generic async TTL cache crate backed by moka. Type TtlCache generic over key and value. Methods get_or_insert_with async computation with caching. get_or_try_insert_with fallible version. Manual invalidation entry counting. Configurable TTL time-to-live. Dependencies moka with futures feature. Standalone no internal dependencies."
+  }
+]

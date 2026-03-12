@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mc-render3d — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html">API</a>
+      <a href="../crates/index.html" class="active">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../crates/index.html">Crates</a>
+        <span class="sep">/</span>
+        <span>mc-render3d</span>
+      </nav>
+      <article class="prose">
+        <h1>mc-render3d</h1>
+        <p>Server-side <strong>3D skin rendering</strong> powered by <code>wgpu</code>. Generates high-quality PNG renders of Minecraft player models with proper lighting, camera framing, and walking poses. Used for OpenGraph preview images and thumbnail generation.</p>
+
+        <table>
+          <tbody>
+            <tr><td><strong>Edition</strong></td><td>2021 (for wgpu compatibility)</td></tr>
+            <tr><td><strong>Standalone</strong></td><td>Yes</td></tr>
+            <tr><td><strong>Path</strong></td><td><code>crates/mc-render3d</code></td></tr>
+          </tbody>
+        </table>
+
+        <h2>Source Structure</h2>
+        <table>
+          <thead>
+            <tr><th>File</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>mesh.rs</code></td><td>Generates textured box meshes for each body part (head, body, arms, legs) with correct UV mapping</td></tr>
+            <tr><td><code>renderer.rs</code></td><td>wgpu rendering pipeline: device setup, texture upload, shader compilation, render pass execution</td></tr>
+            <tr><td><code>error.rs</code></td><td>Rendering-specific error types</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Key Exports</h2>
+
+        <h3>render_skin_png</h3>
+        <p>The main entry point. Takes a skin image and render parameters, returns a PNG-encoded byte vector:</p>
+<pre><code class="language-rust">use mc_render3d::{render_skin_png, RenderParams};
+use image::open;
+
+#[tokio::main]
+async fn main() -> Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let skin = open("skin.png")?.to_rgba8();
+
+    let params = RenderParams {
+        width: 512,
+        height: 832,
+        slim: false,          // Classic (Steve) model
+        walking: true,        // Walking pose
+        ..Default::default()
+    };
+
+    let png_bytes = render_skin_png(&amp;skin, &amp;params).await?;
+    std::fs::write("render.png", &amp;png_bytes)?;
+
+    Ok(())
+}
+</code></pre>
+
+        <h3>RenderParams</h3>
+        <p>Configuration for the 3D render:</p>
+<pre><code class="language-rust">pub struct RenderParams {
+    /// Output image width in pixels.
+    pub width: u32,
+    /// Output image height in pixels.
+    pub height: u32,
+    /// Whether the skin uses the slim (Alex) model.
+    pub slim: bool,
+    /// Apply a walking pose to arms and legs.
+    pub walking: bool,
+}
+
+impl Default for RenderParams {
+    fn default() -> Self {
+        Self {
+            width: 512,
+            height: 832,
+            slim: false,
+            walking: false,
+        }
+    }
+}
+</code></pre>
+
+        <h2>Rendering Pipeline</h2>
+        <p>The renderer follows a standard GPU rendering workflow, executed entirely on the server:</p>
+        <ol>
+          <li><strong>Device initialization</strong> &mdash; Creates a headless wgpu device and queue (no display surface needed)</li>
+          <li><strong>Mesh generation</strong> &mdash; Builds textured box meshes for each body part with correct UVs mapped from the 64x64 skin texture</li>
+          <li><strong>Overlay layers</strong> &mdash; Adds separate slightly-larger meshes for hat, jacket, sleeves, and pants overlay layers</li>
+          <li><strong>Pose application</strong> &mdash; Rotates arms and legs for the walking pose using transformation matrices</li>
+          <li><strong>Camera setup</strong> &mdash; Positions the camera to match NameMC's framing (slight angle, looking at the model center)</li>
+          <li><strong>Render pass</strong> &mdash; Executes the GPU render pass with depth testing and alpha blending</li>
+          <li><strong>Readback</strong> &mdash; Copies the rendered texture from GPU memory back to CPU and encodes as PNG</li>
+        </ol>
+
+        <h2>Mesh Generation</h2>
+        <p>Each body part is a textured cuboid with 6 faces, generated from the skin's UV map:</p>
+<pre><code class="language-rust">// Example: generating the head mesh
+let head = BodyPart::new(
+    // Position and dimensions (in Minecraft pixel units)
+    Vec3::new(0.0, 24.0, 0.0),  // position
+    Vec3::new(8.0, 8.0, 8.0),   // size: 8x8x8
+
+    // UV coordinates from the skin texture (u, v, width, height)
+    UvFaces {
+        front:  UvRect::new(8, 8, 8, 8),
+        back:   UvRect::new(24, 8, 8, 8),
+        left:   UvRect::new(0, 8, 8, 8),
+        right:  UvRect::new(16, 8, 8, 8),
+        top:    UvRect::new(8, 0, 8, 8),
+        bottom: UvRect::new(16, 0, 8, 8),
+    },
+);
+</code></pre>
+
+        <h2>Use Cases</h2>
+        <ul>
+          <li><strong>OpenGraph images</strong> &mdash; Generates player skin previews for link sharing on social media</li>
+          <li><strong>Thumbnails</strong> &mdash; Creates skin gallery thumbnails for the web frontend</li>
+          <li><strong>Skin history</strong> &mdash; Renders previous skins for a player's skin change history</li>
+        </ul>
+
+        <h2>Dependencies</h2>
+<pre><code class="language-toml">[dependencies]
+wgpu = "24"
+glam = "0.29"
+bytemuck = { version = "1", features = ["derive"] }
+image = "0.25"
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["rt"] }
+thiserror = "2"
+pollster = "0.4"
+</code></pre>
+
+        <h2>Design Notes</h2>
+        <ul>
+          <li>Uses <strong>Edition 2021</strong> instead of 2024 due to wgpu compatibility requirements.</li>
+          <li>The renderer runs <strong>headless</strong> &mdash; no window or display server is required, making it suitable for server-side rendering in containers.</li>
+          <li>Camera framing matches <strong>NameMC's style</strong> for a familiar look to players.</li>
+          <li>Face winding and UV mapping are carefully handled to ensure correct rendering of all 6 faces on every body part, including the mirrored left/right sides.</li>
+          <li>Overlay layers (hat, jacket, sleeves, pants) are rendered as slightly inflated meshes on top of the base body parts, with transparency support for partially transparent overlays.</li>
+          <li>The GPU adapter selection prefers discrete GPUs but falls back to integrated graphics or software rendering if needed.</li>
+        </ul>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

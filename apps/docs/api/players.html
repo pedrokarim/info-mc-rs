@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player Endpoints — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html" class="active">API</a>
+      <a href="../crates/index.html">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../api/index.html">API Reference</a>
+        <span class="sep">/</span>
+        <span>Player Endpoints</span>
+      </nav>
+      <article class="prose">
+        <h1>Player Endpoints</h1>
+
+        <p>These endpoints allow you to look up Minecraft player profiles and download their skin textures via the Mojang API.</p>
+
+        <!-- ========== Player Profile ========== -->
+        <h2>Player Profile</h2>
+
+        <div class="endpoint">
+          <span class="badge-get">GET</span>
+          <code>/api/v1/player/{username}</code>
+        </div>
+
+        <p>Retrieves a player's profile information from the Mojang API, including their UUID, username, and skin/cape texture URLs.</p>
+
+        <h3>Path Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>username</code></td>
+              <td><code>string</code></td>
+              <td>Minecraft username (3&ndash;16 characters, alphanumeric and underscores) or UUID (with or without dashes).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Response</h3>
+
+        <details>
+          <summary>200 OK &mdash; Player Profile</summary>
+          <pre><code class="language-json">{
+  "uuid": "069a79f4-44e9-4726-a5be-fca90e38aaf5",
+  "username": "Notch",
+  "skin": {
+    "url": "http://textures.minecraft.net/texture/292009a4925b58f02c77dadc3ecef07ea4c7472f64e0fdc32ce5522489362680",
+    "model": "classic"
+  },
+  "cape": {
+    "url": "http://textures.minecraft.net/texture/afd553b39358a24edfe3b8a9a939fa5fa4faa4d9a9c3d6af8eafb377fa05c2bb"
+  },
+  "name_history": [
+    {
+      "name": "Notch",
+      "changed_at": null
+    }
+  ],
+  "cached": false,
+  "timestamp": "2026-03-12T14:30:00Z"
+}</code></pre>
+        </details>
+
+        <div class="tip">
+          <strong>Skin model:</strong> The <code>model</code> field is either <code>"classic"</code> (Steve, 4px arms) or <code>"slim"</code> (Alex, 3px arms). This is determined by the player's profile settings.
+        </div>
+
+        <h3>Errors</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Code</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>400</code></td>
+              <td><code>invalid_address</code></td>
+              <td>The username or UUID format is invalid.</td>
+            </tr>
+            <tr>
+              <td><code>404</code></td>
+              <td><code>player_not_found</code></td>
+              <td>No player exists with the given username or UUID.</td>
+            </tr>
+            <tr>
+              <td><code>429</code></td>
+              <td><code>rate_limit_exceeded</code></td>
+              <td>Too many requests. See <a href="../api/errors.html">Rate Limiting</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Example</h3>
+        <pre><code class="language-bash">curl http://localhost:3001/api/v1/player/Notch</code></pre>
+        <pre><code class="language-bash">curl http://localhost:3001/api/v1/player/069a79f4-44e9-4726-a5be-fca90e38aaf5</code></pre>
+
+        <!-- ========== Raw Skin ========== -->
+        <h2>Raw Skin</h2>
+
+        <div class="endpoint">
+          <span class="badge-get">GET</span>
+          <code>/api/v1/player/{username}/skin</code>
+        </div>
+
+        <p>Downloads the raw skin texture PNG for a player. Returns the original Minecraft skin image as provided by Mojang.</p>
+
+        <h3>Path Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>username</code></td>
+              <td><code>string</code></td>
+              <td>Minecraft username (3&ndash;16 characters) or UUID.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Query Parameters</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>download</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>When <code>true</code>, sets <code>Content-Disposition: attachment</code> to trigger a file download in browsers.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Response</h3>
+        <p>Returns the raw skin image with <code>Content-Type: image/png</code>. The image dimensions are <strong>64x64</strong> for modern skins or <strong>64x32</strong> for legacy skins.</p>
+
+        <div class="warning">
+          <strong>Note:</strong> This endpoint returns a binary PNG image, not JSON. Error responses are still returned as JSON.
+        </div>
+
+        <h3>Example</h3>
+        <pre><code class="language-bash"># View in browser
+curl http://localhost:3001/api/v1/player/Notch/skin -o notch_skin.png
+
+# Force download with filename
+curl "http://localhost:3001/api/v1/player/Notch/skin?download=true" -o notch_skin.png</code></pre>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

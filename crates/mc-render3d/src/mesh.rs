@@ -284,3 +284,113 @@ pub fn build_character(slim: bool, has_overlay: bool, time: f32) -> Vec<Part> {
 
     parts
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use glam::Vec3;
+
+    #[test]
+    fn test_build_box_vertex_count() {
+        let faces = [[0.0, 0.0, 1.0, 1.0]; 6];
+        let (verts, indices) = build_box(1.0, 1.0, 1.0, &faces, 64.0, 64.0);
+        assert_eq!(verts.len(), 24); // 4 per face × 6 faces
+        assert_eq!(indices.len(), 36); // 6 per face × 6 faces
+    }
+
+    #[test]
+    fn test_build_box_normals() {
+        let faces = [[0.0, 0.0, 1.0, 1.0]; 6];
+        let (verts, _) = build_box(1.0, 1.0, 1.0, &faces, 64.0, 64.0);
+
+        let expected_normals = [
+            Vec3::X, Vec3::NEG_X,
+            Vec3::Y, Vec3::NEG_Y,
+            Vec3::Z, Vec3::NEG_Z,
+        ];
+
+        for (fi, expected) in expected_normals.iter().enumerate() {
+            for vi in 0..4 {
+                let v = &verts[fi * 4 + vi];
+                let n = Vec3::from_array(v.normal);
+                assert_eq!(n, *expected, "face {fi} vertex {vi} normal mismatch");
+            }
+        }
+    }
+
+    #[test]
+    fn test_build_box_uvs_in_range() {
+        let faces = [
+            [8.0, 0.0, 8.0, 8.0],
+            [0.0, 8.0, 8.0, 8.0],
+            [16.0, 8.0, 8.0, 8.0],
+            [24.0, 8.0, 8.0, 8.0],
+            [8.0, 8.0, 8.0, 8.0],
+            [32.0, 8.0, 8.0, 8.0],
+        ];
+        let (verts, _) = build_box(8.0, 8.0, 8.0, &faces, 64.0, 64.0);
+        for (i, v) in verts.iter().enumerate() {
+            assert!(v.uv[0] >= 0.0 && v.uv[0] <= 1.0, "vertex {i} u={} out of range", v.uv[0]);
+            assert!(v.uv[1] >= 0.0 && v.uv[1] <= 1.0, "vertex {i} v={} out of range", v.uv[1]);
+        }
+    }
+
+    #[test]
+    fn test_build_character_part_count_no_overlay() {
+        let parts = build_character(false, false, 90.0);
+        assert_eq!(parts.len(), 6);
+    }
+
+    #[test]
+    fn test_build_character_part_count_with_overlay() {
+        let parts = build_character(false, true, 90.0);
+        assert_eq!(parts.len(), 12);
+    }
+
+    #[test]
+    fn test_build_character_slim_part_count() {
+        let parts = build_character(true, true, 90.0);
+        assert_eq!(parts.len(), 12);
+    }
+
+    #[test]
+    fn test_build_character_no_overlay_flags() {
+        let parts = build_character(false, false, 90.0);
+        for (i, part) in parts.iter().enumerate() {
+            assert!(!part.is_overlay, "part {i} should not be overlay");
+        }
+    }
+
+    #[test]
+    fn test_build_character_walking_pose_time_zero() {
+        let parts_zero = build_character(false, false, 0.0);
+        // With time=0, sin(0)=0 so all limbs have no rotation applied.
+        // Arms (indices 2, 3) and legs (indices 4, 5) should have transforms
+        // equivalent to pure translation (no rotation component from the swing).
+        // Compare right arm and left arm: they should be mirror images in X only.
+        let rarm = &parts_zero[2];
+        let larm = &parts_zero[3];
+        // At time=0 the rotation matrices are identity, so the arm transforms
+        // differ only in X translation sign.
+        let r_col3 = rarm.transform.col(3);
+        let l_col3 = larm.transform.col(3);
+        assert!((r_col3.y - l_col3.y).abs() < 1e-5, "arms should have same Y at time=0");
+        assert!((r_col3.z - l_col3.z).abs() < 1e-5, "arms should have same Z at time=0");
+    }
+
+    #[test]
+    fn test_build_character_walking_pose_time_90() {
+        let parts_zero = build_character(false, false, 0.0);
+        let parts_90 = build_character(false, false, 90.0);
+
+        // Right arm transform should differ between time=0 and time=90
+        let t0 = parts_zero[2].transform;
+        let t90 = parts_90[2].transform;
+        assert_ne!(t0, t90, "right arm transform should change with walking time");
+
+        // Right leg transform should also differ
+        let t0_leg = parts_zero[4].transform;
+        let t90_leg = parts_90[4].transform;
+        assert_ne!(t0_leg, t90_leg, "right leg transform should change with walking time");
+    }
+}

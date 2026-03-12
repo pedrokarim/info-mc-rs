@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCInfo — Documentation</title>
+  <meta name="description" content="Documentation for MCInfo-RS, a Minecraft Server & Player Intelligence Platform built in Rust.">
+  <link rel="icon" href="assets/logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <a href="index.html" class="header-logo">
+      <img src="assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="guide/index.html">Guide</a>
+      <a href="api/index.html">API</a>
+      <a href="crates/index.html">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <!-- Landing layout (no sidebar) -->
+  <div class="layout-landing">
+    <main class="main">
+      <section class="hero">
+        <img src="assets/logo.png" alt="MCInfo Logo" class="hero-logo">
+        <h1>MCInfo</h1>
+        <p class="tagline">
+          Self-contained Rust platform for querying Minecraft servers, looking up players, and rendering skins in 2D &amp; 3D.
+        </p>
+        <div class="hero-actions">
+          <a href="guide/index.html" class="btn btn-brand">Get Started</a>
+          <a href="api/index.html" class="btn btn-ghost">API Reference</a>
+        </div>
+        <div class="features">
+          <div class="feature-card">
+            <div class="feature-icon">&#9889;</div>
+            <h3>Direct Protocol</h3>
+            <p>Pings Minecraft servers directly via SLP, Query, and Bedrock Raknet. No third-party APIs.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#127912;</div>
+            <h3>Skin Rendering</h3>
+            <p>Server-side 2D isometric &amp; 3D wgpu renders. Client-side Three.js interactive viewer.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128640;</div>
+            <h3>Fast &amp; Cached</h3>
+            <p>Async Rust with Tokio &amp; Axum. In-memory TTL caching via moka for blazing responses.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128225;</div>
+            <h3>REST API</h3>
+            <p>Public API for servers, players, and skin rendering with rate limiting and structured errors.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="search.js"></script>
+</body>
+</html>

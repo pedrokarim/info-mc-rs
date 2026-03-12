@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skin Rendering — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html" class="active">Guide</a>
+      <a href="../api/index.html">API</a>
+      <a href="../crates/index.html">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../guide/index.html">Guide</a>
+        <span class="sep">/</span>
+        <span>Skin Rendering</span>
+      </nav>
+      <article class="prose">
+        <h1>Skin Rendering</h1>
+        <p>MCInfo provides both 2D and 3D skin rendering capabilities. The <code>mc-skin</code> crate handles 2D face/body rendering, while <code>mc-render3d</code> produces full 3D renders using wgpu for headless GPU rendering on the server.</p>
+
+        <h2>3D Model Architecture</h2>
+        <p>The Minecraft player model is composed of six cuboid body parts, each positioned relative to the model origin. All dimensions are in Minecraft pixel units (1 unit = 1 pixel on the skin texture).</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Part</th>
+              <th>Size (W x H x D)</th>
+              <th>Position (X, Y, Z)</th>
+              <th>Pivot</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Head</strong></td>
+              <td>8 x 8 x 8</td>
+              <td>(0, 24, 0)</td>
+              <td>Center-bottom</td>
+            </tr>
+            <tr>
+              <td><strong>Torso</strong></td>
+              <td>8 x 12 x 4</td>
+              <td>(0, 12, 0)</td>
+              <td>Center</td>
+            </tr>
+            <tr>
+              <td><strong>Right Arm</strong></td>
+              <td>4 x 12 x 4 (classic) / 3 x 12 x 4 (slim)</td>
+              <td>(-6, 12, 0) / (-5.5, 12, 0)</td>
+              <td>Top-center</td>
+            </tr>
+            <tr>
+              <td><strong>Left Arm</strong></td>
+              <td>4 x 12 x 4 (classic) / 3 x 12 x 4 (slim)</td>
+              <td>(6, 12, 0) / (5.5, 12, 0)</td>
+              <td>Top-center</td>
+            </tr>
+            <tr>
+              <td><strong>Right Leg</strong></td>
+              <td>4 x 12 x 4</td>
+              <td>(-2, 0, 0)</td>
+              <td>Top-center</td>
+            </tr>
+            <tr>
+              <td><strong>Left Leg</strong></td>
+              <td>4 x 12 x 4</td>
+              <td>(2, 0, 0)</td>
+              <td>Top-center</td>
+            </tr>
+            <tr>
+              <td><strong>Cape</strong></td>
+              <td>10 x 16 x 1</td>
+              <td>(0, 24, -2)</td>
+              <td>Top-center</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Overlay Layers</h2>
+        <p>Each body part has an optional overlay layer (hat, jacket, sleeves, pants) that renders slightly larger than the base layer to prevent z-fighting. The overlay uses an epsilon offset on each face.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Overlay</th>
+              <th>Base Part</th>
+              <th>Epsilon</th>
+              <th>Texture Region</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Hat</strong></td>
+              <td>Head</td>
+              <td>0.5 px</td>
+              <td>(32, 0) 32x16</td>
+            </tr>
+            <tr>
+              <td><strong>Jacket</strong></td>
+              <td>Torso</td>
+              <td>0.25 px</td>
+              <td>(16, 32) 24x16</td>
+            </tr>
+            <tr>
+              <td><strong>Right Sleeve</strong></td>
+              <td>Right Arm</td>
+              <td>0.25 px</td>
+              <td>(40, 32) 16x16</td>
+            </tr>
+            <tr>
+              <td><strong>Left Sleeve</strong></td>
+              <td>Left Arm</td>
+              <td>0.25 px</td>
+              <td>(48, 48) 16x16</td>
+            </tr>
+            <tr>
+              <td><strong>Right Pant</strong></td>
+              <td>Right Leg</td>
+              <td>0.25 px</td>
+              <td>(0, 32) 16x16</td>
+            </tr>
+            <tr>
+              <td><strong>Left Pant</strong></td>
+              <td>Left Leg</td>
+              <td>0.25 px</td>
+              <td>(0, 48) 16x16</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>UV Mapping</h2>
+        <p>Each face of a cuboid is mapped to a specific region of the 64x64 skin texture. The UV coordinates are defined in pixel units and then normalized to [0, 1] for the GPU.</p>
+        <p>For a cuboid with skin texture origin at <code>(u, v)</code> and dimensions <code>(w, h, d)</code>, the face UV regions are:</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Face</th>
+              <th>UV Origin (x, y)</th>
+              <th>UV Size (w, h)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Front</td>
+              <td><code>(u + d, v + d)</code></td>
+              <td><code>(w, h)</code></td>
+            </tr>
+            <tr>
+              <td>Back</td>
+              <td><code>(u + d + w + d, v + d)</code></td>
+              <td><code>(w, h)</code></td>
+            </tr>
+            <tr>
+              <td>Right</td>
+              <td><code>(u, v + d)</code></td>
+              <td><code>(d, h)</code></td>
+            </tr>
+            <tr>
+              <td>Left</td>
+              <td><code>(u + d + w, v + d)</code></td>
+              <td><code>(d, h)</code></td>
+            </tr>
+            <tr>
+              <td>Top</td>
+              <td><code>(u + d, v)</code></td>
+              <td><code>(w, d)</code></td>
+            </tr>
+            <tr>
+              <td>Bottom</td>
+              <td><code>(u + d + w, v)</code></td>
+              <td><code>(w, d)</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Example: Head UV Coordinates</h3>
+        <p>The head base layer has skin origin <code>(0, 0)</code> with dimensions <code>8 x 8 x 8</code>:</p>
+        <pre><code class="language-rust">// Head base UV regions (in pixels)
+// Front: (8, 8)   size 8x8
+// Back:  (24, 8)  size 8x8
+// Right: (0, 8)   size 8x8
+// Left:  (16, 8)  size 8x8
+// Top:   (8, 0)   size 8x8
+// Bottom:(16, 0)  size 8x8</code></pre>
+
+        <h2>Slim vs Classic Detection</h2>
+        <p>Minecraft skins come in two arm width variants:</p>
+        <ul>
+          <li><strong>Classic</strong> (Steve) &mdash; 4-pixel wide arms</li>
+          <li><strong>Slim</strong> (Alex) &mdash; 3-pixel wide arms</li>
+        </ul>
+        <p>The skin model type is typically provided by the Mojang API in the profile texture metadata. When unavailable, MCInfo falls back to a heuristic: checking if the rightmost column of the right arm region contains only fully transparent pixels, which indicates a slim skin.</p>
+
+        <h2>Animation (Walking Pose)</h2>
+        <p>The 3D renderer supports a walking pose that applies sinusoidal rotations to the arms and legs around their pivot points.</p>
+
+        <h3>Swing Formulas</h3>
+        <pre><code class="language-rust">// Animation parameter: t (0.0 to 1.0, phase of the walk cycle)
+let swing_angle = 30.0_f32.to_radians(); // Maximum swing: 30 degrees
+
+// Arms swing opposite to the corresponding leg
+let right_arm_rotation = swing_angle * (t * 2.0 * PI).sin();
+let left_arm_rotation  = -right_arm_rotation;
+
+// Legs swing in opposition
+let right_leg_rotation = -right_arm_rotation;
+let left_leg_rotation  = right_arm_rotation;</code></pre>
+        <p>The rotation is applied around the <strong>X axis</strong> at each limb's pivot point (top-center), producing a natural forward/backward swing.</p>
+
+        <h2>Interactive Rotation</h2>
+        <p>The 3D viewer supports orbital camera rotation controlled by two angles:</p>
+        <ul>
+          <li><strong>Theta</strong> &mdash; horizontal rotation around the Y axis (yaw)</li>
+          <li><strong>Phi</strong> &mdash; vertical rotation from the XZ plane (pitch), clamped to avoid gimbal lock</li>
+        </ul>
+        <pre><code class="language-rust">// Camera position from spherical coordinates
+let camera_x = distance * phi.cos() * theta.sin();
+let camera_y = distance * phi.sin();
+let camera_z = distance * phi.cos() * theta.cos();
+
+// Camera always looks at the model center
+let view = Mat4::look_at_rh(
+    Vec3::new(camera_x, camera_y, camera_z),
+    Vec3::new(0.0, 12.0, 0.0), // Model center (half height)
+    Vec3::UP,
+);</code></pre>
+
+        <h2>Lighting and Camera Setup</h2>
+        <p>The renderer uses a simple directional lighting model to add depth to the 3D render:</p>
+        <ul>
+          <li><strong>Ambient light</strong>: 0.6 intensity, applied uniformly</li>
+          <li><strong>Directional light</strong>: 0.4 intensity, from upper-front-right direction</li>
+          <li><strong>Camera</strong>: perspective projection with a narrow FOV to match NameMC-style framing</li>
+        </ul>
+        <p>The lighting calculation is performed per-fragment in the shader:</p>
+        <pre><code class="language-rust">// WGSL shader pseudocode
+let ambient = 0.6;
+let diffuse = max(dot(normal, light_dir), 0.0) * 0.4;
+let final_color = texture_color * (ambient + diffuse);</code></pre>
+
+        <h2>Per-Pixel Face Coloring</h2>
+        <p>Rather than using traditional UV-mapped textures on the GPU, <code>mc-render3d</code> employs a per-pixel face coloring technique. Each face of each cuboid is rasterized and the skin texture is sampled directly in Rust code, producing a vertex-colored mesh. This approach:</p>
+        <ul>
+          <li>Avoids texture filtering artifacts (nearest-neighbor sampling is guaranteed)</li>
+          <li>Handles overlay transparency correctly by pre-compositing layers</li>
+          <li>Makes the wgpu pipeline simpler (no texture bind groups needed)</li>
+        </ul>
+
+        <h2>Cape Rendering</h2>
+        <p>Capes use a separate texture that can be either 64x32 or a larger resolution that is scaled down. The cape is rendered as a flat cuboid attached to the back of the torso.</p>
+
+        <h3>Cape Scale Detection</h3>
+        <p>Cape textures from the Mojang API can come in different resolutions. The renderer detects the scale factor by dividing the texture width by 64 (the base cape texture width) and adjusts UV coordinates accordingly:</p>
+        <pre><code class="language-rust">let scale = cape_texture.width() / 64;
+// All UV coordinates are multiplied by `scale`
+// to sample from the correct positions in the texture</code></pre>
+
+        <h2>Server-Side Rendering with wgpu</h2>
+        <p>The <code>mc-render3d</code> crate uses <strong>wgpu</strong> for headless GPU rendering, allowing the API server to produce 3D skin renders without a display. The rendering pipeline:</p>
+        <ol>
+          <li>Initialize a wgpu device and queue (headless, no surface)</li>
+          <li>Build the vertex/index buffers for all body parts</li>
+          <li>Set up the render pipeline with depth testing enabled</li>
+          <li>Render to an offscreen texture</li>
+          <li>Read back the pixels and encode as PNG</li>
+        </ol>
+        <pre><code class="language-rust">// Simplified rendering flow
+let (device, queue) = adapter.request_device(&amp;default()).await?;
+
+let texture = device.create_texture(&amp;TextureDescriptor {
+    size: Extent3d { width: 300, height: 400, depth_or_array_layers: 1 },
+    format: TextureFormat::Rgba8UnormSrgb,
+    usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC,
+    ..default()
+});
+
+// ... build mesh, encode commands, submit ...
+
+// Read back the rendered image
+let buffer = device.create_buffer(&amp;BufferDescriptor {
+    size: (300 * 400 * 4) as u64,
+    usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+    ..default()
+});
+
+encoder.copy_texture_to_buffer(/* ... */);
+queue.submit([encoder.finish()]);</code></pre>
+
+        <h2>Next Steps</h2>
+        <ul>
+          <li><a href="../crates/mc-skin.html">mc-skin Crate Reference</a> &mdash; 2D rendering API details</li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d Crate Reference</a> &mdash; 3D rendering API details</li>
+          <li><a href="../api/rendering.html">Skin Rendering API Endpoints</a> &mdash; REST endpoints for skin rendering</li>
+          <li><a href="../guide/frontend.html">Frontend Development</a> &mdash; client-side Three.js skin viewer</li>
+        </ul>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

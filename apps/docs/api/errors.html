@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Errors &amp; Rate Limiting — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html" class="active">API</a>
+      <a href="../crates/index.html">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../api/index.html">API Reference</a>
+        <span class="sep">/</span>
+        <span>Errors &amp; Rate Limiting</span>
+      </nav>
+      <article class="prose">
+        <h1>Errors &amp; Rate Limiting</h1>
+
+        <p>All API errors follow a consistent JSON format. This page documents the error structure, error codes, rate limiting rules, and cache behavior.</p>
+
+        <!-- ========== Error Format ========== -->
+        <h2>Error Format</h2>
+
+        <p>Every error response contains an <code>error</code> object with a machine-readable <code>code</code> and a human-readable <code>message</code>:</p>
+
+        <pre><code class="language-json">{
+  "error": {
+    "code": "invalid_address",
+    "message": "The server address 'not a valid address!!!' is not a valid hostname or IP address."
+  }
+}</code></pre>
+
+        <div class="tip">
+          <strong>Tip:</strong> Always check the <code>error.code</code> field for programmatic error handling. The <code>message</code> field is intended for display to end users and may change between versions.
+        </div>
+
+        <!-- ========== Error Codes ========== -->
+        <h2>Error Codes</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>HTTP Status</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>invalid_address</code></td>
+              <td><code>400</code></td>
+              <td>The provided server address, username, or UUID format is invalid.</td>
+            </tr>
+            <tr>
+              <td><code>dns_resolution_failed</code></td>
+              <td><code>422</code></td>
+              <td>The domain name could not be resolved via DNS. The server may not exist or DNS may be misconfigured.</td>
+            </tr>
+            <tr>
+              <td><code>connection_refused</code></td>
+              <td><code>502</code></td>
+              <td>A TCP connection to the server was actively refused. The server may be down or firewalled.</td>
+            </tr>
+            <tr>
+              <td><code>timeout</code></td>
+              <td><code>504</code></td>
+              <td>The server did not respond within the timeout period (default: 5 seconds).</td>
+            </tr>
+            <tr>
+              <td><code>player_not_found</code></td>
+              <td><code>404</code></td>
+              <td>No Minecraft account exists with the given username or UUID.</td>
+            </tr>
+            <tr>
+              <td><code>rate_limit_exceeded</code></td>
+              <td><code>429</code></td>
+              <td>You have exceeded the rate limit for this endpoint. Wait and retry after the reset time.</td>
+            </tr>
+            <tr>
+              <td><code>internal_error</code></td>
+              <td><code>500</code></td>
+              <td>An unexpected internal server error occurred. If this persists, please report it.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- ========== Rate Limiting ========== -->
+        <h2>Rate Limiting</h2>
+
+        <p>Rate limits are applied per IP address on a sliding window basis. Different endpoint groups have different limits:</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Endpoint Group</th>
+              <th>Rate Limit</th>
+              <th>Window</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Server endpoints (<code>/api/v1/server/*</code>)</td>
+              <td>30 requests</td>
+              <td>per minute</td>
+            </tr>
+            <tr>
+              <td>Player endpoints (<code>/api/v1/player/*</code>)</td>
+              <td>60 requests</td>
+              <td>per minute</td>
+            </tr>
+            <tr>
+              <td>Render endpoints (<code>/api/v1/render/*</code>)</td>
+              <td>60 requests</td>
+              <td>per minute</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Rate Limit Headers</h3>
+
+        <p>Every response includes rate limit headers so you can track your usage:</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Header</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>X-RateLimit-Limit</code></td>
+              <td>Maximum number of requests allowed in the current window.</td>
+            </tr>
+            <tr>
+              <td><code>X-RateLimit-Remaining</code></td>
+              <td>Number of requests remaining in the current window.</td>
+            </tr>
+            <tr>
+              <td><code>X-RateLimit-Reset</code></td>
+              <td>Unix timestamp (in seconds) when the rate limit window resets.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>429 Response Example</h3>
+
+        <pre><code class="language-json">{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit exceeded. Try again in 34 seconds."
+  }
+}</code></pre>
+
+        <pre><code class="language-bash"># Response headers on a 429:
+HTTP/1.1 429 Too Many Requests
+X-RateLimit-Limit: 30
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1741789834
+Retry-After: 34</code></pre>
+
+        <div class="warning">
+          <strong>Important:</strong> Continuing to send requests after receiving a 429 response will not reset the window. Respect the <code>Retry-After</code> header or <code>X-RateLimit-Reset</code> timestamp to avoid further rate limiting.
+        </div>
+
+        <!-- ========== Cache Behavior ========== -->
+        <h2>Cache Behavior</h2>
+
+        <p>Responses are cached server-side to reduce latency and load on upstream services. The <code>cached</code> field in JSON responses indicates whether the data was served from cache.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Data Type</th>
+              <th>Cache TTL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Server ping</td>
+              <td>60 seconds</td>
+            </tr>
+            <tr>
+              <td>Player profile</td>
+              <td>5 minutes</td>
+            </tr>
+            <tr>
+              <td>Skin PNG</td>
+              <td>1 hour</td>
+            </tr>
+            <tr>
+              <td>Skin render</td>
+              <td>1 hour</td>
+            </tr>
+            <tr>
+              <td>DNS SRV lookup</td>
+              <td>5 minutes</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="tip">
+          <strong>Tip:</strong> Cached responses do not count against your rate limit. You can check the <code>cached</code> field in the JSON response to know if data was served from cache.
+        </div>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

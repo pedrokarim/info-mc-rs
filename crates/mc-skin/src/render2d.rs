@@ -141,3 +141,62 @@ fn crop_region(img: &RgbaImage, x: u32, y: u32, w: u32, h: u32) -> RgbaImage {
 fn scale_nearest(img: &RgbaImage, width: u32, height: u32) -> RgbaImage {
     imageops::resize(img, width, height, imageops::FilterType::Nearest)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{Rgba, RgbaImage};
+
+    fn dummy_skin() -> RgbaImage {
+        RgbaImage::from_pixel(64, 64, Rgba([255, 0, 0, 255]))
+    }
+
+    #[test]
+    fn test_render_face_dimensions() {
+        let skin = dummy_skin();
+        let opts = RenderOptions { size: 8, overlay: true };
+        let result = render_face(&skin, &opts).unwrap();
+        assert_eq!(result.dimensions(), (8, 8));
+    }
+
+    #[test]
+    fn test_render_face_default_size() {
+        let skin = dummy_skin();
+        let opts = RenderOptions::default();
+        let result = render_face(&skin, &opts).unwrap();
+        assert_eq!(result.dimensions(), (128, 128));
+    }
+
+    #[test]
+    fn test_render_head_dimensions() {
+        let skin = dummy_skin();
+        let opts = RenderOptions { size: 64, overlay: true };
+        let result = render_head(&skin, &opts).unwrap();
+        assert_eq!(result.dimensions(), (64, 64));
+    }
+
+    #[test]
+    fn test_render_full_body_dimensions() {
+        let skin = dummy_skin();
+        let opts = RenderOptions { size: 16, overlay: true };
+        let result = render_full_body(&skin, &opts).unwrap();
+        // width = size, height = size * 2
+        assert_eq!(result.dimensions(), (16, 32));
+    }
+
+    #[test]
+    fn test_render_face_with_overlay() {
+        let skin = dummy_skin();
+        let opts = RenderOptions { size: 32, overlay: true };
+        let result = render_face(&skin, &opts);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_render_face_without_overlay() {
+        let skin = dummy_skin();
+        let opts = RenderOptions { size: 32, overlay: false };
+        let result = render_face(&skin, &opts);
+        assert!(result.is_ok());
+    }
+}

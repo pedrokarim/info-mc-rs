@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frontend Development — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html" class="active">Guide</a>
+      <a href="../api/index.html">API</a>
+      <a href="../crates/index.html">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../guide/index.html">Guide</a>
+        <span class="sep">/</span>
+        <span>Frontend Development</span>
+      </nav>
+      <article class="prose">
+        <h1>Frontend Development</h1>
+        <p>The MCInfo frontend is a <strong>SvelteKit</strong> application located in <code>apps/web</code>. It provides a rich, responsive interface for browsing Minecraft servers and player profiles, complete with an interactive 3D skin viewer powered by Three.js.</p>
+
+        <h2>Stack Overview</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Technology</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>SvelteKit</strong></td>
+              <td>Full-stack framework with SSR, routing, and API proxying</td>
+            </tr>
+            <tr>
+              <td><strong>Three.js</strong></td>
+              <td>Interactive 3D skin viewer in the browser</td>
+            </tr>
+            <tr>
+              <td><strong>Bun</strong></td>
+              <td>Package manager and development runtime</td>
+            </tr>
+            <tr>
+              <td><strong>Vite</strong></td>
+              <td>Build tool (via SvelteKit)</td>
+            </tr>
+          </tbody>
+        </table>
+        <pre><code class="language-bash"># Development
+cd apps/web
+bun install
+bun run dev
+
+# Production build
+bun run build
+bun run preview</code></pre>
+
+        <h2>Design System</h2>
+
+        <h3>Color Palette</h3>
+        <p>The design system uses CSS custom properties for theming. All colors are defined on <code>:root</code> and support both dark and light themes:</p>
+        <pre><code class="language-css">:root {
+  /* Background layers */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a25;
+  --bg-elevated: #22222f;
+
+  /* Text hierarchy */
+  --text-primary: #f0f0f5;
+  --text-secondary: #a0a0b5;
+  --text-muted: #606075;
+
+  /* Accent colors */
+  --accent-primary: #7c5cff;
+  --accent-secondary: #5c9cff;
+  --accent-success: #4cdf7c;
+  --accent-warning: #ffb84c;
+  --accent-danger: #ff5c6c;
+
+  /* Borders and surfaces */
+  --border-primary: #2a2a3a;
+  --border-secondary: #1e1e2e;
+  --surface-glass: rgba(255, 255, 255, 0.03);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+}</code></pre>
+
+        <h3>Typography</h3>
+        <p>The application uses a system font stack with specific sizing for different contexts:</p>
+        <pre><code class="language-css">:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --text-xs: 0.75rem;    /* 12px - labels, badges */
+  --text-sm: 0.875rem;   /* 14px - secondary text */
+  --text-base: 1rem;     /* 16px - body text */
+  --text-lg: 1.125rem;   /* 18px - subtitles */
+  --text-xl: 1.5rem;     /* 24px - section titles */
+  --text-2xl: 2rem;      /* 32px - page titles */
+  --text-3xl: 3rem;      /* 48px - hero text */
+}</code></pre>
+
+        <h2>Key Components</h2>
+
+        <h3>Hero Section</h3>
+        <p>The landing page features a hero section with an animated gradient background, a search bar for server/player lookup, and floating Minecraft-themed decorative elements.</p>
+
+        <h3>Server Card</h3>
+        <p>Displays server information in a compact card format: favicon, MOTD (rendered with Minecraft formatting), player count, version, and latency indicator. Cards support hover animations and link to the full server detail page.</p>
+
+        <h3>Player Profile</h3>
+        <p>Shows player information including username, UUID, skin preview, name history, and associated capes. The profile page includes both a 2D face render and an interactive 3D skin viewer.</p>
+
+        <h3>MOTD Renderer</h3>
+        <p>Renders Minecraft MOTDs with full support for color codes, formatting, and both legacy (&sect;) and JSON chat component formats. The renderer produces styled HTML that accurately matches in-game appearance.</p>
+
+        <h3>Skin 3D Viewer</h3>
+        <p>An interactive Three.js-based viewer that renders the player's skin as a 3D model. Supports orbital rotation (drag to rotate), walking animation toggle, and zoom. Falls back to a static server-rendered image when WebGL is unavailable.</p>
+
+        <h2>MOTD Color Codes</h2>
+        <p>Minecraft uses section sign (&sect;) prefixed codes for text formatting. The MOTD renderer maps each code to the corresponding CSS style:</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Color</th>
+              <th>Hex Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>&sect;0</code></td><td>Black</td><td><code>#000000</code></td></tr>
+            <tr><td><code>&sect;1</code></td><td>Dark Blue</td><td><code>#0000AA</code></td></tr>
+            <tr><td><code>&sect;2</code></td><td>Dark Green</td><td><code>#00AA00</code></td></tr>
+            <tr><td><code>&sect;3</code></td><td>Dark Aqua</td><td><code>#00AAAA</code></td></tr>
+            <tr><td><code>&sect;4</code></td><td>Dark Red</td><td><code>#AA0000</code></td></tr>
+            <tr><td><code>&sect;5</code></td><td>Dark Purple</td><td><code>#AA00AA</code></td></tr>
+            <tr><td><code>&sect;6</code></td><td>Gold</td><td><code>#FFAA00</code></td></tr>
+            <tr><td><code>&sect;7</code></td><td>Gray</td><td><code>#AAAAAA</code></td></tr>
+            <tr><td><code>&sect;8</code></td><td>Dark Gray</td><td><code>#555555</code></td></tr>
+            <tr><td><code>&sect;9</code></td><td>Blue</td><td><code>#5555FF</code></td></tr>
+            <tr><td><code>&sect;a</code></td><td>Green</td><td><code>#55FF55</code></td></tr>
+            <tr><td><code>&sect;b</code></td><td>Aqua</td><td><code>#55FFFF</code></td></tr>
+            <tr><td><code>&sect;c</code></td><td>Red</td><td><code>#FF5555</code></td></tr>
+            <tr><td><code>&sect;d</code></td><td>Light Purple</td><td><code>#FF55FF</code></td></tr>
+            <tr><td><code>&sect;e</code></td><td>Yellow</td><td><code>#FFFF55</code></td></tr>
+            <tr><td><code>&sect;f</code></td><td>White</td><td><code>#FFFFFF</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>Style Codes</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Style</th>
+              <th>CSS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>&sect;k</code></td><td>Obfuscated</td><td>Animation that randomizes characters</td></tr>
+            <tr><td><code>&sect;l</code></td><td>Bold</td><td><code>font-weight: bold</code></td></tr>
+            <tr><td><code>&sect;m</code></td><td>Strikethrough</td><td><code>text-decoration: line-through</code></td></tr>
+            <tr><td><code>&sect;n</code></td><td>Underline</td><td><code>text-decoration: underline</code></td></tr>
+            <tr><td><code>&sect;o</code></td><td>Italic</td><td><code>font-style: italic</code></td></tr>
+            <tr><td><code>&sect;r</code></td><td>Reset</td><td>Clears all formatting</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Responsive Breakpoints</h2>
+        <p>The layout adapts to different screen sizes using the following breakpoints:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Breakpoint</th>
+              <th>Width</th>
+              <th>Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Mobile</strong></td>
+              <td>&lt; 640px</td>
+              <td>Single column, hamburger menu, stacked cards</td>
+            </tr>
+            <tr>
+              <td><strong>Tablet</strong></td>
+              <td>640px &ndash; 1024px</td>
+              <td>Two-column grid, collapsible sidebar</td>
+            </tr>
+            <tr>
+              <td><strong>Desktop</strong></td>
+              <td>1024px &ndash; 1440px</td>
+              <td>Full layout with sidebar, three-column card grid</td>
+            </tr>
+            <tr>
+              <td><strong>Wide</strong></td>
+              <td>&gt; 1440px</td>
+              <td>Max-width container, four-column card grid</td>
+            </tr>
+          </tbody>
+        </table>
+        <pre><code class="language-css">/* Responsive media queries */
+@media (max-width: 640px)  { /* Mobile styles */ }
+@media (max-width: 1024px) { /* Tablet styles */ }
+@media (min-width: 1440px) { /* Wide screen styles */ }</code></pre>
+
+        <h2>Animation Effects</h2>
+        <p>The frontend uses subtle animations to enhance the user experience:</p>
+        <ul>
+          <li><strong>Page transitions</strong> &mdash; fade and slide transitions between routes using SvelteKit's built-in transition system</li>
+          <li><strong>Card hover</strong> &mdash; scale transform (1.02x) with elevated shadow on hover, 200ms ease transition</li>
+          <li><strong>Skeleton loading</strong> &mdash; animated gradient pulse effect for loading states</li>
+          <li><strong>MOTD obfuscation</strong> &mdash; rapid character randomization matching in-game behavior at 20 ticks/second</li>
+          <li><strong>3D viewer rotation</strong> &mdash; smooth orbital rotation with momentum/inertia on mouse release</li>
+          <li><strong>Scroll reveal</strong> &mdash; elements fade in as they enter the viewport using IntersectionObserver</li>
+        </ul>
+
+        <h2>SEO and OpenGraph</h2>
+        <p>MCInfo uses SvelteKit's server-side rendering to ensure all pages are fully indexed by search engines. Each page includes comprehensive meta tags:</p>
+        <pre><code class="language-bash"># Server page: /server/play.example.com
+&lt;title&gt;play.example.com - Minecraft Server Status | MCInfo&lt;/title&gt;
+&lt;meta name="description" content="..." /&gt;
+&lt;meta property="og:title" content="play.example.com" /&gt;
+&lt;meta property="og:description" content="42/100 players online..." /&gt;
+&lt;meta property="og:image" content="/api/server/play.example.com/icon" /&gt;
+
+# Player page: /player/Notch
+&lt;title&gt;Notch - Minecraft Player Profile | MCInfo&lt;/title&gt;
+&lt;meta property="og:image" content="/api/player/Notch/render3d" /&gt;</code></pre>
+        <p>The OpenGraph images are dynamically generated by the API using the server-side rendering pipeline, ensuring rich link previews on Discord, Twitter, and other platforms.</p>
+
+        <h2>Next Steps</h2>
+        <ul>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a> &mdash; understand the 3D viewer's rendering pipeline</li>
+          <li><a href="../api/index.html">API Reference</a> &mdash; all available REST endpoints</li>
+          <li><a href="../guide/index.html">Getting Started</a> &mdash; development environment setup</li>
+        </ul>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

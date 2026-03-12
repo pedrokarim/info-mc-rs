@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mc-protocol — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html">Guide</a>
+      <a href="../api/index.html">API</a>
+      <a href="../crates/index.html" class="active">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../crates/index.html">Crates</a>
+        <span class="sep">/</span>
+        <span>mc-protocol</span>
+      </nav>
+      <article class="prose">
+        <h1>mc-protocol</h1>
+        <p>Custom Minecraft protocol implementation with <strong>zero third-party protocol dependencies</strong>. This crate handles all low-level communication with Minecraft servers, including Java Edition Server List Ping (SLP), Bedrock Edition pinging, and the legacy Query protocol.</p>
+
+        <table>
+          <tbody>
+            <tr><td><strong>Edition</strong></td><td>2024</td></tr>
+            <tr><td><strong>Standalone</strong></td><td>Yes</td></tr>
+            <tr><td><strong>Path</strong></td><td><code>crates/mc-protocol</code></td></tr>
+          </tbody>
+        </table>
+
+        <h2>Source Structure</h2>
+        <table>
+          <thead>
+            <tr><th>File</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>types.rs</code></td><td>VarInt, VarLong, McString, McPacket and other protocol-level types</td></tr>
+            <tr><td><code>slp.rs</code></td><td>Server List Ping (Java Edition) &mdash; handshake, status request/response, latency ping</td></tr>
+            <tr><td><code>query.rs</code></td><td>Query protocol (UDP) &mdash; basic and full stat requests</td></tr>
+            <tr><td><code>bedrock.rs</code></td><td>Bedrock Edition unconnected ping via RakNet</td></tr>
+            <tr><td><code>dns.rs</code></td><td>SRV record resolution for Minecraft servers</td></tr>
+            <tr><td><code>error.rs</code></td><td>Protocol-specific error types</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Key Types</h2>
+        <p>The protocol types handle Minecraft's custom variable-length encoding:</p>
+<pre><code class="language-rust">/// Variable-length integer (1-5 bytes), used extensively in the protocol.
+pub struct VarInt(pub i32);
+
+/// Variable-length long (1-10 bytes), used for entity IDs and timestamps.
+pub struct VarLong(pub i64);
+
+/// Length-prefixed UTF-8 string with a maximum byte length.
+pub struct McString(pub String);
+
+/// A raw protocol packet with ID and payload.
+pub struct McPacket {
+    pub id: VarInt,
+    pub data: Vec&lt;u8&gt;,
+}
+</code></pre>
+
+        <h2>Key Functions</h2>
+
+        <h3>ping_java</h3>
+        <p>Performs a full Server List Ping against a Java Edition server. Returns the server's MOTD, player count, version, favicon, and latency.</p>
+<pre><code class="language-rust">use mc_protocol::slp::ping_java;
+
+#[tokio::main]
+async fn main() -> Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let response = ping_java("mc.hypixel.net", 25565).await?;
+
+    println!("Version: {}", response.version.name);
+    println!("Players: {}/{}", response.players.online, response.players.max);
+    println!("Latency: {}ms", response.latency_ms);
+    println!("MOTD: {:?}", response.description);
+
+    Ok(())
+}
+</code></pre>
+
+        <h3>ping_bedrock</h3>
+        <p>Sends an unconnected ping to a Bedrock Edition server using the RakNet protocol and parses the response string.</p>
+<pre><code class="language-rust">use mc_protocol::bedrock::ping_bedrock;
+
+#[tokio::main]
+async fn main() -> Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let response = ping_bedrock("play.example.com", 19132).await?;
+
+    println!("Edition: {}", response.edition);
+    println!("MOTD: {}", response.motd);
+    println!("Players: {}/{}", response.players_online, response.players_max);
+    println!("Game mode: {}", response.game_mode);
+
+    Ok(())
+}
+</code></pre>
+
+        <h3>query_server</h3>
+        <p>Uses the UDP Query protocol to retrieve extended server information, including the player list and installed plugins. Requires <code>enable-query=true</code> in the server's <code>server.properties</code>.</p>
+<pre><code class="language-rust">use mc_protocol::query::query_server;
+
+#[tokio::main]
+async fn main() -> Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let stats = query_server("mc.example.com", 25565).await?;
+
+    println!("Map: {}", stats.map);
+    println!("Plugins: {:?}", stats.plugins);
+    println!("Online players: {:?}", stats.players);
+
+    Ok(())
+}
+</code></pre>
+
+        <h3>resolve_srv</h3>
+        <p>Resolves <code>_minecraft._tcp.&lt;domain&gt;</code> SRV records to find the actual host and port of a Minecraft server.</p>
+<pre><code class="language-rust">use mc_protocol::dns::resolve_srv;
+
+#[tokio::main]
+async fn main() -> Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    if let Some((host, port)) = resolve_srv("example.com").await? {
+        println!("Resolved to {}:{}", host, port);
+    } else {
+        println!("No SRV record found, using default port 25565");
+    }
+
+    Ok(())
+}
+</code></pre>
+
+        <h2>Dependencies</h2>
+<pre><code class="language-toml">[dependencies]
+tokio = { version = "1", features = ["net", "time", "io-util", "rt"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hickory-resolver = "0.25"
+bytes = "1"
+rand = "0.8"
+</code></pre>
+
+        <h2>Design Notes</h2>
+        <ul>
+          <li>The protocol implementation is fully <strong>hand-written</strong> &mdash; no code generation or third-party Minecraft protocol libraries.</li>
+          <li>VarInt/VarLong encoding follows the <a href="https://wiki.vg/Protocol#VarInt_and_VarLong">wiki.vg specification</a> exactly.</li>
+          <li>All network I/O is async via <strong>tokio</strong>, with configurable timeouts to avoid hanging on unresponsive servers.</li>
+          <li>SRV resolution uses <strong>hickory-resolver</strong> (formerly trust-dns) for pure-Rust DNS lookups.</li>
+        </ul>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>

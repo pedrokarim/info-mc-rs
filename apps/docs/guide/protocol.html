@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Protocol Implementation — MCInfo Docs</title>
+  <link rel="icon" href="../assets/logo.png">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <a href="../index.html" class="header-logo">
+      <img src="../assets/logo.png" alt="MCInfo">
+      <span>MCInfo Docs</span>
+    </a>
+    <nav class="header-nav">
+      <a href="../guide/index.html" class="active">Guide</a>
+      <a href="../api/index.html">API</a>
+      <a href="../crates/index.html">Crates</a>
+    </nav>
+    <div class="header-spacer"></div>
+    <div class="search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" placeholder="Search docs..." aria-label="Search documentation">
+      <span class="search-kbd">Ctrl K</span>
+      <div class="search-results"></div>
+    </div>
+  </header>
+
+  <div class="sidebar-overlay"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Guide <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../guide/index.html">Getting Started</a></li>
+          <li><a href="../guide/architecture.html">Architecture</a></li>
+          <li><a href="../guide/protocol.html">Protocol Implementation</a></li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a></li>
+          <li><a href="../guide/frontend.html">Frontend Development</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">API Reference <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../api/index.html">Overview</a></li>
+          <li><a href="../api/servers.html">Server Endpoints</a></li>
+          <li><a href="../api/players.html">Player Endpoints</a></li>
+          <li><a href="../api/rendering.html">Skin Rendering</a></li>
+          <li><a href="../api/errors.html">Errors &amp; Rate Limiting</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Crates <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <ul class="sidebar-links">
+          <li><a href="../crates/index.html">Overview</a></li>
+          <li><a href="../crates/mc-protocol.html">mc-protocol</a></li>
+          <li><a href="../crates/mc-api.html">mc-api</a></li>
+          <li><a href="../crates/mc-mojang.html">mc-mojang</a></li>
+          <li><a href="../crates/mc-motd.html">mc-motd</a></li>
+          <li><a href="../crates/mc-skin.html">mc-skin</a></li>
+          <li><a href="../crates/mc-render3d.html">mc-render3d</a></li>
+          <li><a href="../crates/mc-cache.html">mc-cache</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <nav class="breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep">/</span>
+        <a href="../guide/index.html">Guide</a>
+        <span class="sep">/</span>
+        <span>Protocol Implementation</span>
+      </nav>
+      <article class="prose">
+        <h1>Protocol Implementation</h1>
+        <p>The <code>mc-protocol</code> crate implements the Minecraft network protocol from scratch. It supports three distinct ping methods: <strong>Server List Ping</strong> (Java Edition, TCP), <strong>Query Protocol</strong> (Java Edition, UDP), and <strong>Bedrock Raknet Ping</strong> (Bedrock Edition, UDP).</p>
+
+        <h2>VarInt Encoding</h2>
+        <p>Minecraft uses a variable-length integer encoding for most numeric fields in its protocol. A VarInt uses between 1 and 5 bytes, where each byte uses 7 bits for data and 1 bit as a continuation flag.</p>
+
+        <h3>Encoding</h3>
+        <pre><code class="language-rust">/// Encode a 32-bit integer as a Minecraft VarInt
+pub fn write_varint(mut value: i32) -> Vec&lt;u8&gt; {
+    let mut buf = Vec::new();
+    loop {
+        let mut byte = (value &amp; 0x7F) as u8;
+        value = ((value as u32) &gt;&gt; 7) as i32;
+        if value != 0 {
+            byte |= 0x80;
+        }
+        buf.push(byte);
+        if value == 0 {
+            break;
+        }
+    }
+    buf
+}</code></pre>
+
+        <h3>Decoding</h3>
+        <pre><code class="language-rust">/// Decode a Minecraft VarInt from a byte stream
+pub async fn read_varint(stream: &amp;mut (impl AsyncRead + Unpin)) -&gt; Result&lt;i32&gt; {
+    let mut result: i32 = 0;
+    let mut shift: u32 = 0;
+    loop {
+        let mut buf = [0u8; 1];
+        stream.read_exact(&amp;mut buf).await?;
+        let byte = buf[0];
+        result |= ((byte &amp; 0x7F) as i32) &lt;&lt; shift;
+        if byte &amp; 0x80 == 0 {
+            break;
+        }
+        shift += 7;
+        if shift &gt;= 32 {
+            return Err(anyhow!("VarInt too large"));
+        }
+    }
+    Ok(result)
+}</code></pre>
+
+        <h2>VarLong</h2>
+        <p>VarLong uses the same encoding as VarInt but supports 64-bit values, requiring up to 10 bytes. The algorithm is identical with a shift limit of 64 instead of 32.</p>
+
+        <h2>MC String</h2>
+        <p>Minecraft strings are length-prefixed using a VarInt, followed by UTF-8 encoded bytes:</p>
+        <pre><code class="language-rust">/// Write a Minecraft protocol string
+pub fn write_string(s: &amp;str) -> Vec&lt;u8&gt; {
+    let mut buf = write_varint(s.len() as i32);
+    buf.extend_from_slice(s.as_bytes());
+    buf
+}</code></pre>
+
+        <h2>MC Packet Format</h2>
+        <p>Every Minecraft packet follows the same structure:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Length</td>
+              <td>VarInt</td>
+              <td>Total byte length of Packet ID + Data</td>
+            </tr>
+            <tr>
+              <td>Packet ID</td>
+              <td>VarInt</td>
+              <td>Identifies the packet type</td>
+            </tr>
+            <tr>
+              <td>Data</td>
+              <td>byte[]</td>
+              <td>Packet-specific payload</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Server List Ping (SLP)</h2>
+        <p>The Server List Ping is a TCP-based protocol used by Minecraft Java Edition clients to fetch server information from the multiplayer menu.</p>
+
+        <h3>TCP Flow</h3>
+        <pre class="ascii-diagram">
+  Client                          Server
+    │                               │
+    │──── Handshake (0x00) ────────▶│
+    │     - Protocol version        │
+    │     - Server address          │
+    │     - Server port             │
+    │     - Next state = 1          │
+    │                               │
+    │──── Status Request (0x00) ───▶│
+    │                               │
+    │◀─── Status Response (0x00) ───│
+    │     - JSON payload            │
+    │                               │
+    │──── Ping (0x01) ────────────▶│
+    │     - Timestamp (i64)         │
+    │                               │
+    │◀─── Pong (0x01) ─────────────│
+    │     - Same timestamp          │
+    │                               │
+        </pre>
+
+        <h3>JSON Response Format</h3>
+        <p>The server responds with a JSON object containing server information:</p>
+        <pre><code class="language-json">{
+  "version": {
+    "name": "1.21.4",
+    "protocol": 769
+  },
+  "players": {
+    "max": 100,
+    "online": 42,
+    "sample": [
+      { "name": "Player1", "id": "uuid-here" }
+    ]
+  },
+  "description": {
+    "text": "A Minecraft Server"
+  },
+  "favicon": "data:image/png;base64,..."
+}</code></pre>
+
+        <h2>Query Protocol</h2>
+        <p>The Query protocol is a UDP-based protocol that provides more detailed server information. It must be explicitly enabled in <code>server.properties</code> with <code>enable-query=true</code>.</p>
+
+        <h3>Handshake</h3>
+        <p>Before querying, the client must perform a handshake to obtain a challenge token:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Direction</th>
+              <th>Packet</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Client &rarr; Server</td>
+              <td>Handshake request (type=0x09, session ID)</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>Server &rarr; Client</td>
+              <td>Challenge token (ASCII number string)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Basic Stat</h3>
+        <p>A basic stat query returns minimal information: MOTD, game type, map, current players, max players, host port, and host IP.</p>
+
+        <h3>Full Stat</h3>
+        <p>A full stat query returns comprehensive information including all key-value pairs and a full player list. The response uses a padding scheme with <code>splitnum\x00\x80\x00</code> as a delimiter between the KV section and the player list.</p>
+
+        <h3>Plugin Parsing</h3>
+        <p>The <code>plugins</code> field in the full stat response follows a specific format:</p>
+        <pre><code class="language-bash"># Format: "ServerSoftware: Plugin1 vX.Y; Plugin2 vA.B"
+# Example:
+"Paper 1.21.4: EssentialsX 2.20.1; WorldEdit 7.3.0; ViaVersion 4.9.0"</code></pre>
+        <p>The parser splits on <code>:</code> to separate the server software, then splits the remainder on <code>;</code> to extract individual plugins.</p>
+
+        <h2>Bedrock Raknet Ping</h2>
+        <p>Bedrock Edition uses the Raknet protocol over UDP. MCInfo sends an <strong>Unconnected Ping</strong> packet and receives an <strong>Unconnected Pong</strong> containing a server ID string.</p>
+
+        <h3>Server ID String Format</h3>
+        <p>The pong response contains a semicolon-delimited string with the following fields:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Index</th>
+              <th>Field</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>0</td><td>Edition</td><td><code>MCPE</code></td></tr>
+            <tr><td>1</td><td>MOTD line 1</td><td><code>My Server</code></td></tr>
+            <tr><td>2</td><td>Protocol version</td><td><code>685</code></td></tr>
+            <tr><td>3</td><td>Version name</td><td><code>1.21.50</code></td></tr>
+            <tr><td>4</td><td>Online players</td><td><code>42</code></td></tr>
+            <tr><td>5</td><td>Max players</td><td><code>100</code></td></tr>
+            <tr><td>6</td><td>Server unique ID</td><td><code>12345678</code></td></tr>
+            <tr><td>7</td><td>MOTD line 2</td><td><code>Subtitle</code></td></tr>
+            <tr><td>8</td><td>Game mode</td><td><code>Survival</code></td></tr>
+            <tr><td>9</td><td>Game mode numeric</td><td><code>1</code></td></tr>
+            <tr><td>10</td><td>Port (IPv4)</td><td><code>19132</code></td></tr>
+            <tr><td>11</td><td>Port (IPv6)</td><td><code>19133</code></td></tr>
+          </tbody>
+        </table>
+
+        <h2>DNS SRV Resolution</h2>
+        <p>Before connecting to a Minecraft server, the client should check for a DNS SRV record at <code>_minecraft._tcp.{hostname}</code>. This allows server operators to run Minecraft on non-standard ports without requiring users to specify the port.</p>
+
+        <h3>Resolution Algorithm</h3>
+        <ol>
+          <li>If the address contains a port (e.g., <code>play.example.com:25565</code>), use it directly</li>
+          <li>Otherwise, perform an SRV lookup for <code>_minecraft._tcp.{hostname}</code></li>
+          <li>If an SRV record exists, use the target host and port from the record</li>
+          <li>If no SRV record exists, fall back to the hostname with the default port (25565 for Java, 19132 for Bedrock)</li>
+        </ol>
+
+        <pre><code class="language-rust">/// Resolve a Minecraft server address using DNS SRV records
+pub async fn resolve_address(address: &amp;str) -&gt; (String, u16) {
+    // Check if port is already specified
+    if let Some((host, port)) = address.rsplit_once(':') {
+        if let Ok(port) = port.parse::&lt;u16&gt;() {
+            return (host.to_string(), port);
+        }
+    }
+
+    // Try SRV lookup
+    let srv_name = format!("_minecraft._tcp.{address}");
+    if let Ok(records) = resolve_srv(&amp;srv_name).await {
+        if let Some(record) = records.first() {
+            return (record.target.clone(), record.port);
+        }
+    }
+
+    // Fall back to default port
+    (address.to_string(), 25565)
+}</code></pre>
+
+        <h2>Java vs Bedrock Detection</h2>
+        <p>MCInfo can automatically detect whether a server is Java or Bedrock edition by running both ping methods in parallel using Tokio:</p>
+        <pre><code class="language-rust">/// Ping a server, auto-detecting Java vs Bedrock
+pub async fn ping_auto(address: &amp;str) -&gt; Result&lt;ServerInfo&gt; {
+    let java = tokio::spawn(ping_java(address.to_string()));
+    let bedrock = tokio::spawn(ping_bedrock(address.to_string()));
+
+    // Return whichever succeeds first, or both if available
+    let (java_result, bedrock_result) = tokio::join!(java, bedrock);
+
+    match (java_result?, bedrock_result?) {
+        (Ok(j), Ok(b)) =&gt; Ok(ServerInfo::Both { java: j, bedrock: b }),
+        (Ok(j), Err(_)) =&gt; Ok(ServerInfo::Java(j)),
+        (Err(_), Ok(b)) =&gt; Ok(ServerInfo::Bedrock(b)),
+        (Err(e), Err(_)) =&gt; Err(e),
+    }
+}</code></pre>
+
+        <h2>Error Handling</h2>
+        <p>The protocol crate uses typed errors to distinguish between different failure modes:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Error</th>
+              <th>Cause</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ConnectionTimeout</code></td>
+              <td>Server did not respond within the timeout window</td>
+              <td>Server may be offline or firewalled</td>
+            </tr>
+            <tr>
+              <td><code>ConnectionRefused</code></td>
+              <td>TCP connection actively refused</td>
+              <td>Port is not open or server is not running</td>
+            </tr>
+            <tr>
+              <td><code>InvalidPacket</code></td>
+              <td>Response could not be parsed</td>
+              <td>Protocol mismatch or corrupted data</td>
+            </tr>
+            <tr>
+              <td><code>DnsResolutionFailed</code></td>
+              <td>Hostname could not be resolved</td>
+              <td>Invalid hostname or DNS issue</td>
+            </tr>
+            <tr>
+              <td><code>VarIntTooLarge</code></td>
+              <td>VarInt exceeded 5 bytes</td>
+              <td>Malformed packet data</td>
+            </tr>
+            <tr>
+              <td><code>UnexpectedEof</code></td>
+              <td>Stream ended before expected data</td>
+              <td>Connection was closed prematurely</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Next Steps</h2>
+        <ul>
+          <li><a href="../crates/mc-protocol.html">mc-protocol Crate Reference</a> &mdash; detailed API documentation</li>
+          <li><a href="../guide/skin-rendering.html">Skin Rendering</a> &mdash; how MCInfo renders player skins</li>
+          <li><a href="../api/servers.html">Server Endpoints</a> &mdash; REST API endpoints that use the protocol layer</li>
+        </ul>
+      </article>
+    </main>
+
+    <nav class="toc">
+      <div class="toc-title">On this page</div>
+      <ul class="toc-list"></ul>
+    </nav>
+  </div>
+
+  <footer class="footer">
+    <span>MCInfo-RS Documentation</span>
+    <a href="https://github.com">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="../nav.js"></script>
+  <script src="../search.js"></script>
+</body>
+</html>
