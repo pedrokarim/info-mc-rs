@@ -9,7 +9,7 @@ use image::{ImageFormat, RgbaImage};
 use wgpu::util::DeviceExt;
 
 use crate::error::RenderError;
-use crate::mesh::{build_character, Vertex};
+use crate::mesh::{build_cape, build_character, build_elytra, BackEquipment, Part, Vertex};
 
 /// Render parameters.
 pub struct RenderParams {
@@ -22,6 +22,10 @@ pub struct RenderParams {
     pub phi: f32,
     /// Walking animation time in degrees (default 90 = max swing).
     pub time: f32,
+    /// Optional cape texture for cape/elytra rendering.
+    pub cape_rgba: Option<RgbaImage>,
+    /// Back equipment: Cape, Elytra, or None.
+    pub back_equipment: BackEquipment,
 }
 
 impl Default for RenderParams {
@@ -33,6 +37,8 @@ impl Default for RenderParams {
             theta: std::f32::consts::FRAC_PI_6, // 30°
             phi: 0.366,                          // ~21°
             time: 90.0,
+            cape_rgba: None,
+            back_equipment: BackEquipment::None,
         }
     }
 }
@@ -218,7 +224,42 @@ pub async fn render_skin_png(
     // ── Mesh ─────────────────────────────────────────────────────────
     // Check if skin has any transparency (if not, overlay regions contain garbage)
     let has_overlay = skin_rgba.pixels().any(|p| p.0[3] < 255);
-    let parts = build_character(params.slim, has_overlay, params.time);
+    let skin_parts = build_character(params.slim, has_overlay, params.time);
+
+    // Back equipment parts (cape or elytra) — use cape texture
+    let back_parts: Vec<Part> = match (&params.cape_rgba, params.back_equipment) {
+        (Some(cape), BackEquipment::Cape) => {
+            build_cape(cape.width() as f32, cape.height() as f32)
+        }
+        (Some(cape), BackEquipment::Elytra) => {
+            build_elytra(cape.width() as f32, cape.height() as f32)
+        }
+        _ => vec![],
+    };
+
+    // Optional cape texture for back equipment
+    let cape_tex_view = params.cape_rgba.as_ref().map(|cape| {
+        let ct = device.create_texture_with_data(
+            &queue,
+            &wgpu::TextureDescriptor {
+                label: Some("cape"),
+                size: wgpu::Extent3d {
+                    width: cape.width(),
+                    height: cape.height(),
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            },
+            wgpu::util::TextureDataOrder::LayerMajor,
+            cape.as_raw(),
+        );
+        ct.create_view(&Default::default())
+    });
 
     // ── Render pass ──────────────────────────────────────────────────
     let mut encoder = device.create_command_encoder(&Default::default());
@@ -245,47 +286,67 @@ pub async fn render_skin_png(
         });
         pass.set_pipeline(&pipeline);
 
-        for part in &parts {
-            let model = model_base * part.transform;
-            let mvp = proj * view * model;
+        // Helper: render a list of parts with a given texture view
+        fn render_parts<'a>(
+            pass: &mut wgpu::RenderPass<'a>,
+            device: &wgpu::Device,
+            bgl: &wgpu::BindGroupLayout,
+            tex_view: &'a wgpu::TextureView,
+            sampler: &'a wgpu::Sampler,
+            proj: &Mat4,
+            view_mat: &Mat4,
+            model_base: &Mat4,
+            parts: &[Part],
+        ) {
+            for part in parts {
+                let model = *model_base * part.transform;
+                let mvp = *proj * *view_mat * model;
 
-            // Uniform buffer: mvp (16 f32) + model (16 f32) + is_overlay (1 u32 as f32, padded to vec4)
-            let mut uniform_data = [0f32; 36];
-            uniform_data[..16].copy_from_slice(&mvp.to_cols_array());
-            uniform_data[16..32].copy_from_slice(&model.to_cols_array());
-            uniform_data[32] = if part.is_overlay { 1.0 } else { 0.0 };
+                let mut uniform_data = [0f32; 36];
+                uniform_data[..16].copy_from_slice(&mvp.to_cols_array());
+                uniform_data[16..32].copy_from_slice(&model.to_cols_array());
+                uniform_data[32] = if part.is_overlay { 1.0 } else { 0.0 };
 
-            let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: cast_slice(&uniform_data),
-                usage: wgpu::BufferUsages::UNIFORM,
-            });
+                let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: cast_slice(&uniform_data),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                });
 
-            let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: None,
-                layout: &bgl,
-                entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: uniform_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(&skin_view) },
-                    wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::Sampler(&sampler) },
-                ],
-            });
+                let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: bgl,
+                    entries: &[
+                        wgpu::BindGroupEntry { binding: 0, resource: uniform_buf.as_entire_binding() },
+                        wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(tex_view) },
+                        wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::Sampler(sampler) },
+                    ],
+                });
 
-            let vbuf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: cast_slice(&part.vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-            let ibuf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: cast_slice(&part.indices),
-                usage: wgpu::BufferUsages::INDEX,
-            });
+                let vbuf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: cast_slice(&part.vertices),
+                    usage: wgpu::BufferUsages::VERTEX,
+                });
+                let ibuf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: cast_slice(&part.indices),
+                    usage: wgpu::BufferUsages::INDEX,
+                });
 
-            pass.set_bind_group(0, &bg, &[]);
-            pass.set_vertex_buffer(0, vbuf.slice(..));
-            pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint16);
-            pass.draw_indexed(0..part.indices.len() as u32, 0, 0..1);
+                pass.set_bind_group(0, &bg, &[]);
+                pass.set_vertex_buffer(0, vbuf.slice(..));
+                pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint16);
+                pass.draw_indexed(0..part.indices.len() as u32, 0, 0..1);
+            }
+        }
+
+        // Pass 1: skin parts
+        render_parts(&mut pass, &device, &bgl, &skin_view, &sampler, &proj, &view, &model_base, &skin_parts);
+
+        // Pass 2: back equipment (cape/elytra) with cape texture
+        if let Some(ref ctv) = cape_tex_view {
+            render_parts(&mut pass, &device, &bgl, ctv, &sampler, &proj, &view, &model_base, &back_parts);
         }
     }
 

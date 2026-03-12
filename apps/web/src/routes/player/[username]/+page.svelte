@@ -34,6 +34,7 @@
 
   let viewMode = $state<'3d' | '2d'>('3d');
   let animPaused = $state(false);
+  let backEquipment = $state<'cape' | 'elytra' | 'none'>('cape');
   let isFavorite = $state(false);
   let favoriteLoading = $state(false);
 
@@ -161,6 +162,14 @@
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1v9m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M2 12v2h12v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
             </a>
 
+            <!-- Back equipment toggle (Cape / Elytra) -->
+            {#if data.player.cape?.url || data.player.optifine_cape?.url}
+              <div class="view-toggle" role="group" aria-label="Back equipment">
+                <button class="view-btn" class:active={backEquipment === 'cape'} onclick={() => (backEquipment = 'cape')}>Cape</button>
+                <button class="view-btn" class:active={backEquipment === 'elytra'} onclick={() => (backEquipment = 'elytra')}>Elytra</button>
+              </div>
+            {/if}
+
             <!-- Favorite -->
             <button
               class="toolbar-btn toolbar-btn--fav"
@@ -184,9 +193,10 @@
           {#key data.player.skin.url}
             <SkinViewer3D
               skinUrl={data.player.skin.url}
-              capeUrl={data.player.cape?.url}
+              capeUrl={data.player.cape?.url ?? data.player.optifine_cape?.url}
               slim={isSlim}
               paused={animPaused}
+              {backEquipment}
               width={240}
               height={360}
             />

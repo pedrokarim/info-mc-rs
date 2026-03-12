@@ -5,7 +5,7 @@ use axum::http::header;
 use axum::response::IntoResponse;
 use serde::Deserialize;
 
-use mc_render3d::{render_skin_png, RenderParams};
+use mc_render3d::{render_skin_png, BackEquipment, RenderParams};
 use mc_skin::fetch_skin;
 
 use crate::error::ApiError;
@@ -19,6 +19,8 @@ pub struct Render3dParams {
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub time: Option<f32>,
+    /// Back equipment: "cape", "elytra", or "none" (default: "cape").
+    pub back: Option<String>,
 }
 
 pub async fn render_skin_3d(
@@ -67,7 +69,25 @@ pub async fn render_skin_3d(
 
     let slim = player.skin.as_ref().map(|s| s.model == "slim").unwrap_or(false);
 
+    let back_equipment = match params.back.as_deref() {
+        Some("elytra") => BackEquipment::Elytra,
+        Some("none") => BackEquipment::None,
+        _ => BackEquipment::Cape, // default
+    };
+
+    // Fetch skin texture
     let skin_rgba = fetch_skin(&skin_url).await.map_err(ApiError::from)?;
+
+    // Fetch cape texture if needed
+    let cape_rgba = if back_equipment != BackEquipment::None {
+        if let Some(cape_url) = player.cape.as_ref().map(|c| &c.url) {
+            fetch_skin(cape_url).await.ok()
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
     let width = params.width.unwrap_or(240).clamp(8, 512);
     let height = params.height.unwrap_or(360).clamp(8, 512);
@@ -75,9 +95,12 @@ pub async fn render_skin_3d(
     let phi = params.phi.unwrap_or(21.0).to_radians();
     let time = params.time.unwrap_or(90.0);
 
-    let png_bytes = render_skin_png(&skin_rgba, &RenderParams { width, height, slim, theta, phi, time })
-        .await
-        .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    let png_bytes = render_skin_png(
+        &skin_rgba,
+        &RenderParams { width, height, slim, theta, phi, time, cape_rgba, back_equipment },
+    )
+    .await
+    .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     Ok(([
         (header::CONTENT_TYPE, "image/png"),

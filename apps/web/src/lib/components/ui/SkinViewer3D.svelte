@@ -9,6 +9,7 @@
   export let height: number = 360;
   export let autoRotate: boolean = false;
   export let paused: boolean = false;
+  export let backEquipment: 'cape' | 'elytra' | 'none' = 'cape';
 
   let container: HTMLDivElement;
   let animId: number;
@@ -174,10 +175,13 @@
     lLegPivot.position.set(2, -4, 0);
     root.add(lLegPivot);
 
-    // ── Cape ─────────────────────────────────────────────────────────
+    // ── Back equipment (Cape / Elytra) ──────────────────────────────
     let capeGroup: THREE.Group | null = null;
+    let elytraGroup: THREE.Group | null = null;
+    let elytraLeftWing: THREE.Group | null = null;
+    let elytraRightWing: THREE.Group | null = null;
 
-    if (capeUrl) {
+    if (capeUrl && backEquipment !== 'none') {
       const capeTex = loader.load(capeUrl);
       capeTex.magFilter = THREE.NearestFilter;
       capeTex.minFilter = THREE.NearestFilter;
@@ -190,11 +194,16 @@
         const tw = img.naturalWidth;
         const th = img.naturalHeight;
 
-        // Cape geometry: 10×16×1, pivot at top edge (translate -8 down, +0.5 forward)
+        const capeMat = new THREE.MeshLambertMaterial({
+          map: capeTex,
+          side: THREE.DoubleSide,
+          transparent: true,
+          alphaTest: 0.1,
+        });
+
+        // ── Cape geometry ──
         const capeGeo = new THREE.BoxGeometry(10, 16, 1);
         capeGeo.translate(0, -8, 0.5);
-
-        // UV from reference script.js (cs-scaled pixel coords)
         applyFaceUVs(capeGeo, [
           [11*cs, cs,   cs,    16*cs],  // +x right
           [0,     cs,   cs,    16*cs],  // -x left
@@ -204,18 +213,55 @@
           [12*cs, cs,   10*cs, 16*cs],  // -z back (inner face)
         ], tw, th);
 
-        const capeMat = new THREE.MeshLambertMaterial({
-          map: capeTex,
-          side: THREE.DoubleSide,
-          transparent: true,
-          alphaTest: 0.1,
-        });
-
         capeGroup = new THREE.Group();
         capeGroup.position.set(0, 8, -2);
-        capeGroup.rotation.y = Math.PI; // rotate 180° so front faces outward
+        capeGroup.rotation.y = Math.PI;
         capeGroup.add(new THREE.Mesh(capeGeo, capeMat));
+        capeGroup.visible = (backEquipment === 'cape');
         root.add(capeGroup);
+
+        // ── Elytra geometry ──
+        // Elytra UVs from skinview3d: setCapeUVs(22, 0, 10, 20, 2)
+        // Face order: +x, -x, +y, -y, +z, -z
+        const elytraUVs: [number, number, number, number][] = [
+          [(22+10)*cs, 2*cs,  2*cs,  20*cs],  // +x right side
+          [22*cs,      2*cs,  2*cs,  20*cs],  // -x left side
+          [(22+2)*cs,  0,     10*cs, 2*cs ],  // +y top
+          [(22+2+10)*cs, 0,   10*cs, 2*cs ],  // -y bottom
+          [(22+2)*cs,  2*cs,  10*cs, 20*cs],  // +z front (outer)
+          [(22+2+10+2)*cs, 2*cs, 10*cs, 20*cs], // -z back (inner)
+        ];
+
+        // Left wing
+        const leftGeo = new THREE.BoxGeometry(12, 22, 4);
+        applyFaceUVs(leftGeo, elytraUVs, tw, th);
+        const leftMesh = new THREE.Mesh(leftGeo, capeMat);
+        leftMesh.position.set(-5, -10, -1);
+
+        elytraLeftWing = new THREE.Group();
+        elytraLeftWing.position.set(5, 0, 0);
+        elytraLeftWing.rotation.set(0.2618, 0.01, 0.2618);
+        elytraLeftWing.add(leftMesh);
+
+        // Right wing (mirrored)
+        const rightGeo = new THREE.BoxGeometry(12, 22, 4);
+        applyFaceUVs(rightGeo, elytraUVs, tw, th);
+        const rightMesh = new THREE.Mesh(rightGeo, capeMat);
+        rightMesh.scale.x = -1;
+        rightMesh.position.set(5, -10, -1);
+
+        elytraRightWing = new THREE.Group();
+        elytraRightWing.position.set(-5, 0, 0);
+        elytraRightWing.rotation.set(0.2618, -0.01, -0.2618);
+        elytraRightWing.add(rightMesh);
+
+        elytraGroup = new THREE.Group();
+        elytraGroup.position.set(0, 8, -2);
+        elytraGroup.rotation.y = Math.PI;
+        elytraGroup.add(elytraLeftWing);
+        elytraGroup.add(elytraRightWing);
+        elytraGroup.visible = (backEquipment === 'elytra');
+        root.add(elytraGroup);
       };
       img.src = capeUrl;
     }
@@ -274,8 +320,15 @@
         rLegPivot.rotation.x =  THREE.MathUtils.degToRad(20) * Math.sin(rad);
         lLegPivot.rotation.x = -THREE.MathUtils.degToRad(20) * Math.sin(rad);
 
-        if (capeGroup) {
+        if (capeGroup && capeGroup.visible) {
           capeGroup.rotation.x = THREE.MathUtils.degToRad(18) - THREE.MathUtils.degToRad(6) * Math.sin(rad / 4);
+        }
+
+        if (elytraLeftWing && elytraRightWing && elytraGroup && elytraGroup.visible) {
+          // Idle flutter: gentle Z-axis oscillation
+          const flutter = THREE.MathUtils.degToRad(3) * Math.sin(rad / 3);
+          elytraLeftWing.rotation.z = 0.2618 + flutter;
+          elytraRightWing.rotation.z = -(0.2618 + flutter);
         }
 
         if (autoRotate) theta += 0.005;

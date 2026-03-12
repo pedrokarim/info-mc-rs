@@ -285,6 +285,96 @@ pub fn build_character(slim: bool, has_overlay: bool, time: f32) -> Vec<Part> {
     parts
 }
 
+/// Back equipment type for cape/elytra rendering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackEquipment {
+    Cape,
+    Elytra,
+    None,
+}
+
+/// Build a cape mesh using the cape texture.
+/// Returns a single Part positioned at the back of the body with a slight tilt.
+pub fn build_cape(cape_tw: f32, cape_th: f32) -> Vec<Part> {
+    // Cape scale detection (same logic as client)
+    let cs = cape_scale(cape_th);
+
+    // Cape UVs in cape texture pixel coords — same as Three.js client
+    let cape_uv: [[f32; 4]; 6] = [
+        [11.0*cs, cs,       cs,      16.0*cs],  // +x right
+        [0.0,     cs,       cs,      16.0*cs],  // -x left
+        [cs,      0.0,      10.0*cs, cs      ],  // +y top
+        [11.0*cs, cs,       10.0*cs, -cs     ],  // -y bottom (flip)
+        [cs,      cs,       10.0*cs, 16.0*cs ],  // +z front (outer)
+        [12.0*cs, cs,       10.0*cs, 16.0*cs ],  // -z back (inner)
+    ];
+
+    let (v, i) = build_box(10.0, 16.0, 1.0, &cape_uv, cape_tw, cape_th);
+
+    // Transform: translate mesh so pivot is at top edge, then position at back of body
+    // Mesh offset: (0, -8, 0.5) then group at (0, 8, -2) rotated Y=π and tilt X=18°
+    let t = Mat4::from_translation(Vec3::new(0.0, 8.0, -2.0))
+          * Mat4::from_rotation_y(std::f32::consts::PI)
+          * Mat4::from_rotation_x(18f32.to_radians())
+          * Mat4::from_translation(Vec3::new(0.0, -8.0, 0.5));
+
+    vec![Part { vertices: v, indices: i, transform: t, is_overlay: false }]
+}
+
+/// Build elytra wings using the cape texture.
+/// Returns 2 Parts (left wing + right wing) in idle pose.
+pub fn build_elytra(cape_tw: f32, cape_th: f32) -> Vec<Part> {
+    let cs = cape_scale(cape_th);
+
+    // Elytra UVs from skinview3d: setCapeUVs(22, 0, 10, 20, 2)
+    let elytra_uv: [[f32; 4]; 6] = [
+        [(22.0+10.0)*cs, 2.0*cs,  2.0*cs,  20.0*cs],  // +x right side
+        [22.0*cs,        2.0*cs,  2.0*cs,  20.0*cs],   // -x left side
+        [(22.0+2.0)*cs,  0.0,     10.0*cs, 2.0*cs ],   // +y top
+        [(22.0+2.0+10.0)*cs, 0.0, 10.0*cs, 2.0*cs ],   // -y bottom
+        [(22.0+2.0)*cs,  2.0*cs,  10.0*cs, 20.0*cs],   // +z front (outer)
+        [(22.0+2.0+10.0+2.0)*cs, 2.0*cs, 10.0*cs, 20.0*cs], // -z back (inner)
+    ];
+
+    let (v_left, i_left) = build_box(12.0, 22.0, 4.0, &elytra_uv, cape_tw, cape_th);
+    let (v_right_raw, i_right) = build_box(12.0, 22.0, 4.0, &elytra_uv, cape_tw, cape_th);
+
+    // Mirror right wing on X axis (negate X positions and X normals)
+    let v_right: Vec<Vertex> = v_right_raw.into_iter().map(|mut v| {
+        v.pos[0] = -v.pos[0];
+        v.normal[0] = -v.normal[0];
+        v
+    }).collect();
+
+    // Left wing: parent at (0,8,-2) rot Y=π, wing pivot at (5,0,0) rot (0.2618, 0.01, 0.2618), mesh at (-5,-10,-1)
+    let left_t = Mat4::from_translation(Vec3::new(0.0, 8.0, -2.0))
+               * Mat4::from_rotation_y(std::f32::consts::PI)
+               * Mat4::from_translation(Vec3::new(5.0, 0.0, 0.0))
+               * Mat4::from_euler(glam::EulerRot::XYZ, 0.2618, 0.01, 0.2618)
+               * Mat4::from_translation(Vec3::new(-5.0, -10.0, -1.0));
+
+    // Right wing: parent at (0,8,-2) rot Y=π, wing pivot at (-5,0,0) rot (0.2618, -0.01, -0.2618), mesh at (5,-10,-1)
+    let right_t = Mat4::from_translation(Vec3::new(0.0, 8.0, -2.0))
+                * Mat4::from_rotation_y(std::f32::consts::PI)
+                * Mat4::from_translation(Vec3::new(-5.0, 0.0, 0.0))
+                * Mat4::from_euler(glam::EulerRot::XYZ, 0.2618, -0.01, -0.2618)
+                * Mat4::from_translation(Vec3::new(5.0, -10.0, -1.0));
+
+    vec![
+        Part { vertices: v_left, indices: i_left, transform: left_t, is_overlay: false },
+        Part { vertices: v_right, indices: i_right, transform: right_t, is_overlay: false },
+    ]
+}
+
+/// Detect cape texture scale from height.
+fn cape_scale(h: f32) -> f32 {
+    let h = h as u32;
+    if h % 22 == 0 { return (h / 22) as f32; }
+    if h % 17 == 0 { return (h / 17) as f32; }
+    if h >= 32 && (h & (h - 1)) == 0 { return (h / 32) as f32; }
+    (h / 22).max(1) as f32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
