@@ -20,7 +20,7 @@ async fn main() {
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
 
-    let state = Arc::new(AppState::new());
+    let state = Arc::new(AppState::new().await);
 
     // CORS - allow all origins for now (restrict in production)
     let cors = CorsLayer::new()
@@ -43,6 +43,16 @@ async fn main() {
         .route(
             "/api/v1/render3d/{identifier}",
             get(routes::render3d::render_skin_3d),
+        )
+        .route(
+            "/api/v1/favorites",
+            get(routes::favorites::list_favorites),
+        )
+        .route(
+            "/api/v1/favorites/{uuid}",
+            get(routes::favorites::is_favorite)
+                .post(routes::favorites::add_favorite)
+                .delete(routes::favorites::remove_favorite),
         )
         .layer(cors)
         .with_state(state);

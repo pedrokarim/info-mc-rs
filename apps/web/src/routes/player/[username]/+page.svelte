@@ -33,12 +33,47 @@
   const isSlim = $derived(data.player?.skin?.model === 'slim');
 
   let viewMode = $state<'3d' | '2d'>('3d');
+  let animPaused = $state(false);
+  let isFavorite = $state(false);
+  let favoriteLoading = $state(false);
 
-  // Reset to 3D when player changes
+  // Reset to 3D + unpause when player changes
   $effect(() => {
     data.username;
     viewMode = '3d';
+    animPaused = false;
   });
+
+  // Check favorite status on load
+  $effect(() => {
+    if (!data.player?.uuid) return;
+    fetch(`${data.apiBase}/api/v1/favorites/${data.player.uuid}`)
+      .then(r => r.json())
+      .then(d => { isFavorite = d.favorited === true; })
+      .catch(() => { isFavorite = false; });
+  });
+
+  async function toggleFavorite() {
+    if (!data.player?.uuid || favoriteLoading) return;
+    favoriteLoading = true;
+    const was = isFavorite;
+    isFavorite = !was; // optimistic
+    try {
+      if (was) {
+        await fetch(`${data.apiBase}/api/v1/favorites/${data.player.uuid}`, { method: 'DELETE' });
+      } else {
+        await fetch(`${data.apiBase}/api/v1/favorites/${data.player.uuid}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: data.player.username }),
+        });
+      }
+    } catch {
+      isFavorite = was; // revert
+    } finally {
+      favoriteLoading = false;
+    }
+  }
 
   const playerDetails = $derived(
     data.player
@@ -58,7 +93,7 @@
       <p class="eyebrow">Player Detail</p>
       <h2>{data.username}</h2>
       <p>
-        Viewer 3D interactif + rendus 2D head/face depuis notre API Rust.
+        Viewer 3D interactif + rendu 2D depuis notre API Rust.
         Drag pour faire pivoter le skin.
       </p>
       <div class="hero-tags">
@@ -101,17 +136,47 @@
       <!-- Viewer column -->
       <div class="viewer-col">
         {#if data.player.skin?.url}
-          <div class="view-toggle" role="group" aria-label="Mode viewer">
+          <div class="viewer-toolbar">
+            <!-- Play / Pause -->
             <button
-              class="view-btn"
-              class:active={viewMode === '3d'}
-              onclick={() => (viewMode = '3d')}
-            >3D</button>
+              class="toolbar-btn"
+              title={animPaused ? 'Reprendre animation' : 'Pause animation'}
+              onclick={() => (animPaused = !animPaused)}
+            >
+              {#if animPaused}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6z"/></svg>
+              {:else}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="3.5" height="12"/><rect x="9.5" y="2" width="3.5" height="12"/></svg>
+              {/if}
+            </button>
+
+            <!-- 3D / 2D toggle -->
+            <div class="view-toggle" role="group" aria-label="Mode viewer">
+              <button class="view-btn" class:active={viewMode === '3d'} onclick={() => (viewMode = '3d')}>3D</button>
+              <button class="view-btn" class:active={viewMode === '2d'} onclick={() => (viewMode = '2d')}>2D</button>
+            </div>
+
+            <!-- Download skin -->
+            <a class="toolbar-btn" href={data.player.skin.url} download title="Télécharger skin PNG">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1v9m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M2 12v2h12v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+            </a>
+
+            <!-- Favorite -->
             <button
-              class="view-btn"
-              class:active={viewMode === '2d'}
-              onclick={() => (viewMode = '2d')}
-            >2D</button>
+              class="toolbar-btn toolbar-btn--fav"
+              class:is-fav={isFavorite}
+              title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              onclick={toggleFavorite}
+              disabled={favoriteLoading}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16">
+                <path d="M8 14s-5.5-3.5-5.5-7.5C2.5 4 4.5 2 6.5 2c1.2 0 2.3.8 3 1.5C10.2 2.8 11.3 2 12.5 2c2 0 3 2 3 4.5S8 14 8 14z"
+                  fill={isFavorite ? '#e74c5e' : 'none'}
+                  stroke={isFavorite ? '#e74c5e' : 'currentColor'}
+                  stroke-width="1.2"
+                />
+              </svg>
+            </button>
           </div>
         {/if}
 
@@ -121,6 +186,7 @@
               skinUrl={data.player.skin.url}
               capeUrl={data.player.cape?.url}
               slim={isSlim}
+              paused={animPaused}
               width={240}
               height={360}
             />
@@ -153,22 +219,14 @@
         </div>
 
         <div class="card" style="margin-top: 1rem;">
-          <div class="card-head"><h4>Aperçus 2D</h4></div>
+          <div class="card-head"><h4>Aperçu 2D</h4></div>
           <div class="card-body renders-row">
             <div class="render-tile">
-              <p class="render-label">Head</p>
-              <img
-                class="skin-preview head"
-                src={renderUrl('head', 128)}
-                alt={`Head ${data.player.username}`}
-              />
-            </div>
-            <div class="render-tile">
-              <p class="render-label">Face</p>
+              <p class="render-label">Visage</p>
               <img
                 class="skin-preview head"
                 src={renderUrl('face', 128)}
-                alt={`Face ${data.player.username}`}
+                alt={`Visage ${data.player.username}`}
               />
             </div>
           </div>
@@ -279,6 +337,40 @@
   }
   .cape-link:hover { text-decoration: underline; }
 
+  /* Viewer toolbar */
+  .viewer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+  }
+  .toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(76, 120, 176, 0.38);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(6px);
+    color: var(--ink-1);
+    cursor: pointer;
+    transition: background 120ms, color 120ms, transform 100ms;
+    text-decoration: none;
+    padding: 0;
+  }
+  .toolbar-btn:hover {
+    background: rgba(255, 255, 255, 0.92);
+  }
+  .toolbar-btn:active {
+    transform: scale(0.93);
+  }
+  .toolbar-btn--fav.is-fav {
+    border-color: rgba(231, 76, 94, 0.4);
+    background: rgba(231, 76, 94, 0.08);
+  }
+
   /* View toggle */
   .view-toggle {
     display: inline-flex;
@@ -287,7 +379,6 @@
     background: rgba(255, 255, 255, 0.72);
     padding: 0.18rem;
     gap: 0.18rem;
-    margin-bottom: 0.6rem;
   }
   .view-btn {
     font: inherit;

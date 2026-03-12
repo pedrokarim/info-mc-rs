@@ -8,6 +8,7 @@
   export let width: number = 240;
   export let height: number = 360;
   export let autoRotate: boolean = false;
+  export let paused: boolean = false;
 
   let container: HTMLDivElement;
   let animId: number;
@@ -264,20 +265,21 @@
     let t = 0;
     function animate() {
       animId = requestAnimationFrame(animate);
-      t += 360 / 1500;
-      const rad = THREE.MathUtils.degToRad(t);
+      if (!paused) {
+        t += 360 / 1500;
+        const rad = THREE.MathUtils.degToRad(t);
 
-      rArmPivot.rotation.x = -THREE.MathUtils.degToRad(18) * Math.sin(rad);
-      lArmPivot.rotation.x =  THREE.MathUtils.degToRad(18) * Math.sin(rad);
-      rLegPivot.rotation.x =  THREE.MathUtils.degToRad(20) * Math.sin(rad);
-      lLegPivot.rotation.x = -THREE.MathUtils.degToRad(20) * Math.sin(rad);
+        rArmPivot.rotation.x = -THREE.MathUtils.degToRad(18) * Math.sin(rad);
+        lArmPivot.rotation.x =  THREE.MathUtils.degToRad(18) * Math.sin(rad);
+        rLegPivot.rotation.x =  THREE.MathUtils.degToRad(20) * Math.sin(rad);
+        lLegPivot.rotation.x = -THREE.MathUtils.degToRad(20) * Math.sin(rad);
 
-      if (capeGroup) {
-        // Cape sways gently: base tilt 18° minus 6° wave on slower cycle
-        capeGroup.rotation.x = THREE.MathUtils.degToRad(18) - THREE.MathUtils.degToRad(6) * Math.sin(rad / 4);
+        if (capeGroup) {
+          capeGroup.rotation.x = THREE.MathUtils.degToRad(18) - THREE.MathUtils.degToRad(6) * Math.sin(rad / 4);
+        }
+
+        if (autoRotate) theta += 0.005;
       }
-
-      if (autoRotate) theta += 0.005;
       applyRotation();
 
       renderer.render(scene, camera);
