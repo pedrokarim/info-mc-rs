@@ -30,6 +30,9 @@ pub struct Part {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u16>,
     pub transform: Mat4,
+    /// true for overlay layers (hat, jacket, sleeves, pants) — uses texture alpha.
+    /// false for base layers — rendered fully opaque.
+    pub is_overlay: bool,
 }
 
 /// UV rectangle in texture pixels → [0..1] range.
@@ -80,23 +83,24 @@ pub fn build_box(
         Vec3::Z, Vec3::NEG_Z,
     ];
 
-    // Corner positions for each face (CCW winding when viewed from outside)
+    // Corner positions for each face — all CCW winding when viewed from outside.
+    // Order within each face: bl, br, tr, tl (as seen from outside the cube).
     let face_corners: [[Vec3; 4]; 6] = [
-        // +x (right)
-        [Vec3::new(hw,-hh,-hd), Vec3::new(hw,-hh, hd), Vec3::new(hw, hh, hd), Vec3::new(hw, hh,-hd)],
-        // -x (left)
-        [Vec3::new(-hw,-hh, hd), Vec3::new(-hw,-hh,-hd), Vec3::new(-hw, hh,-hd), Vec3::new(-hw, hh, hd)],
-        // +y (top)
+        // +x (character left) — viewed from +x: y up, z left
+        [Vec3::new(hw,-hh, hd), Vec3::new(hw,-hh,-hd), Vec3::new(hw, hh,-hd), Vec3::new(hw, hh, hd)],
+        // -x (character right) — viewed from -x: y up, z right
+        [Vec3::new(-hw,-hh,-hd), Vec3::new(-hw,-hh, hd), Vec3::new(-hw, hh, hd), Vec3::new(-hw, hh,-hd)],
+        // +y (top) — viewed from +y: x right, z forward (=bottom of screen)
         [Vec3::new(-hw, hh, hd), Vec3::new( hw, hh, hd), Vec3::new( hw, hh,-hd), Vec3::new(-hw, hh,-hd)],
         // -y (bottom)
         [Vec3::new(-hw,-hh,-hd), Vec3::new( hw,-hh,-hd), Vec3::new( hw,-hh, hd), Vec3::new(-hw,-hh, hd)],
-        // +z (front)
+        // +z (front) — viewed from +z: x right, y up
         [Vec3::new(-hw,-hh, hd), Vec3::new( hw,-hh, hd), Vec3::new( hw, hh, hd), Vec3::new(-hw, hh, hd)],
-        // -z (back)
+        // -z (back) — viewed from -z: x left, y up
         [Vec3::new( hw,-hh,-hd), Vec3::new(-hw,-hh,-hd), Vec3::new(-hw, hh,-hd), Vec3::new( hw, hh,-hd)],
     ];
 
-    // UV corners: bl, br, tr, tl (matching face_corners order)
+    // UV corners: bl, br, tr, tl — uniform mapping for all faces (no special swap).
     let mut vertices = Vec::with_capacity(24);
     let mut indices: Vec<u16> = Vec::with_capacity(36);
 
@@ -127,7 +131,9 @@ pub fn build_box(
 /// Returns a list of `Part` with their world transforms.
 /// Face order: +x, -x, +y, -y, +z, -z  (right, left, top, bottom, front, back)
 /// Side faces of arms (+x/-x) always use depth=4, not aw.
-pub fn build_character(slim: bool) -> Vec<Part> {
+/// `has_overlay` should be true only if the skin image has any pixel with alpha < 255
+/// (otherwise the overlay UV regions contain opaque garbage and must be skipped).
+pub fn build_character(slim: bool, has_overlay: bool) -> Vec<Part> {
     const TW: f32 = 64.0;
     const TH: f32 = 64.0;
 
@@ -137,64 +143,64 @@ pub fn build_character(slim: bool) -> Vec<Part> {
     // ── Base layer UV tables ──────────────────────────────────────────
     let head_uv: [[f32; 4]; 6] = [
         [16.0,8.0,8.0,8.0],  [0.0,8.0,8.0,8.0],
-        [8.0,0.0,8.0,8.0],   [16.0,0.0,8.0,8.0],
+        [8.0,0.0,8.0,8.0],   [16.0,7.0,8.0,-8.0],
         [8.0,8.0,8.0,8.0],   [24.0,8.0,8.0,8.0],
     ];
     let body_uv: [[f32; 4]; 6] = [
         [28.0,20.0,4.0,12.0], [16.0,20.0,4.0,12.0],
-        [20.0,16.0,8.0,4.0],  [28.0,16.0,8.0,4.0],
+        [20.0,16.0,8.0,4.0],  [28.0,19.0,8.0,-4.0],
         [20.0,20.0,8.0,12.0], [32.0,20.0,8.0,12.0],
     ];
     let rarm_uv: [[f32; 4]; 6] = [
         [44.0+aw,20.0,4.0,12.0], [40.0,20.0,4.0,12.0],
-        [44.0,16.0,aw,4.0],       [44.0+aw,16.0,aw,4.0],
+        [44.0,16.0,aw,4.0],       [44.0+aw,19.0,aw,-4.0],
         [44.0,20.0,aw,12.0],      [44.0+aw+4.0,20.0,aw,12.0],
     ];
     let larm_uv: [[f32; 4]; 6] = [
         [36.0+aw,52.0,4.0,12.0], [32.0,52.0,4.0,12.0],
-        [36.0,48.0,aw,4.0],       [36.0+aw,48.0,aw,4.0],
+        [36.0,48.0,aw,4.0],       [36.0+aw,51.0,aw,-4.0],
         [36.0,52.0,aw,12.0],      [36.0+aw+4.0,52.0,aw,12.0],
     ];
     let rleg_uv: [[f32; 4]; 6] = [
         [8.0,20.0,4.0,12.0],  [0.0,20.0,4.0,12.0],
-        [4.0,16.0,4.0,4.0],   [8.0,16.0,4.0,4.0],
+        [4.0,16.0,4.0,4.0],   [8.0,19.0,4.0,-4.0],
         [4.0,20.0,4.0,12.0],  [12.0,20.0,4.0,12.0],
     ];
     let lleg_uv: [[f32; 4]; 6] = [
         [24.0,52.0,4.0,12.0], [16.0,52.0,4.0,12.0],
-        [20.0,48.0,4.0,4.0],  [24.0,48.0,4.0,4.0],
+        [20.0,48.0,4.0,4.0],  [24.0,51.0,4.0,-4.0],
         [20.0,52.0,4.0,12.0], [28.0,52.0,4.0,12.0],
     ];
 
     // ── Overlay layer UV tables ───────────────────────────────────────
     let hat_uv: [[f32; 4]; 6] = [
         [48.0,8.0,8.0,8.0],  [32.0,8.0,8.0,8.0],
-        [40.0,0.0,8.0,8.0],  [48.0,0.0,8.0,8.0],
+        [40.0,0.0,8.0,8.0],  [48.0,7.0,8.0,-8.0],
         [40.0,8.0,8.0,8.0],  [56.0,8.0,8.0,8.0],
     ];
     let jacket_uv: [[f32; 4]; 6] = [
         [28.0,36.0,4.0,12.0], [16.0,36.0,4.0,12.0],
-        [20.0,32.0,8.0,4.0],  [28.0,32.0,8.0,4.0],
+        [20.0,32.0,8.0,4.0],  [28.0,35.0,8.0,-4.0],
         [20.0,36.0,8.0,12.0], [32.0,36.0,8.0,12.0],
     ];
     let rsleeve_uv: [[f32; 4]; 6] = [
         [44.0+aw,36.0,4.0,12.0], [40.0,36.0,4.0,12.0],
-        [44.0,32.0,aw,4.0],       [44.0+aw,32.0,aw,4.0],
+        [44.0,32.0,aw,4.0],       [44.0+aw,35.0,aw,-4.0],
         [44.0,36.0,aw,12.0],      [44.0+aw+4.0,36.0,aw,12.0],
     ];
     let lsleeve_uv: [[f32; 4]; 6] = [
         [52.0+aw,52.0,4.0,12.0], [48.0,52.0,4.0,12.0],
-        [52.0,48.0,aw,4.0],       [52.0+aw,48.0,aw,4.0],
+        [52.0,48.0,aw,4.0],       [52.0+aw,51.0,aw,-4.0],
         [52.0,52.0,aw,12.0],      [52.0+aw+4.0,52.0,aw,12.0],
     ];
     let rpant_uv: [[f32; 4]; 6] = [
         [8.0,36.0,4.0,12.0],  [0.0,36.0,4.0,12.0],
-        [4.0,32.0,4.0,4.0],   [8.0,32.0,4.0,4.0],
+        [4.0,32.0,4.0,4.0],   [8.0,35.0,4.0,-4.0],
         [4.0,36.0,4.0,12.0],  [12.0,36.0,4.0,12.0],
     ];
     let lpant_uv: [[f32; 4]; 6] = [
         [8.0,52.0,4.0,12.0],  [0.0,52.0,4.0,12.0],
-        [4.0,48.0,4.0,4.0],   [8.0,48.0,4.0,4.0],
+        [4.0,48.0,4.0,4.0],   [8.0,51.0,4.0,-4.0],
         [4.0,52.0,4.0,12.0],  [12.0,52.0,4.0,12.0],
     ];
 
@@ -206,54 +212,67 @@ pub fn build_character(slim: bool) -> Vec<Part> {
     // ── Head + Hat ───────────────────────────────────────────────────
     let head_t = Mat4::from_translation(Vec3::new(0.0, 12.0, 0.0));
     let (v, i) = build_box(8.0, 8.0, 8.0, &head_uv, TW, TH);
-    parts.push(Part { vertices: v, indices: i, transform: head_t });
-    let (v, i) = build_box(8.0+OV, 8.0+OV, 8.0+OV, &hat_uv, TW, TH);
-    parts.push(Part { vertices: v, indices: i, transform: head_t });
+    parts.push(Part { vertices: v, indices: i, transform: head_t, is_overlay: false });
+    if has_overlay {
+        let (v, i) = build_box(9.0, 9.0, 9.0, &hat_uv, TW, TH);
+        parts.push(Part { vertices: v, indices: i, transform: head_t, is_overlay: true });
+    }
 
     // ── Body + Jacket ────────────────────────────────────────────────
+    let body_t = Mat4::from_translation(Vec3::new(0.0, 2.0, 0.0));
     let (v, i) = build_box(8.0, 12.0, 4.0, &body_uv, TW, TH);
-    parts.push(Part { vertices: v, indices: i, transform: Mat4::IDENTITY });
-    let (v, i) = build_box(8.0+OV, 12.0+OV, 4.0+OV, &jacket_uv, TW, TH);
-    parts.push(Part { vertices: v, indices: i, transform: Mat4::IDENTITY });
+    parts.push(Part { vertices: v, indices: i, transform: body_t, is_overlay: false });
+    if has_overlay {
+        let (v, i) = build_box(8.0+OV, 12.0+OV, 4.0+OV, &jacket_uv, TW, TH);
+        parts.push(Part { vertices: v, indices: i, transform: body_t, is_overlay: true });
+    }
 
     // ── Right arm + Sleeve ───────────────────────────────────────────
     {
         let t = Mat4::from_translation(Vec3::new(-arm_off, 6.0, 0.0))
-              * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
+              * Mat4::from_translation(Vec3::new(0.0, -4.0, 0.0));
         let (v, i) = build_box(aw, 12.0, 4.0, &rarm_uv, TW, TH);
-        parts.push(Part { vertices: v, indices: i, transform: t });
-        let (v, i) = build_box(aw+OV, 12.0+OV, 4.0+OV, &rsleeve_uv, TW, TH);
-        parts.push(Part { vertices: v, indices: i, transform: t });
+        parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: false });
+        if has_overlay {
+            let (v, i) = build_box(aw+OV, 12.0+OV, 4.0+OV, &rsleeve_uv, TW, TH);
+            parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: true });
+        }
     }
 
     // ── Left arm + Sleeve ────────────────────────────────────────────
     {
         let t = Mat4::from_translation(Vec3::new(arm_off, 6.0, 0.0))
-              * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
+              * Mat4::from_translation(Vec3::new(0.0, -4.0, 0.0));
         let (v, i) = build_box(aw, 12.0, 4.0, &larm_uv, TW, TH);
-        parts.push(Part { vertices: v, indices: i, transform: t });
-        let (v, i) = build_box(aw+OV, 12.0+OV, 4.0+OV, &lsleeve_uv, TW, TH);
-        parts.push(Part { vertices: v, indices: i, transform: t });
+        parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: false });
+        if has_overlay {
+            let (v, i) = build_box(aw+OV, 12.0+OV, 4.0+OV, &lsleeve_uv, TW, TH);
+            parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: true });
+        }
     }
 
     // ── Right leg + Pants ────────────────────────────────────────────
     {
-        let t = Mat4::from_translation(Vec3::new(-2.0, -6.0, 0.0))
+        let t = Mat4::from_translation(Vec3::new(-2.0, -4.0, 0.0))
               * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
         let (v, i) = build_box(4.0, 12.0, 4.0, &rleg_uv, TW, TH);
-        parts.push(Part { vertices: v, indices: i, transform: t });
-        let (v, i) = build_box(4.0+OV, 12.0+OV, 4.0+OV, &rpant_uv, TW, TH);
-        parts.push(Part { vertices: v, indices: i, transform: t });
+        parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: false });
+        if has_overlay {
+            let (v, i) = build_box(4.0+OV, 12.0+OV, 4.0+OV, &rpant_uv, TW, TH);
+            parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: true });
+        }
     }
 
     // ── Left leg + Pants ─────────────────────────────────────────────
     {
-        let t = Mat4::from_translation(Vec3::new(2.0, -6.0, 0.0))
+        let t = Mat4::from_translation(Vec3::new(2.0, -4.0, 0.0))
               * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
         let (v, i) = build_box(4.0, 12.0, 4.0, &lleg_uv, TW, TH);
-        parts.push(Part { vertices: v, indices: i, transform: t });
-        let (v, i) = build_box(4.0+OV, 12.0+OV, 4.0+OV, &lpant_uv, TW, TH);
-        parts.push(Part { vertices: v, indices: i, transform: t });
+        parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: false });
+        if has_overlay {
+            let (v, i) = build_box(4.0+OV, 12.0+OV, 4.0+OV, &lpant_uv, TW, TH);
+            parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: true });
+        }
     }
 
     parts

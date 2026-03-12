@@ -125,7 +125,7 @@ pub async fn render_skin_png(
             // uniform: matrices
             wgpu::BindGroupLayoutEntry {
                 binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
+                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
@@ -213,7 +213,9 @@ pub async fn render_skin_png(
     let model_base = Mat4::from_translation(Vec3::new(0.0, 4.0, 0.0)) * rot;
 
     // ── Mesh ─────────────────────────────────────────────────────────
-    let parts = build_character(params.slim);
+    // Check if skin has any transparency (if not, overlay regions contain garbage)
+    let has_overlay = skin_rgba.pixels().any(|p| p.0[3] < 255);
+    let parts = build_character(params.slim, has_overlay);
 
     // ── Render pass ──────────────────────────────────────────────────
     let mut encoder = device.create_command_encoder(&Default::default());
@@ -244,10 +246,11 @@ pub async fn render_skin_png(
             let model = model_base * part.transform;
             let mvp = proj * view * model;
 
-            // Uniform buffer: mvp (16 f32) + model (16 f32)
-            let mut uniform_data = [0f32; 32];
+            // Uniform buffer: mvp (16 f32) + model (16 f32) + is_overlay (1 u32 as f32, padded to vec4)
+            let mut uniform_data = [0f32; 36];
             uniform_data[..16].copy_from_slice(&mvp.to_cols_array());
-            uniform_data[16..].copy_from_slice(&model.to_cols_array());
+            uniform_data[16..32].copy_from_slice(&model.to_cols_array());
+            uniform_data[32] = if part.is_overlay { 1.0 } else { 0.0 };
 
             let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
@@ -337,8 +340,12 @@ fn align_to(val: u32, align: u32) -> u32 {
 // ── WGSL Shader ───────────────────────────────────────────────────────
 const SHADER_SRC: &str = r#"
 struct Uniforms {
-    mvp:   mat4x4<f32>,
-    model: mat4x4<f32>,
+    mvp:        mat4x4<f32>,
+    model:      mat4x4<f32>,
+    is_overlay: f32,
+    _pad0:      f32,
+    _pad1:      f32,
+    _pad2:      f32,
 }
 @group(0) @binding(0) var<uniform> u: Uniforms;
 @group(0) @binding(1) var t_skin: texture_2d<f32>;
@@ -367,7 +374,14 @@ fn vs_main(v: VIn) -> VOut {
 @fragment
 fn fs_main(in: VOut) -> @location(0) vec4<f32> {
     let col = textureSample(t_skin, s_skin, in.uv);
-    if col.a < 0.1 { discard; }
+
+    // Overlay parts: discard fully transparent pixels
+    // Base parts: render opaque (skin base regions may have garbage alpha)
+    if u.is_overlay > 0.5 {
+        if col.a < 0.1 { discard; }
+    }
+
+    let alpha = select(1.0, col.a, u.is_overlay > 0.5);
 
     // Simple lambertian shading
     let ambient   = vec3<f32>(0.7, 0.7, 0.7);
@@ -375,6 +389,6 @@ fn fs_main(in: VOut) -> @location(0) vec4<f32> {
     let diff      = max(dot(in.world_n, light_dir), 0.0) * 0.3;
     let lighting  = ambient + vec3<f32>(diff, diff, diff);
 
-    return vec4<f32>(col.rgb * lighting, col.a);
+    return vec4<f32>(col.rgb * lighting, alpha);
 }
 "#;

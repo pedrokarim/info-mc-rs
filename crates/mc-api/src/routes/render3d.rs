@@ -77,5 +77,8 @@ pub async fn render_skin_3d(
         .await
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    Ok(([( header::CONTENT_TYPE, "image/png")], png_bytes))
+    Ok(([
+        (header::CONTENT_TYPE, "image/png"),
+        (header::CACHE_CONTROL, "no-cache, no-store, must-revalidate"),
+    ], png_bytes))
 }
