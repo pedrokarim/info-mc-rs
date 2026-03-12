@@ -18,6 +18,7 @@ pub struct Render3dParams {
     pub phi: Option<f32>,
     pub width: Option<u32>,
     pub height: Option<u32>,
+    pub time: Option<f32>,
 }
 
 pub async fn render_skin_3d(
@@ -72,8 +73,9 @@ pub async fn render_skin_3d(
     let height = params.height.unwrap_or(360).clamp(8, 512);
     let theta = params.theta.unwrap_or(30.0).to_radians();
     let phi = params.phi.unwrap_or(21.0).to_radians();
+    let time = params.time.unwrap_or(90.0);
 
-    let png_bytes = render_skin_png(&skin_rgba, &RenderParams { width, height, slim, theta, phi })
+    let png_bytes = render_skin_png(&skin_rgba, &RenderParams { width, height, slim, theta, phi, time })
         .await
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 

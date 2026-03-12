@@ -133,7 +133,7 @@ pub fn build_box(
 /// Side faces of arms (+x/-x) always use depth=4, not aw.
 /// `has_overlay` should be true only if the skin image has any pixel with alpha < 255
 /// (otherwise the overlay UV regions contain opaque garbage and must be skipped).
-pub fn build_character(slim: bool, has_overlay: bool) -> Vec<Part> {
+pub fn build_character(slim: bool, has_overlay: bool, time: f32) -> Vec<Part> {
     const TW: f32 = 64.0;
     const TH: f32 = 64.0;
 
@@ -207,6 +207,9 @@ pub fn build_character(slim: bool, has_overlay: bool) -> Vec<Part> {
     // Overlay boxes are 0.5 larger than base (0.25 per face, matches MC client)
     const OV: f32 = 0.5;
 
+    // Walking pose: time in degrees, default 90 = max swing
+    let angle = time.to_radians().sin();
+
     let mut parts = Vec::new();
 
     // ── Head + Hat ───────────────────────────────────────────────────
@@ -230,6 +233,7 @@ pub fn build_character(slim: bool, has_overlay: bool) -> Vec<Part> {
     // ── Right arm + Sleeve ───────────────────────────────────────────
     {
         let t = Mat4::from_translation(Vec3::new(-arm_off, 6.0, 0.0))
+              * Mat4::from_rotation_x((-18f32).to_radians() * angle)
               * Mat4::from_translation(Vec3::new(0.0, -4.0, 0.0));
         let (v, i) = build_box(aw, 12.0, 4.0, &rarm_uv, TW, TH);
         parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: false });
@@ -242,6 +246,7 @@ pub fn build_character(slim: bool, has_overlay: bool) -> Vec<Part> {
     // ── Left arm + Sleeve ────────────────────────────────────────────
     {
         let t = Mat4::from_translation(Vec3::new(arm_off, 6.0, 0.0))
+              * Mat4::from_rotation_x((18f32).to_radians() * angle)
               * Mat4::from_translation(Vec3::new(0.0, -4.0, 0.0));
         let (v, i) = build_box(aw, 12.0, 4.0, &larm_uv, TW, TH);
         parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: false });
@@ -254,6 +259,7 @@ pub fn build_character(slim: bool, has_overlay: bool) -> Vec<Part> {
     // ── Right leg + Pants ────────────────────────────────────────────
     {
         let t = Mat4::from_translation(Vec3::new(-2.0, -4.0, 0.0))
+              * Mat4::from_rotation_x((20f32).to_radians() * angle)
               * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
         let (v, i) = build_box(4.0, 12.0, 4.0, &rleg_uv, TW, TH);
         parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: false });
@@ -266,6 +272,7 @@ pub fn build_character(slim: bool, has_overlay: bool) -> Vec<Part> {
     // ── Left leg + Pants ─────────────────────────────────────────────
     {
         let t = Mat4::from_translation(Vec3::new(2.0, -4.0, 0.0))
+              * Mat4::from_rotation_x((-20f32).to_radians() * angle)
               * Mat4::from_translation(Vec3::new(0.0, -6.0, 0.0));
         let (v, i) = build_box(4.0, 12.0, 4.0, &lleg_uv, TW, TH);
         parts.push(Part { vertices: v, indices: i, transform: t, is_overlay: false });
