@@ -99,6 +99,38 @@ Mood: forbidden, mysterious, ancient, imposing.
 
 ---
 
+## Logo
+
+### `/images/logo/logo-mark-v01.svg` (ou `.png`)
+
+**Usage :** Logo principal du site — affiché dans le header, favicon, og:image, etc.
+
+**Concept :** Un blason / emblème gaming inspiré de Minecraft. Forme carrée ou en écusson avec un motif bloc pixelisé central, couleurs de la DA du site.
+
+> ⚠️ Le nom de marque est **MCInfo** uniquement — le "-RS" est le langage (Rust), il ne doit **pas** apparaître sur le logo.
+
+```
+Minimalist gaming emblem / coat of arms logo for "MCInfo",
+a Minecraft data intelligence platform.
+Flat vector icon, geometric style.
+Central motif: a stylized pixelated diamond ore block or a
+creeper face reduced to pure geometric shapes.
+Color palette: deep navy background (#0b131c), bright cyan-blue
+accent (#6fb0ff, #8be4c3), gold trim (#ffc33d).
+Outer shape: rounded square or shield crest.
+Style: clean, modern, slightly retro gaming badge — think
+Hypixel or Origin Realms logo energy but flat and minimal.
+No text. Suitable for use at 32px (favicon) up to 512px.
+SVG-friendly: simple shapes, limited colors (3-4 max).
+```
+
+**Variantes à décliner :**
+- `logo-mark-v01.svg` — icône seule (carré 1:1)
+- `logo-full-v01.svg` — icône + texte "MCInfo" à droite (horizontal)
+- `favicon.png` — 32×32 px rognée sur l'icône
+
+---
+
 ## Notes techniques
 
 - **Taille fichier cible :** < 800 Ko par image (compresser en WebP si possible)

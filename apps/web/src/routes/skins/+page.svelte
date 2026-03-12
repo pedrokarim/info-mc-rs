@@ -26,7 +26,7 @@
   }
 
   function render3dUrl(username: string): string {
-    return `${apiBase}/api/v1/render3d/${encodeURIComponent(username)}?width=240&height=360&theta=30&phi=21`;
+    return `${apiBase}/api/v1/render3d/${encodeURIComponent(username)}?width=256&height=256&theta=30&phi=21`;
   }
 </script>
 
@@ -82,9 +82,9 @@
 </main>
 
 <style>
-  /* Portrait 3D renders — override global 1/1 aspect ratio */
+  /* Square 3D renders matching NameMC style */
   :global(.skin-gallery .skin-card img) {
-    aspect-ratio: 2 / 3;
+    aspect-ratio: 1 / 1;
     background: linear-gradient(180deg, #e8f0f7 0%, #d4e4f0 100%);
   }
 

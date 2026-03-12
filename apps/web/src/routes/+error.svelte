@@ -61,7 +61,7 @@
 </script>
 
 <main class="error-root">
-  <section class="error-stage">
+  <section class="error-stage" data-kind={page.status >= 500 ? 'server' : page.status === 404 ? 'notfound' : 'generic'}>
     <div
       class="error-bg"
       style="background-image: url('{cfg.image}');"
@@ -118,14 +118,24 @@
     transform: scale(1.04); /* léger zoom pour éviter les bords blancs */
   }
 
-  /* Overlay gradient sombre */
+  /* Overlay gradient — 404 : léger */
   .error-stage::after {
     content: '';
     position: absolute;
     inset: 0;
+    background: linear-gradient(180deg, rgba(5, 6, 8, 0.12) 0%, rgba(11, 19, 28, 0.22) 50%, rgba(5, 6, 8, 0.55) 100%);
+  }
+
+  /* Overlay gradient — 5xx : plus sombre, dramatique */
+  .error-stage[data-kind='server']::after {
     background:
-      radial-gradient(ellipse 70% 80% at 50% 60%, rgba(5, 6, 8, 0.55), transparent),
-      linear-gradient(180deg, rgba(5, 6, 8, 0.6) 0%, rgba(11, 19, 28, 0.78) 55%, rgba(5, 6, 8, 0.92) 100%);
+      radial-gradient(ellipse 60% 50% at 50% 40%, rgba(80, 20, 5, 0.35), transparent),
+      linear-gradient(180deg, rgba(5, 6, 8, 0.45) 0%, rgba(11, 19, 28, 0.65) 50%, rgba(5, 6, 8, 0.88) 100%);
+  }
+
+  /* Overlay gradient — générique : léger */
+  .error-stage[data-kind='generic']::after {
+    background: linear-gradient(180deg, rgba(5, 6, 8, 0.10) 0%, rgba(11, 19, 28, 0.18) 50%, rgba(5, 6, 8, 0.50) 100%);
   }
 
   /* ── Contenu ────────────────────────────────────────── */

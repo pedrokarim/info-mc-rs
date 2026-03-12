@@ -35,22 +35,22 @@
   const spotlightPlayers = ['Notch', 'Dream', 'Technoblade', 'Skeppy'];
 </script>
 
-<main class="page">
-  <HeroBleed
-    eyebrow="Minecraft Data Hub"
-    title="Un front qui ressemble enfin a un vrai site de jeu."
-    description="Direction Chunklock: hero impactant, navigation arcade, et infos claires pour lookup serveur, MOTD visuel et explorer de skins."
-    image="/images/hero/hero-main-v01.png"
-    primaryLabel="Voir un serveur"
-    primaryHref="/server/play.hypixel.net"
-    secondaryLabel="Explorer les skins"
-    secondaryHref="/skins"
-  />
+<HeroBleed
+  eyebrow="Minecraft Intelligence"
+  title="Serveurs, joueurs, skins. Tout en un."
+  description="Statut en temps réel, MOTD visuel, statistiques de joueurs et explorer de skins Minecraft."
+  image="/images/hero/hero-main-v01.png"
+  primaryLabel="Voir un serveur"
+  primaryHref="/server/play.hypixel.net"
+  secondaryLabel="Explorer les skins"
+  secondaryHref="/skins"
+/>
 
+<main class="page">
   <section class="lookup-panel section-strip">
     <SectionHeading
       title="Lookup rapide"
-      description="Entre une adresse ou un pseudo pour ouvrir la fiche detaillee."
+      description="Entre une adresse de serveur ou un pseudo joueur pour ouvrir la fiche détaillée."
     />
 
     <form class="lookup-form" onsubmit={submitLookup}>
