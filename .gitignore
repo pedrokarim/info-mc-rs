@@ -51,3 +51,4 @@ bun.lockb
 # Test coverage
 coverage/
 apps/*/coverage/
+data
