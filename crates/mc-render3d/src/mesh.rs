@@ -346,19 +346,17 @@ pub fn build_elytra(cape_tw: f32, cape_th: f32) -> Vec<Part> {
         v
     }).collect();
 
-    // Left wing: parent at (0,8,-2) rot Y=π, wing pivot at (5,0,0) rot (0.2618, 0.01, 0.2618), mesh at (-5,-10,-1)
-    let left_t = Mat4::from_translation(Vec3::new(0.0, 8.0, -2.0))
-               * Mat4::from_rotation_y(std::f32::consts::PI)
+    // Left wing: parent at (0,8,0), wing pivot at (5,0,0) rot (0.2618, 0.01, 0.1), mesh at (-5,-10,0)
+    let left_t = Mat4::from_translation(Vec3::new(0.0, 8.0, 0.0))
                * Mat4::from_translation(Vec3::new(5.0, 0.0, 0.0))
-               * Mat4::from_euler(glam::EulerRot::XYZ, 0.2618, 0.01, 0.2618)
-               * Mat4::from_translation(Vec3::new(-5.0, -10.0, -1.0));
+               * Mat4::from_euler(glam::EulerRot::XYZ, 0.2618, 0.01, 0.1)
+               * Mat4::from_translation(Vec3::new(-5.0, -10.0, 0.0));
 
-    // Right wing: parent at (0,8,-2) rot Y=π, wing pivot at (-5,0,0) rot (0.2618, -0.01, -0.2618), mesh at (5,-10,-1)
-    let right_t = Mat4::from_translation(Vec3::new(0.0, 8.0, -2.0))
-                * Mat4::from_rotation_y(std::f32::consts::PI)
+    // Right wing: parent at (0,8,0), wing pivot at (-5,0,0) rot (0.2618, -0.01, -0.1), mesh at (5,-10,0)
+    let right_t = Mat4::from_translation(Vec3::new(0.0, 8.0, 0.0))
                 * Mat4::from_translation(Vec3::new(-5.0, 0.0, 0.0))
-                * Mat4::from_euler(glam::EulerRot::XYZ, 0.2618, -0.01, -0.2618)
-                * Mat4::from_translation(Vec3::new(5.0, -10.0, -1.0));
+                * Mat4::from_euler(glam::EulerRot::XYZ, 0.2618, -0.01, -0.1)
+                * Mat4::from_translation(Vec3::new(5.0, -10.0, 0.0));
 
     vec![
         Part { vertices: v_left, indices: i_left, transform: left_t, is_overlay: false },

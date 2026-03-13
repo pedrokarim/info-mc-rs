@@ -193,7 +193,7 @@
           {#key data.player.skin.url}
             <SkinViewer3D
               skinUrl={data.player.skin.url}
-              capeUrl={data.player.cape?.url ?? data.player.optifine_cape?.url}
+              capeUrl={data.player.cape?.url ?? (data.player.optifine_cape?.url ? `${data.apiBase}${data.player.optifine_cape.url}` : undefined)}
               slim={isSlim}
               paused={animPaused}
               {backEquipment}
@@ -264,8 +264,8 @@
               {#if data.player.optifine_cape?.url}
                 <div class="cape-tile">
                   <div class="cape-badge cape-badge--optifine">OptiFine</div>
-                  <CapePreview url={data.player.optifine_cape.url} scale={8} />
-                  <a class="cape-link" href={data.player.optifine_cape.url} target="_blank" rel="noreferrer">PNG ↗</a>
+                  <CapePreview url={`${data.apiBase}${data.player.optifine_cape.url}`} scale={8} />
+                  <a class="cape-link" href={`${data.apiBase}${data.player.optifine_cape.url}`} target="_blank" rel="noreferrer">PNG ↗</a>
                 </div>
               {/if}
             </div>

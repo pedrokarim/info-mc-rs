@@ -1,3 +1,4 @@
+pub mod cape_proxy;
 pub mod docs;
 pub mod favorites;
 pub mod health;

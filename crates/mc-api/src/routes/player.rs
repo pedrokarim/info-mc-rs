@@ -62,6 +62,14 @@ pub async fn get_player(
         check_labymod_cape(&state.http, &uuid_clean),
     );
 
+    // Use proxy URLs so the frontend doesn't hit CORS issues
+    let optifine_cape = optifine_cape.map(|_| CapeResponse {
+        url: format!("/api/v1/cape/optifine/{}", profile.username),
+    });
+    let labymod_cape = labymod_cape.map(|_| CapeResponse {
+        url: format!("/api/v1/cape/labymod/{uuid_clean}"),
+    });
+
     let now = chrono::Utc::now().to_rfc3339();
 
     let response = PlayerResponse {

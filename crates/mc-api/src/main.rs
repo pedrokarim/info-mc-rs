@@ -45,6 +45,10 @@ async fn main() {
             get(routes::render3d::render_skin_3d),
         )
         .route(
+            "/api/v1/cape/{source}/{identifier}",
+            get(routes::cape_proxy::proxy_cape),
+        )
+        .route(
             "/api/v1/favorites",
             get(routes::favorites::list_favorites),
         )

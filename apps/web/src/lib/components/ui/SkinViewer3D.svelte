@@ -14,6 +14,16 @@
   let container: HTMLDivElement;
   let animId: number;
 
+  // Back equipment groups (need component scope for reactivity)
+  let capeGroup: THREE.Group | null = null;
+  let elytraGroup: THREE.Group | null = null;
+  let elytraLeftWing: THREE.Group | null = null;
+  let elytraRightWing: THREE.Group | null = null;
+
+  // Update visibility when backEquipment changes
+  $: if (capeGroup) capeGroup.visible = (backEquipment === 'cape');
+  $: if (elytraGroup) elytraGroup.visible = (backEquipment === 'elytra');
+
   // ── UV helpers ────────────────────────────────────────────────────
   // BoxGeometry face order: +x(right) -x(left) +y(top) -y(bottom) +z(front) -z(back)
   // [x, y, w, h] in texture pixels — negative w/h = flip
@@ -176,12 +186,7 @@
     root.add(lLegPivot);
 
     // ── Back equipment (Cape / Elytra) ──────────────────────────────
-    let capeGroup: THREE.Group | null = null;
-    let elytraGroup: THREE.Group | null = null;
-    let elytraLeftWing: THREE.Group | null = null;
-    let elytraRightWing: THREE.Group | null = null;
-
-    if (capeUrl && backEquipment !== 'none') {
+    if (capeUrl) {
       const capeTex = loader.load(capeUrl);
       capeTex.magFilter = THREE.NearestFilter;
       capeTex.minFilter = THREE.NearestFilter;
@@ -236,11 +241,11 @@
         const leftGeo = new THREE.BoxGeometry(12, 22, 4);
         applyFaceUVs(leftGeo, elytraUVs, tw, th);
         const leftMesh = new THREE.Mesh(leftGeo, capeMat);
-        leftMesh.position.set(-5, -10, -1);
+        leftMesh.position.set(-5, -10, 0);
 
         elytraLeftWing = new THREE.Group();
         elytraLeftWing.position.set(5, 0, 0);
-        elytraLeftWing.rotation.set(0.2618, 0.01, 0.2618);
+        elytraLeftWing.rotation.set(0.2618, 0.01, 0.1);
         elytraLeftWing.add(leftMesh);
 
         // Right wing (mirrored)
@@ -248,16 +253,15 @@
         applyFaceUVs(rightGeo, elytraUVs, tw, th);
         const rightMesh = new THREE.Mesh(rightGeo, capeMat);
         rightMesh.scale.x = -1;
-        rightMesh.position.set(5, -10, -1);
+        rightMesh.position.set(5, -10, 0);
 
         elytraRightWing = new THREE.Group();
         elytraRightWing.position.set(-5, 0, 0);
-        elytraRightWing.rotation.set(0.2618, -0.01, -0.2618);
+        elytraRightWing.rotation.set(0.2618, -0.01, -0.1);
         elytraRightWing.add(rightMesh);
 
         elytraGroup = new THREE.Group();
-        elytraGroup.position.set(0, 8, -2);
-        elytraGroup.rotation.y = Math.PI;
+        elytraGroup.position.set(0, 8, 0);
         elytraGroup.add(elytraLeftWing);
         elytraGroup.add(elytraRightWing);
         elytraGroup.visible = (backEquipment === 'elytra');
