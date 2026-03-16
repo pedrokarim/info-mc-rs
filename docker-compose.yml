@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "${API_PORT:-3001}:3001"
+    environment:
+      - PORT=3001
+      - RUST_LOG=info
+    volumes:
+      - api-data:/app/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      - PUBLIC_API_BASE=http://api:3001
+      - PORT=3000
+      - ORIGIN=http://localhost:${WEB_PORT:-3000}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api-data:
