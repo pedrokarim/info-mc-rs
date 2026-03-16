@@ -263,7 +263,7 @@
               {/if}
               {#if data.player.optifine_cape?.url}
                 <div class="cape-tile">
-                  <div class="cape-badge cape-badge--optifine">OptiFine</div>
+                  <div class="cape-badge cape-badge--optifine">OptiFine{#if data.player.optifine_cape.active === false} (inactive){/if}</div>
                   <CapePreview url={`${data.apiBase}${data.player.optifine_cape.url}`} scale={8} />
                   <a class="cape-link" href={`${data.apiBase}${data.player.optifine_cape.url}`} target="_blank" rel="noreferrer">PNG ↗</a>
                 </div>

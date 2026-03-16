@@ -25,6 +25,8 @@ pub struct SkinResponse {
 #[derive(Debug, Clone, Serialize)]
 pub struct CapeResponse {
     pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active: Option<bool>,
 }
 
 pub async fn get_player(
@@ -63,11 +65,13 @@ pub async fn get_player(
     );
 
     // Use proxy URLs so the frontend doesn't hit CORS issues
-    let optifine_cape = optifine_cape.map(|_| CapeResponse {
+    let optifine_cape = optifine_cape.map(|c| CapeResponse {
         url: format!("/api/v1/cape/optifine/{}", profile.username),
+        active: c.active,
     });
     let labymod_cape = labymod_cape.map(|_| CapeResponse {
         url: format!("/api/v1/cape/labymod/{uuid_clean}"),
+        active: None,
     });
 
     let now = chrono::Utc::now().to_rfc3339();
@@ -79,7 +83,7 @@ pub async fn get_player(
             url: s.url,
             model: format!("{:?}", s.model).to_lowercase(),
         }),
-        cape: profile.cape.map(|c| CapeResponse { url: c.url }),
+        cape: profile.cape.map(|c| CapeResponse { url: c.url, active: None }),
         optifine_cape,
         labymod_cape,
         retrieved_at: now,
@@ -90,12 +94,26 @@ pub async fn get_player(
     Ok(Json(response))
 }
 
-/// HEAD `https://optifine.net/capes/{username}.png`
+/// Check both active and inactive Optifine capes.
 async fn check_optifine_cape(http: &reqwest::Client, username: &str) -> Option<CapeResponse> {
-    let url = format!("https://optifine.net/capes/{username}.png");
-    let resp = http.head(&url).send().await.ok()?;
+    // Try active cape first
+    let active_url = format!("https://optifine.net/capes/{username}.png");
+    if let Ok(resp) = http.head(&active_url).send().await {
+        if resp.status().is_success() {
+            return Some(CapeResponse {
+                url: active_url,
+                active: Some(true),
+            });
+        }
+    }
+    // Fallback to inactive cape
+    let inactive_url = format!("https://optifine.net/capes/inactive/{username}.png");
+    let resp = http.head(&inactive_url).send().await.ok()?;
     if resp.status().is_success() {
-        Some(CapeResponse { url })
+        Some(CapeResponse {
+            url: inactive_url,
+            active: Some(false),
+        })
     } else {
         None
     }
@@ -106,7 +124,7 @@ async fn check_labymod_cape(http: &reqwest::Client, uuid: &str) -> Option<CapeRe
     let url = format!("https://dl.labymod.net/capes/{uuid}");
     let resp = http.head(&url).send().await.ok()?;
     if resp.status().is_success() {
-        Some(CapeResponse { url })
+        Some(CapeResponse { url, active: None })
     } else {
         None
     }

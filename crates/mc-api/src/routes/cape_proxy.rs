@@ -12,20 +12,29 @@ pub async fn proxy_cape(
     State(state): State<SharedState>,
     Path((source, identifier)): Path<(String, String)>,
 ) -> Response {
-    let url = match source.as_str() {
-        "optifine" => format!("https://optifine.net/capes/{identifier}.png"),
-        "labymod" => format!("https://dl.labymod.net/capes/{identifier}"),
+    let urls: Vec<String> = match source.as_str() {
+        "optifine" => vec![
+            format!("https://optifine.net/capes/{identifier}.png"),
+            format!("https://optifine.net/capes/inactive/{identifier}.png"),
+        ],
+        "labymod" => vec![format!("https://dl.labymod.net/capes/{identifier}")],
         _ => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let resp = match state.http.get(&url).send().await {
-        Ok(r) => r,
-        Err(_) => return StatusCode::BAD_GATEWAY.into_response(),
-    };
-
-    if !resp.status().is_success() {
-        return StatusCode::NOT_FOUND.into_response();
+    // Try each URL until one succeeds
+    let mut resp = None;
+    for url in &urls {
+        if let Ok(r) = state.http.get(url).send().await {
+            if r.status().is_success() {
+                resp = Some(r);
+                break;
+            }
+        }
     }
+    let resp = match resp {
+        Some(r) => r,
+        None => return StatusCode::NOT_FOUND.into_response(),
+    };
 
     let content_type = resp
         .headers()

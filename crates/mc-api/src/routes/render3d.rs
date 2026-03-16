@@ -52,7 +52,7 @@ pub async fn render_skin_3d(
                 url: s.url,
                 model: format!("{:?}", s.model).to_lowercase(),
             }),
-            cape: profile.cape.map(|c| CapeResponse { url: c.url }),
+            cape: profile.cape.map(|c| CapeResponse { url: c.url, active: None }),
             optifine_cape: None,
             labymod_cape: None,
             retrieved_at: chrono::Utc::now().to_rfc3339(),
