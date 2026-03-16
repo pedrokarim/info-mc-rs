@@ -5,6 +5,13 @@ use axum::response::{IntoResponse, Response};
 
 use crate::state::SharedState;
 
+fn is_valid_identifier(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 64
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-' || b == b'.')
+}
+
 /// Proxy cape images from third-party servers that don't send CORS headers.
 /// GET /api/v1/cape/optifine/{username}
 /// GET /api/v1/cape/labymod/{uuid}
@@ -12,6 +19,10 @@ pub async fn proxy_cape(
     State(state): State<SharedState>,
     Path((source, identifier)): Path<(String, String)>,
 ) -> Response {
+    if !is_valid_identifier(&identifier) {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+
     let urls: Vec<String> = match source.as_str() {
         "optifine" => vec![
             format!("https://optifine.net/capes/{identifier}.png"),

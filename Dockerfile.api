@@ -33,13 +33,16 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -r -s /bin/false appuser
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/mc-api .
+COPY --from=builder --chown=appuser:appuser /app/target/release/mc-api .
 
-RUN mkdir -p data
+RUN mkdir -p data && chown appuser:appuser data
+
+USER appuser
 
 EXPOSE 3001
 

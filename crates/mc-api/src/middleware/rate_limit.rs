@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use axum::extract::ConnectInfo;
+use axum::extract::{ConnectInfo, Extension};
 use axum::http::{Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -26,6 +26,19 @@ impl RateLimiter {
         }
     }
 
+    pub fn from_env() -> Self {
+        let max_requests: usize = std::env::var("RATE_LIMIT_MAX")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(100);
+        let window_secs: u64 = std::env::var("RATE_LIMIT_WINDOW_SECS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(60);
+
+        Self::new(max_requests, Duration::from_secs(window_secs))
+    }
+
     async fn check(&self, ip: IpAddr) -> bool {
         let mut map = self.inner.lock().await;
         let now = Instant::now();
@@ -46,20 +59,16 @@ impl RateLimiter {
 /// Axum middleware layer for rate limiting.
 pub async fn rate_limit_middleware(
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    Extension(limiter): Extension<RateLimiter>,
     request: Request<axum::body::Body>,
     next: Next,
 ) -> Response {
-    // Access the rate limiter from extensions
-    let limiter = request.extensions().get::<RateLimiter>().cloned();
-
-    if let Some(limiter) = limiter {
-        if !limiter.check(addr.ip()).await {
-            let body = serde_json::json!({
-                "error": "rate_limit_exceeded",
-                "message": "Too many requests. Please try again later."
-            });
-            return (StatusCode::TOO_MANY_REQUESTS, axum::Json(body)).into_response();
-        }
+    if !limiter.check(addr.ip()).await {
+        let body = serde_json::json!({
+            "error": "rate_limit_exceeded",
+            "message": "Too many requests. Please try again later."
+        });
+        return (StatusCode::TOO_MANY_REQUESTS, axum::Json(body)).into_response();
     }
 
     next.run(request).await

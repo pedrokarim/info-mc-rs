@@ -1,8 +1,41 @@
+use std::net::IpAddr;
+
 use hickory_resolver::TokioResolver;
 
 use crate::error::{McProtocolError, Result};
 
 const DEFAULT_MC_PORT: u16 = 25565;
+
+/// Returns true if the IP address is private, loopback, or otherwise not routable
+/// on the public internet. Used to prevent SSRF attacks.
+fn is_private_ip(ip: &IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            v4.is_loopback()
+                || v4.is_private()
+                || v4.is_link_local()
+                || v4.is_unspecified()
+                || v4.is_broadcast()
+        }
+        IpAddr::V6(v6) => {
+            v6.is_loopback()
+                || v6.is_unspecified()
+                || (v6.segments()[0] & 0xfe00) == 0xfc00 // unique local (fc00::/7)
+                || (v6.segments()[0] & 0xffc0) == 0xfe80 // link-local (fe80::/10)
+        }
+    }
+}
+
+fn reject_private_ip(ip: &str) -> Result<()> {
+    if let Ok(parsed) = ip.parse::<IpAddr>() {
+        if is_private_ip(&parsed) {
+            return Err(McProtocolError::DnsFailure(
+                "address resolves to a private/internal IP".to_string(),
+            ));
+        }
+    }
+    Ok(())
+}
 
 #[derive(Debug, Clone)]
 pub struct ResolvedAddress {
@@ -22,8 +55,9 @@ pub async fn resolve_address(address: &str) -> Result<ResolvedAddress> {
     let (hostname, explicit_port) = parse_address(address);
     let port = explicit_port.unwrap_or(DEFAULT_MC_PORT);
 
-    // If it's an IP literal, skip DNS entirely
-    if hostname.parse::<std::net::IpAddr>().is_ok() {
+    // If it's an IP literal, skip DNS but reject private IPs
+    if hostname.parse::<IpAddr>().is_ok() {
+        reject_private_ip(hostname)?;
         return Ok(ResolvedAddress {
             hostname: hostname.to_string(),
             resolved_host: hostname.to_string(),
@@ -51,6 +85,9 @@ pub async fn resolve_address(address: &str) -> Result<ResolvedAddress> {
     let ip = resolve_ip(&resolver, &target)
         .await
         .map_err(|_| McProtocolError::DnsFailure(format!("failed to resolve {target}")))?;
+
+    // Reject private/internal IPs after DNS resolution (prevent DNS rebinding)
+    reject_private_ip(&ip)?;
 
     Ok(ResolvedAddress {
         hostname: hostname.to_string(),
@@ -131,5 +168,30 @@ mod tests {
         assert!("1.2.3.4".parse::<std::net::IpAddr>().is_ok());
         assert!("::1".parse::<std::net::IpAddr>().is_ok());
         assert!("play.hypixel.net".parse::<std::net::IpAddr>().is_err());
+    }
+
+    #[test]
+    fn test_is_private_ip() {
+        let private_ips = [
+            "127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1",
+            "169.254.1.1", "0.0.0.0", "::1",
+        ];
+        for ip in private_ips {
+            let parsed: IpAddr = ip.parse().unwrap();
+            assert!(is_private_ip(&parsed), "{ip} should be private");
+        }
+
+        let public_ips = ["8.8.8.8", "1.1.1.1", "142.250.80.46"];
+        for ip in public_ips {
+            let parsed: IpAddr = ip.parse().unwrap();
+            assert!(!is_private_ip(&parsed), "{ip} should be public");
+        }
+    }
+
+    #[test]
+    fn test_reject_private_ip() {
+        assert!(reject_private_ip("127.0.0.1").is_err());
+        assert!(reject_private_ip("192.168.1.1").is_err());
+        assert!(reject_private_ip("8.8.8.8").is_ok());
     }
 }

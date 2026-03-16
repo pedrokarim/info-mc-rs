@@ -48,9 +48,17 @@ impl IntoResponse for ApiError {
             ApiError::InternalError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
         };
 
+        let message = match &self {
+            ApiError::Internal(msg) | ApiError::InternalError(msg) => {
+                tracing::error!("internal error: {msg}");
+                "An internal error occurred".to_string()
+            }
+            _ => self.to_string(),
+        };
+
         let body = ErrorResponse {
             error: error_code.to_string(),
-            message: self.to_string(),
+            message,
         };
 
         (status, axum::Json(body)).into_response()
