@@ -1,8 +1,11 @@
+pub mod admin;
 pub mod cape_proxy;
 pub mod docs;
 pub mod favorites;
 pub mod health;
+pub mod likes;
 pub mod player;
+pub mod popular;
 pub mod render;
 pub mod render3d;
 pub mod server;

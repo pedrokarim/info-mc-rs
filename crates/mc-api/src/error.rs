@@ -27,6 +27,12 @@ pub enum ApiError {
 
     #[error("internal error: {0}")]
     InternalError(String),
+
+    #[error("unauthorized")]
+    Unauthorized,
+
+    #[error("forbidden: {0}")]
+    Forbidden(String),
 }
 
 #[derive(Serialize)]
@@ -46,6 +52,8 @@ impl IntoResponse for ApiError {
             ApiError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
             ApiError::NotFound(_) => (StatusCode::NOT_FOUND, "not_found"),
             ApiError::InternalError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
+            ApiError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
+            ApiError::Forbidden(_) => (StatusCode::FORBIDDEN, "forbidden"),
         };
 
         let message = match &self {

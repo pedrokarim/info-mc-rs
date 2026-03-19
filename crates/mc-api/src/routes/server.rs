@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use mc_protocol::{SlpConfig, SlpResponse};
 
 use crate::error::ApiError;
+use crate::routes::popular::Popularity;
 use crate::state::SharedState;
 
 #[derive(Deserialize)]
@@ -36,6 +37,8 @@ pub struct ServerResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     pub retrieved_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub popularity: Option<Popularity>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -118,6 +121,17 @@ pub async fn get_server(
         }
     };
 
+    // Persist online servers to the index and get popularity stats
+    let response = if response.online {
+        let popularity = persist_server(&state.db, &response).await;
+        ServerResponse {
+            popularity,
+            ..response
+        }
+    } else {
+        response
+    };
+
     // Cache the response
     state.server_cache.insert(cache_key, response.clone()).await;
 
@@ -149,6 +163,7 @@ async fn ping_java(
             edition: "java".to_string(),
             error: Some(format_error(&e)),
             retrieved_at: now.to_string(),
+            popularity: None,
         },
     }
 }
@@ -208,6 +223,7 @@ async fn ping_bedrock(
             edition: "bedrock".to_string(),
             error: None,
             retrieved_at: now.to_string(),
+            popularity: None,
         },
         Err(e) => ServerResponse {
             online: false,
@@ -223,6 +239,7 @@ async fn ping_bedrock(
             edition: "bedrock".to_string(),
             error: Some(format_error(&e)),
             retrieved_at: now.to_string(),
+            popularity: None,
         },
     }
 }
@@ -261,6 +278,7 @@ fn build_java_response(slp: SlpResponse, address_info: AddressInfo, now: &str) -
         edition: "java".to_string(),
         error: None,
         retrieved_at: now.to_string(),
+        popularity: None,
     }
 }
 
@@ -271,4 +289,71 @@ fn format_error(e: &mc_protocol::McProtocolError) -> String {
         mc_protocol::McProtocolError::DnsFailure(_) => "dns_resolution_failed".to_string(),
         _ => e.to_string(),
     }
+}
+
+/// Normalize server address for use as DB key: "hostname:port"
+fn normalize_address(resp: &ServerResponse) -> String {
+    let default_port = if resp.edition == "bedrock" { 19132 } else { 25565 };
+    if resp.address.port == default_port {
+        resp.address.hostname.to_lowercase()
+    } else {
+        format!("{}:{}", resp.address.hostname.to_lowercase(), resp.address.port)
+    }
+}
+
+/// Upsert server into the persistent index and return popularity stats.
+async fn persist_server(db: &sqlx::SqlitePool, resp: &ServerResponse) -> Option<Popularity> {
+    let address = normalize_address(resp);
+    let motd_clean = resp.motd.as_ref().map(|m| m.clean.as_str());
+    let version_name = resp.version.as_ref().map(|v| v.name.as_str());
+    let max_players = resp.players.as_ref().map(|p| p.max as i64);
+
+    let upsert_result = sqlx::query(
+        "INSERT INTO servers (address, hostname, ip, port, edition, version_name, motd_clean, favicon, max_players, last_online_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(address) DO UPDATE SET
+            hostname = excluded.hostname,
+            ip = excluded.ip,
+            port = excluded.port,
+            edition = excluded.edition,
+            version_name = excluded.version_name,
+            motd_clean = excluded.motd_clean,
+            favicon = excluded.favicon,
+            max_players = excluded.max_players,
+            last_seen_at = datetime('now'),
+            last_online_at = datetime('now'),
+            views = views + 1",
+    )
+    .bind(&address)
+    .bind(&resp.address.hostname)
+    .bind(&resp.address.ip)
+    .bind(resp.address.port as i64)
+    .bind(&resp.edition)
+    .bind(version_name)
+    .bind(motd_clean)
+    .bind(&resp.favicon)
+    .bind(max_players)
+    .execute(db)
+    .await;
+
+    if upsert_result.is_err() {
+        tracing::warn!("failed to persist server {address}: {:?}", upsert_result.err());
+        return None;
+    }
+
+    let row = sqlx::query_as::<_, (i64, i64, String, String)>(
+        "SELECT views, likes, first_seen_at, last_seen_at FROM servers WHERE address = ?",
+    )
+    .bind(&address)
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten()?;
+
+    Some(Popularity {
+        views: row.0,
+        likes: row.1,
+        first_seen_at: row.2,
+        last_seen_at: row.3,
+    })
 }

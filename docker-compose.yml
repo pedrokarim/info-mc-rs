@@ -8,6 +8,11 @@ services:
     environment:
       - PORT=3001
       - RUST_LOG=info
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
+      - DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI:-}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - IP_HASH_SALT=${IP_HASH_SALT:-}
     volumes:
       - api-data:/app/data
     restart: unless-stopped

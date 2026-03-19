@@ -56,6 +56,7 @@ pub async fn render_skin_3d(
             optifine_cape: None,
             labymod_cape: None,
             retrieved_at: chrono::Utc::now().to_rfc3339(),
+            popularity: None,
         };
         state.player_cache.insert(cache_key, r.clone()).await;
         r

@@ -3,6 +3,7 @@ use axum::extract::{Path, State};
 use serde::Serialize;
 
 use crate::error::ApiError;
+use crate::routes::popular::Popularity;
 use crate::state::SharedState;
 
 #[derive(Debug, Clone, Serialize)]
@@ -14,6 +15,8 @@ pub struct PlayerResponse {
     pub optifine_cape: Option<CapeResponse>,
     pub labymod_cape: Option<CapeResponse>,
     pub retrieved_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub popularity: Option<Popularity>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -76,9 +79,15 @@ pub async fn get_player(
 
     let now = chrono::Utc::now().to_rfc3339();
 
+    let skin_url = profile.skin.as_ref().map(|s| s.url.clone());
+    let skin_model = profile
+        .skin
+        .as_ref()
+        .map(|s| format!("{:?}", s.model).to_lowercase());
+
     let response = PlayerResponse {
-        uuid: profile.uuid,
-        username: profile.username,
+        uuid: profile.uuid.clone(),
+        username: profile.username.clone(),
         skin: profile.skin.map(|s| SkinResponse {
             url: s.url,
             model: format!("{:?}", s.model).to_lowercase(),
@@ -87,11 +96,76 @@ pub async fn get_player(
         optifine_cape,
         labymod_cape,
         retrieved_at: now,
+        popularity: None, // filled below
+    };
+
+    // Persist to DB (upsert) and get popularity stats
+    let popularity = persist_player(
+        &state.db,
+        &profile.uuid,
+        &profile.username,
+        skin_url.as_deref(),
+        skin_model.as_deref(),
+    )
+    .await;
+
+    let response = PlayerResponse {
+        popularity,
+        ..response
     };
 
     state.player_cache.insert(cache_key, response.clone()).await;
 
     Ok(Json(response))
+}
+
+/// Upsert player into the persistent index and return popularity stats.
+async fn persist_player(
+    db: &sqlx::SqlitePool,
+    uuid: &str,
+    username: &str,
+    skin_url: Option<&str>,
+    skin_model: Option<&str>,
+) -> Option<Popularity> {
+    // Upsert: insert or update + increment views
+    let upsert_result = sqlx::query(
+        "INSERT INTO players (uuid, username, skin_url, skin_model)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(uuid) DO UPDATE SET
+            username = excluded.username,
+            skin_url = excluded.skin_url,
+            skin_model = excluded.skin_model,
+            last_seen_at = datetime('now'),
+            views = views + 1",
+    )
+    .bind(uuid)
+    .bind(username)
+    .bind(skin_url)
+    .bind(skin_model)
+    .execute(db)
+    .await;
+
+    if upsert_result.is_err() {
+        tracing::warn!("failed to persist player {uuid}: {:?}", upsert_result.err());
+        return None;
+    }
+
+    // Fetch popularity stats
+    let row = sqlx::query_as::<_, (i64, i64, String, String)>(
+        "SELECT views, likes, first_seen_at, last_seen_at FROM players WHERE uuid = ?",
+    )
+    .bind(uuid)
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten()?;
+
+    Some(Popularity {
+        views: row.0,
+        likes: row.1,
+        first_seen_at: row.2,
+        last_seen_at: row.3,
+    })
 }
 
 /// Check both active and inactive Optifine capes.

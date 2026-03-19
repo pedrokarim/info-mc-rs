@@ -40,6 +40,7 @@ export interface ServerApiResponse {
   edition: 'java' | 'bedrock';
   error?: string;
   retrieved_at: string;
+  popularity?: Popularity;
 }
 
 export interface SkinResponse {
@@ -59,6 +60,14 @@ export interface PlayerApiResponse {
   optifine_cape?: CapeResponse;
   labymod_cape?: CapeResponse;
   retrieved_at: string;
+  popularity?: Popularity;
+}
+
+export interface Popularity {
+  views: number;
+  likes: number;
+  first_seen_at: string;
+  last_seen_at: string;
 }
 
 export interface ApiErrorResponse {
