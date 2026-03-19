@@ -63,6 +63,11 @@ pub async fn rate_limit_middleware(
     request: Request<axum::body::Body>,
     next: Next,
 ) -> Response {
+    // Skip rate limiting for loopback IPs (trusted SSR calls from SvelteKit)
+    if addr.ip().is_loopback() {
+        return next.run(request).await;
+    }
+
     if !limiter.check(addr.ip()).await {
         let body = serde_json::json!({
             "error": "rate_limit_exceeded",

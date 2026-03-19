@@ -50,6 +50,7 @@ export interface SkinResponse {
 
 export interface CapeResponse {
   url: string;
+  active?: boolean;
 }
 
 export interface PlayerApiResponse {
@@ -68,6 +69,37 @@ export interface Popularity {
   likes: number;
   first_seen_at: string;
   last_seen_at: string;
+}
+
+export interface PopularPlayerEntry {
+  uuid: string;
+  username: string;
+  skin_url?: string;
+  skin_model?: string;
+  views: number;
+  likes: number;
+  first_seen_at: string;
+  last_seen_at: string;
+}
+
+export interface PopularServerEntry {
+  address: string;
+  hostname: string;
+  port: number;
+  edition: string;
+  version_name?: string;
+  motd_clean?: string;
+  favicon?: string;
+  max_players?: number;
+  views: number;
+  likes: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  last_online_at?: string;
+}
+
+export interface LikeStatus {
+  liked: boolean;
 }
 
 export interface ApiErrorResponse {

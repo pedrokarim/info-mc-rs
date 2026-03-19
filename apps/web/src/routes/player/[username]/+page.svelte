@@ -37,6 +37,10 @@
   let backEquipment = $state<'cape' | 'elytra' | 'none'>('cape');
   let isFavorite = $state(false);
   let favoriteLoading = $state(false);
+  let isLiked = $state(false);
+  let likeLoading = $state(false);
+  let likeCount = $state(data.player?.popularity?.likes ?? 0);
+  let viewCount = $state(data.player?.popularity?.views ?? 0);
 
   // Reset to 3D + unpause when player changes
   $effect(() => {
@@ -45,13 +49,20 @@
     animPaused = false;
   });
 
-  // Check favorite status on load
+  // Check favorite + like status on load
   $effect(() => {
     if (!data.player?.uuid) return;
     fetch(`${data.apiBase}/api/v1/favorites/${data.player.uuid}`)
       .then(r => r.json())
       .then(d => { isFavorite = d.favorited === true; })
       .catch(() => { isFavorite = false; });
+    fetch(`${data.apiBase}/api/v1/player/${data.player.uuid}/like`)
+      .then(r => r.json())
+      .then(d => { isLiked = d.liked === true; })
+      .catch(() => { isLiked = false; });
+    // Sync popularity counters from fresh data
+    likeCount = data.player?.popularity?.likes ?? 0;
+    viewCount = data.player?.popularity?.views ?? 0;
   });
 
   async function toggleFavorite() {
@@ -74,6 +85,30 @@
     } finally {
       favoriteLoading = false;
     }
+  }
+
+  async function toggleLike() {
+    if (!data.player?.uuid || likeLoading) return;
+    likeLoading = true;
+    const was = isLiked;
+    isLiked = !was;
+    likeCount += was ? -1 : 1;
+    try {
+      await fetch(`${data.apiBase}/api/v1/player/${data.player.uuid}/like`, {
+        method: was ? 'DELETE' : 'POST',
+      });
+    } catch {
+      isLiked = was;
+      likeCount += was ? 1 : -1;
+    } finally {
+      likeLoading = false;
+    }
+  }
+
+  function formatNumber(n: number): string {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+    return n.toString();
   }
 
   const playerDetails = $derived(
@@ -170,6 +205,20 @@
               </div>
             {/if}
 
+            <!-- Like -->
+            <button
+              class="toolbar-btn toolbar-btn--like"
+              class:is-liked={isLiked}
+              title={isLiked ? 'Retirer le like' : 'Liker'}
+              onclick={toggleLike}
+              disabled={likeLoading}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16">
+                <path d="M2 8.5l4 4.5 8-9" stroke={isLiked ? '#5e90ff' : 'currentColor'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+              <span class="toolbar-count">{formatNumber(likeCount)}</span>
+            </button>
+
             <!-- Favorite -->
             <button
               class="toolbar-btn toolbar-btn--fav"
@@ -227,6 +276,24 @@
             <KeyValueGrid items={playerDetails} />
           </div>
         </div>
+
+        {#if data.player.popularity}
+          <div class="popularity-strip">
+            <div class="pop-stat">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3"/><path d="M1 8s3-5.5 7-5.5S15 8 15 8s-3 5.5-7 5.5S1 8 1 8z"/></svg>
+              <span class="pop-value">{formatNumber(viewCount)}</span>
+              <span class="pop-label">vues</span>
+            </div>
+            <div class="pop-stat">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8.5l4 4.5 8-9"/></svg>
+              <span class="pop-value">{formatNumber(likeCount)}</span>
+              <span class="pop-label">likes</span>
+            </div>
+            <div class="pop-stat">
+              <span class="pop-label">Vu depuis {new Date(data.player.popularity.first_seen_at).toLocaleDateString('fr-FR')}</span>
+            </div>
+          </div>
+        {/if}
 
         <div class="card" style="margin-top: 1rem;">
           <div class="card-head"><h4>Aperçu 2D</h4></div>
@@ -408,6 +475,49 @@
     background: linear-gradient(180deg, var(--blue-0), var(--blue-1));
     box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset;
   }
+  /* Like button */
+  .toolbar-btn--like {
+    width: auto;
+    gap: 0.3rem;
+    padding: 0 0.5rem;
+  }
+  .toolbar-btn--like.is-liked {
+    border-color: rgba(94, 144, 255, 0.4);
+    background: rgba(94, 144, 255, 0.08);
+    color: #5e90ff;
+  }
+  .toolbar-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  /* Popularity strip */
+  .popularity-strip {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-top: 0.8rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 10px;
+    background: rgba(94, 144, 255, 0.06);
+    border: 1px solid rgba(94, 144, 255, 0.15);
+  }
+  .pop-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--ink-2);
+    font-size: 0.8rem;
+  }
+  .pop-value {
+    font-weight: 700;
+    color: var(--ink-1);
+  }
+  .pop-label {
+    color: var(--ink-2);
+    font-size: 0.75rem;
+  }
+
   .head-2d {
     width: 200px;
     height: 200px;

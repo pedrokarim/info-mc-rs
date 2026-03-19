@@ -33,4 +33,5 @@ sha2 = "0.10"
 jsonwebtoken = "9"
 rand = "0.8"
 urlencoding = "2"
+dotenvy = "0.15"
 totp-rs = { version = "5", features = ["gen_secret", "otpauth"] }

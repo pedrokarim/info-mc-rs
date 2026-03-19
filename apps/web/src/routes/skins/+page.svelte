@@ -1,22 +1,26 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { env } from '$env/dynamic/public';
   import SkinTile from '$lib/components/ui/SkinTile.svelte';
   import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
   import SearchInputRow from '$lib/components/ui/SearchInputRow.svelte';
+  import type { PageData } from './$types';
 
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
+  let { data }: { data: PageData } = $props();
+
+  const apiBase = data.apiBase;
 
   let query = $state('');
 
-  // Popular skins from NameMC weekly chart (actual Minecraft usernames, no emoji)
-  const popularSkins = [
+  // Fallback skins if API returns nothing
+  const fallbackSkins = [
     'hiruai', 'sweetily', 'Mxodz', 'saphyras', 'cakeycat', 'Hamazushi14422',
     'marlowwwwwww', '1441', 'Sumugi', 'Sunlity', 'dhfjdhfjkhgdkhs', 'menuchah',
     'ee9e', 'Xekial_', 'Vietnamesin', 'tempvrance', 'ccquetel', 'quiet',
     'Sucie', 'Alesitu', 'ciubun', 'coldreason', 'Transgenres',
     'DeadbyTuesday0', 'Voilta_', 'MochiBud'
   ];
+
+  const hasPopular = data.popularPlayers.length > 0;
 
   function submitSearch(event: SubmitEvent) {
     event.preventDefault();
@@ -64,19 +68,31 @@
   <section class="surface lookup-panel">
     <SectionHeading
       title="Skins populaires"
-      description="Top hebdomadaire — rendus 3D générés par l'API en temps réel."
+      description={hasPopular ? 'Les joueurs les plus recherchés sur MCInfo.' : 'Top hebdomadaire — rendus 3D générés par l\'API en temps réel.'}
       light={true}
     />
 
     <div class="gallery-grid skin-gallery">
-      {#each popularSkins as username, i}
-        <SkinTile
-          {username}
-          rank={i + 1}
-          image={render3dUrl(username)}
-          href={`/player/${encodeURIComponent(username)}`}
-        />
-      {/each}
+      {#if hasPopular}
+        {#each data.popularPlayers as player, i}
+          <SkinTile
+            username={player.username}
+            rank={i + 1}
+            image={render3dUrl(player.username)}
+            href={`/player/${encodeURIComponent(player.username)}`}
+            tag="{player.views} vues · {player.likes} likes"
+          />
+        {/each}
+      {:else}
+        {#each fallbackSkins as username, i}
+          <SkinTile
+            {username}
+            rank={i + 1}
+            image={render3dUrl(username)}
+            href={`/player/${encodeURIComponent(username)}`}
+          />
+        {/each}
+      {/if}
     </div>
   </section>
 </main>

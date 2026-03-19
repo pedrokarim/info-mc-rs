@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/public';
 
-import type { ApiErrorResponse, PlayerApiResponse, ServerApiResponse, ServerEdition } from '$lib/types';
+import type { ApiErrorResponse, PlayerApiResponse, PopularPlayerEntry, PopularServerEntry, ServerApiResponse, ServerEdition } from '$lib/types';
 
 const FALLBACK_API_BASE = 'http://127.0.0.1:3002';
 
@@ -75,5 +75,63 @@ export async function fetchPlayerSnapshot(
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to reach API server';
     return { data: null, error: message, apiBase };
+  }
+}
+
+export async function fetchPopularPlayers(
+  fetchFn: typeof fetch,
+  sort: 'views' | 'likes' = 'views',
+  limit = 20
+): Promise<PopularPlayerEntry[]> {
+  const apiBase = getApiBase();
+  try {
+    const res = await fetchFn(`${apiBase}/api/v1/popular/players?sort=${sort}&limit=${limit}`);
+    if (!res.ok) return [];
+    return (await res.json()) as PopularPlayerEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchPopularServers(
+  fetchFn: typeof fetch,
+  sort: 'views' | 'likes' = 'views',
+  limit = 20
+): Promise<PopularServerEntry[]> {
+  const apiBase = getApiBase();
+  try {
+    const res = await fetchFn(`${apiBase}/api/v1/popular/servers?sort=${sort}&limit=${limit}`);
+    if (!res.ok) return [];
+    return (await res.json()) as PopularServerEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchRecentPlayers(
+  fetchFn: typeof fetch,
+  limit = 8
+): Promise<PopularPlayerEntry[]> {
+  const apiBase = getApiBase();
+  try {
+    const res = await fetchFn(`${apiBase}/api/v1/recent/players?limit=${limit}`);
+    if (!res.ok) return [];
+    return (await res.json()) as PopularPlayerEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchRecentServers(
+  fetchFn: typeof fetch,
+  limit = 8
+): Promise<PopularServerEntry[]> {
+  const apiBase = getApiBase();
+  try {
+    const res = await fetchFn(`${apiBase}/api/v1/recent/servers?limit=${limit}`);
+    if (!res.ok) return [];
+    return (await res.json()) as PopularServerEntry[];
+  } catch {
+    return [];
   }
 }

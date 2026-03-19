@@ -46,6 +46,47 @@
     return Math.max(0, Math.min(100, (players.online / players.max) * 100));
   }
 
+  let isLiked = $state(false);
+  let likeLoading = $state(false);
+  let likeCount = $state(data.server?.popularity?.likes ?? 0);
+  let viewCount = $state(data.server?.popularity?.views ?? 0);
+
+  $effect(() => {
+    if (!data.server || !data.server.online) return;
+    const addr = data.server.address.hostname;
+    fetch(`${data.apiBase}/api/v1/server/${encodeURIComponent(addr)}/like`)
+      .then(r => r.json())
+      .then(d => { isLiked = d.liked === true; })
+      .catch(() => { isLiked = false; });
+    likeCount = data.server?.popularity?.likes ?? 0;
+    viewCount = data.server?.popularity?.views ?? 0;
+  });
+
+  async function toggleLike() {
+    if (!data.server?.online || likeLoading) return;
+    const addr = data.server.address.hostname;
+    likeLoading = true;
+    const was = isLiked;
+    isLiked = !was;
+    likeCount += was ? -1 : 1;
+    try {
+      await fetch(`${data.apiBase}/api/v1/server/${encodeURIComponent(addr)}/like`, {
+        method: was ? 'DELETE' : 'POST',
+      });
+    } catch {
+      isLiked = was;
+      likeCount += was ? 1 : -1;
+    } finally {
+      likeLoading = false;
+    }
+  }
+
+  function formatNumber(n: number): string {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+    return n.toString();
+  }
+
   const serverDetails = $derived(data.server
     ? [
         { key: 'Hostname', value: data.server.address.hostname },
@@ -131,6 +172,27 @@
               {data.server.players.online} / {data.server.players.max} joueurs
             </p>
             <ProgressMeter value={populationPercent()} max={100} />
+          {/if}
+
+          {#if data.server.popularity}
+            <div class="popularity-strip" style="margin-top: 0.8rem; display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0.7rem; border-radius: 8px; background: rgba(94,144,255,0.06); border: 1px solid rgba(94,144,255,0.15); font-size: 0.8rem;">
+              <span style="display:flex;align-items:center;gap:0.3rem;color:var(--ink-2)">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3"/><path d="M1 8s3-5.5 7-5.5S15 8 15 8s-3 5.5-7 5.5S1 8 1 8z"/></svg>
+                <strong style="color:var(--ink-1)">{formatNumber(viewCount)}</strong> vues
+              </span>
+              <span style="display:flex;align-items:center;gap:0.3rem;color:var(--ink-2)">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8.5l4 4.5 8-9"/></svg>
+                <strong style="color:var(--ink-1)">{formatNumber(likeCount)}</strong> likes
+              </span>
+              <button
+                onclick={toggleLike}
+                disabled={likeLoading}
+                style="margin-left:auto; cursor:pointer; border:1px solid {isLiked ? 'rgba(94,144,255,0.4)' : 'rgba(76,120,176,0.3)'}; background:{isLiked ? 'rgba(94,144,255,0.1)' : 'rgba(255,255,255,0.7)'}; color:{isLiked ? '#5e90ff' : 'var(--ink-1)'}; border-radius:6px; padding:0.25rem 0.6rem; font-size:0.75rem; font-weight:700; display:flex; align-items:center; gap:0.3rem;"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8.5l4 4.5 8-9"/></svg>
+                {isLiked ? 'Liké' : 'Like'}
+              </button>
+            </div>
           {/if}
         </div>
       </article>

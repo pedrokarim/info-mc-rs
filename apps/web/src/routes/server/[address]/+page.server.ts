@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import type { ServerEdition } from '$lib/types';
-import { fetchServerSnapshot } from '$lib/server/mc-api';
+import { fetchServerSnapshot, getApiBase } from '$lib/server/mc-api';
 
 function asEdition(value: string | null): ServerEdition {
   if (value === 'java' || value === 'bedrock') {
@@ -20,6 +20,7 @@ export const load: PageServerLoad = async ({ params, url, fetch }) => {
     address,
     edition,
     server: result.data,
-    error: result.error
+    error: result.error,
+    apiBase: getApiBase()
   };
 };

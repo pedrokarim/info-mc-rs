@@ -1,6 +1,9 @@
 <script lang="ts">
   import GameChip from '$lib/components/ui/GameChip.svelte';
   import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
+  import type { PageData } from './$types';
+
+  let { data }: { data: PageData } = $props();
 
   interface ServerEntry {
     name: string;
@@ -68,6 +71,28 @@
       </div>
     </div>
   </section>
+
+  {#if data.popularServers.length > 0}
+    <section class="surface lookup-panel">
+      <SectionHeading title="Tendances" description="Les serveurs les plus recherchés sur MCInfo." light={true} />
+      <div class="server-grid">
+        {#each data.popularServers as srv}
+          <a class="server-card" href={`/server/${encodeURIComponent(srv.address)}`}>
+            <div class="server-card-head">
+              <p class="server-name">{srv.hostname}</p>
+              <span class="server-edition">{srv.edition}</span>
+            </div>
+            <p class="server-address">{srv.address}</p>
+            {#if srv.motd_clean}
+              <p class="server-desc">{srv.motd_clean.slice(0, 80)}</p>
+            {/if}
+            <p class="server-stats">{srv.views} vues · {srv.likes} likes</p>
+            <span class="server-cta">Voir le statut →</span>
+          </a>
+        {/each}
+      </div>
+    </section>
+  {/if}
 
   {#each serversByCategory as category}
     <section class="surface lookup-panel">
@@ -168,6 +193,13 @@
     color: var(--ink-1);
     font-size: 0.82rem;
     flex: 1;
+  }
+
+  .server-stats {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--ink-2);
+    font-weight: 600;
   }
 
   .server-cta {
