@@ -89,6 +89,7 @@ export interface PopularServerEntry {
   edition: string;
   version_name?: string;
   motd_clean?: string;
+  motd_html?: string;
   favicon?: string;
   max_players?: number;
   views: number;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import GameChip from '$lib/components/ui/GameChip.svelte';
+  import MotdBlock from '$lib/components/ui/MotdBlock.svelte';
   import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
   import type { PageData } from './$types';
 
@@ -77,14 +78,17 @@
       <SectionHeading title="Tendances" description="Les serveurs les plus recherchés sur MCInfo." light={true} />
       <div class="server-grid">
         {#each data.popularServers as srv}
+          {@const liveMotd = data.storedMap[srv.address.toLowerCase()]?.motd_html ?? data.storedMap[srv.hostname.toLowerCase()]?.motd_html}
           <a class="server-card" href={`/server/${encodeURIComponent(srv.address)}`}>
             <div class="server-card-head">
               <p class="server-name">{srv.hostname}</p>
               <span class="server-edition">{srv.edition}</span>
             </div>
             <p class="server-address">{srv.address}</p>
-            {#if srv.motd_clean}
-              <p class="server-desc">{srv.motd_clean.slice(0, 80)}</p>
+            {#if liveMotd || srv.motd_html || srv.motd_clean}
+              <div class="server-motd">
+                <MotdBlock html={liveMotd ?? srv.motd_html ?? srv.motd_clean ?? ''} />
+              </div>
             {/if}
             <p class="server-stats">{srv.views} vues · {srv.likes} likes</p>
             <span class="server-cta">Voir le statut →</span>
@@ -100,13 +104,20 @@
 
       <div class="server-grid">
         {#each category.servers as srv}
+          {@const stored = data.storedMap[srv.address.toLowerCase()]}
           <a class="server-card" href={`/server/${encodeURIComponent(srv.address)}`}>
             <div class="server-card-head">
               <p class="server-name">{srv.name}</p>
               <span class="server-edition">{editionLabel[srv.edition]}</span>
             </div>
             <p class="server-address">{srv.address}</p>
-            <p class="server-desc">{srv.description}</p>
+            {#if stored?.motd_html}
+              <div class="server-motd">
+                <MotdBlock html={stored.motd_html} />
+              </div>
+            {:else}
+              <p class="server-desc">{srv.description}</p>
+            {/if}
             <span class="server-cta">Voir le statut →</span>
           </a>
         {/each}
@@ -186,6 +197,10 @@
     color: var(--ink-2);
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.76rem;
+  }
+
+  .server-motd {
+    flex: 1;
   }
 
   .server-desc {

@@ -11,7 +11,7 @@
 
   let query = $state('');
 
-  // Fallback skins if API returns nothing
+  // Hardcoded skins to always fill the gallery
   const fallbackSkins = [
     'hiruai', 'sweetily', 'Mxodz', 'saphyras', 'cakeycat', 'Hamazushi14422',
     'marlowwwwwww', '1441', 'Sumugi', 'Sunlity', 'dhfjdhfjkhgdkhs', 'menuchah',
@@ -20,7 +20,27 @@
     'DeadbyTuesday0', 'Voilta_', 'MochiBud'
   ];
 
-  const hasPopular = data.popularPlayers.length > 0;
+  // Merge: popular first, then fill with hardcoded (no duplicates)
+  const popularNames = new Set(data.popularPlayers.map(p => p.username.toLowerCase()));
+  const fillSkins = fallbackSkins.filter(u => !popularNames.has(u.toLowerCase()));
+
+  interface DisplaySkin {
+    username: string;
+    tag?: string;
+    fromApi: boolean;
+  }
+
+  const allSkins: DisplaySkin[] = [
+    ...data.popularPlayers.map(p => ({
+      username: p.username,
+      tag: `${p.views} vues · ${p.likes} likes`,
+      fromApi: true,
+    })),
+    ...fillSkins.map(u => ({
+      username: u,
+      fromApi: false,
+    })),
+  ];
 
   function submitSearch(event: SubmitEvent) {
     event.preventDefault();
@@ -68,31 +88,20 @@
   <section class="surface lookup-panel">
     <SectionHeading
       title="Skins populaires"
-      description={hasPopular ? 'Les joueurs les plus recherchés sur MCInfo.' : 'Top hebdomadaire — rendus 3D générés par l\'API en temps réel.'}
+      description="Les joueurs les plus recherchés sur MCInfo — rendus 3D en temps réel."
       light={true}
     />
 
     <div class="gallery-grid skin-gallery">
-      {#if hasPopular}
-        {#each data.popularPlayers as player, i}
-          <SkinTile
-            username={player.username}
-            rank={i + 1}
-            image={render3dUrl(player.username)}
-            href={`/player/${encodeURIComponent(player.username)}`}
-            tag="{player.views} vues · {player.likes} likes"
-          />
-        {/each}
-      {:else}
-        {#each fallbackSkins as username, i}
-          <SkinTile
-            {username}
-            rank={i + 1}
-            image={render3dUrl(username)}
-            href={`/player/${encodeURIComponent(username)}`}
-          />
-        {/each}
-      {/if}
+      {#each allSkins as skin, i}
+        <SkinTile
+          username={skin.username}
+          rank={i + 1}
+          image={render3dUrl(skin.username)}
+          href={`/player/${encodeURIComponent(skin.username)}`}
+          tag={skin.tag}
+        />
+      {/each}
     </div>
   </section>
 </main>

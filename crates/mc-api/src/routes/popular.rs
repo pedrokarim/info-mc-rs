@@ -38,6 +38,7 @@ pub struct PopularServerEntry {
     pub edition: String,
     pub version_name: Option<String>,
     pub motd_clean: Option<String>,
+    pub motd_html: Option<String>,
     pub favicon: Option<String>,
     pub max_players: Option<i64>,
     pub views: i64,
@@ -141,7 +142,7 @@ pub async fn popular_servers(
 
     let rows: Vec<PopularServerEntry> = if order_col == "likes" {
         sqlx::query_as(
-            "SELECT address, hostname, port, edition, version_name, motd_clean, favicon, max_players,
+            "SELECT address, hostname, port, edition, version_name, motd_clean, motd_html, favicon, max_players,
                     views, likes, first_seen_at, last_seen_at, last_online_at
              FROM servers WHERE status = 'active'
              ORDER BY likes DESC, views DESC
@@ -154,7 +155,7 @@ pub async fn popular_servers(
         .map_err(|e| ApiError::InternalError(e.to_string()))?
     } else {
         sqlx::query_as(
-            "SELECT address, hostname, port, edition, version_name, motd_clean, favicon, max_players,
+            "SELECT address, hostname, port, edition, version_name, motd_clean, motd_html, favicon, max_players,
                     views, likes, first_seen_at, last_seen_at, last_online_at
              FROM servers WHERE status = 'active'
              ORDER BY views DESC, likes DESC

@@ -203,11 +203,15 @@ impl AppState {
         .await
         .expect("failed to create admin_alerts table");
 
-        // Add totp_secret column if not exists (migration-safe)
+        // Migrations (ALTER TABLE, safe to re-run)
         sqlx::query("ALTER TABLE admin_users ADD COLUMN totp_secret TEXT")
             .execute(&db)
             .await
-            .ok(); // Ignore error if column already exists
+            .ok();
+        sqlx::query("ALTER TABLE servers ADD COLUMN motd_html TEXT")
+            .execute(&db)
+            .await
+            .ok();
 
         // Seed super admin
         sqlx::query(

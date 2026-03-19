@@ -305,12 +305,13 @@ fn normalize_address(resp: &ServerResponse) -> String {
 async fn persist_server(db: &sqlx::SqlitePool, resp: &ServerResponse) -> Option<Popularity> {
     let address = normalize_address(resp);
     let motd_clean = resp.motd.as_ref().map(|m| m.clean.as_str());
+    let motd_html = resp.motd.as_ref().map(|m| m.html.as_str());
     let version_name = resp.version.as_ref().map(|v| v.name.as_str());
     let max_players = resp.players.as_ref().map(|p| p.max as i64);
 
     let upsert_result = sqlx::query(
-        "INSERT INTO servers (address, hostname, ip, port, edition, version_name, motd_clean, favicon, max_players, last_online_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        "INSERT INTO servers (address, hostname, ip, port, edition, version_name, motd_clean, motd_html, favicon, max_players, last_online_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
          ON CONFLICT(address) DO UPDATE SET
             hostname = excluded.hostname,
             ip = excluded.ip,
@@ -318,6 +319,7 @@ async fn persist_server(db: &sqlx::SqlitePool, resp: &ServerResponse) -> Option<
             edition = excluded.edition,
             version_name = excluded.version_name,
             motd_clean = excluded.motd_clean,
+            motd_html = excluded.motd_html,
             favicon = excluded.favicon,
             max_players = excluded.max_players,
             last_seen_at = datetime('now'),
@@ -331,6 +333,7 @@ async fn persist_server(db: &sqlx::SqlitePool, resp: &ServerResponse) -> Option<
     .bind(&resp.edition)
     .bind(version_name)
     .bind(motd_clean)
+    .bind(motd_html)
     .bind(&resp.favicon)
     .bind(max_players)
     .execute(db)
