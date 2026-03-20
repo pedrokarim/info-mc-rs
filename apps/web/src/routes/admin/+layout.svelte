@@ -4,11 +4,12 @@
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
   import { adminSession, clearSession, adminFetch } from '$lib/stores/admin';
-  import { getApiBase } from '$lib/server/mc-api';
+  import { env } from '$env/dynamic/public';
+  import Avatar from '$lib/components/ui/Avatar.svelte';
 
   let { children } = $props();
 
-  const apiBase = getApiBase();
+  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3001';
 
   const navItems = [
     { label: 'Dashboard', href: '/admin', icon: '📊' },
@@ -69,13 +70,12 @@
       <div class="admin-sidebar-footer">
         {#if $adminSession?.user}
           <div class="admin-user">
-            {#if $adminSession.user.discord_avatar}
-              <img
-                class="admin-avatar"
-                src="https://cdn.discordapp.com/avatars/{$adminSession.user.discord_id}/{$adminSession.user.discord_avatar}.png?size=64"
-                alt=""
-              />
-            {/if}
+            <Avatar
+              src={$adminSession.user.discord_avatar ? `https://cdn.discordapp.com/avatars/${$adminSession.user.discord_id}/${$adminSession.user.discord_avatar}.png?size=64` : ''}
+              alt={$adminSession.user.discord_username}
+              fallback={$adminSession.user.discord_username}
+              size="sm"
+            />
             <div class="admin-user-info">
               <span class="admin-username">{$adminSession.user.discord_username}</span>
               <span class="admin-role">{$adminSession.user.role}</span>
@@ -167,12 +167,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .admin-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
   }
 
   .admin-user-info {

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { env } from '$env/dynamic/public';
   import { adminSession, adminFetch } from '$lib/stores/admin';
+  import Badge from '$lib/components/ui/Badge.svelte';
+  import Avatar from '$lib/components/ui/Avatar.svelte';
 
   const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
@@ -92,15 +94,16 @@
         {#each admins as a}
           <tr>
             <td>
-              {#if a.discord_avatar}
-                <img class="avatar" src="https://cdn.discordapp.com/avatars/{a.discord_id}/{a.discord_avatar}.png?size=32" alt="" />
-              {:else}
-                <div class="avatar-placeholder"></div>
-              {/if}
+              <Avatar
+                src={a.discord_avatar ? `https://cdn.discordapp.com/avatars/${a.discord_id}/${a.discord_avatar}.png?size=32` : ''}
+                alt={a.discord_username}
+                fallback={a.discord_username}
+                size="sm"
+              />
             </td>
             <td>{a.discord_username}</td>
             <td class="mono">{a.discord_id}</td>
-            <td><span class="badge badge--{a.role}">{a.role}</span></td>
+            <td><Badge label={a.role} variant={a.role === 'super_admin' ? 'warning' : 'info'} size="sm" /></td>
             <td class="mono">{a.last_login_at?.slice(0, 10) ?? 'Jamais'}</td>
             <td class="actions">
               {#if a.role === 'admin'}
@@ -132,13 +135,6 @@
   th { text-align: left; padding: 0.5rem 0.6rem; color: #8b949e; border-bottom: 1px solid #30363d; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
   td { padding: 0.45rem 0.6rem; border-bottom: 1px solid #21262d; color: #e6edf3; vertical-align: middle; }
   .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #8b949e; }
-
-  .avatar { width: 28px; height: 28px; border-radius: 50%; }
-  .avatar-placeholder { width: 28px; height: 28px; border-radius: 50%; background: #30363d; }
-
-  .badge { font-size: 0.68rem; font-weight: 600; padding: 0.15em 0.5em; border-radius: 4px; text-transform: uppercase; }
-  .badge--admin { background: rgba(88,166,255,0.2); color: #58a6ff; }
-  .badge--super_admin { background: rgba(210,153,34,0.2); color: #d29922; }
 
   .actions { display: flex; gap: 0.3rem; }
   .act-btn { font-size: 0.7rem; padding: 0.2rem 0.5rem; border: 1px solid #30363d; background: #21262d; color: #8b949e; border-radius: 4px; cursor: pointer; }

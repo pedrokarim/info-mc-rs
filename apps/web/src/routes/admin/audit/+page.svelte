@@ -1,12 +1,15 @@
 <script lang="ts">
   import { env } from '$env/dynamic/public';
   import { adminSession, adminFetch } from '$lib/stores/admin';
+  import Badge from '$lib/components/ui/Badge.svelte';
+  import Pagination from '$lib/components/ui/Pagination.svelte';
 
   const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
   let entries = $state<any[]>([]);
   let total = $state(0);
   let offset = $state(0);
+  let currentPage = $state(1);
   const limit = 50;
 
   async function load() {
@@ -23,8 +26,7 @@
 
   $effect(() => { load(); });
 
-  function nextPage() { offset += limit; load(); }
-  function prevPage() { offset = Math.max(0, offset - limit); load(); }
+  function goToPage(page: number) { offset = (page - 1) * limit; currentPage = page; load(); }
 </script>
 
 <div class="admin-page">
@@ -45,7 +47,7 @@
           <tr>
             <td class="mono">{e.created_at.slice(0, 16).replace('T', ' ')}</td>
             <td class="mono">{e.discord_id.slice(0, 8)}...</td>
-            <td><span class="action-badge">{e.action}</span></td>
+            <td><Badge label={e.action} variant="info" size="sm" /></td>
             <td class="detail">{e.detail ?? '—'}</td>
           </tr>
         {/each}
@@ -53,11 +55,7 @@
     </table>
   </div>
 
-  <div class="pagination">
-    <button disabled={offset === 0} onclick={prevPage}>Précédent</button>
-    <span>{offset + 1}–{Math.min(offset + limit, total)} / {total}</span>
-    <button disabled={offset + limit >= total} onclick={nextPage}>Suivant</button>
-  </div>
+  <Pagination current={currentPage} {total} perPage={limit} onchange={goToPage} />
 </div>
 
 <style>
@@ -68,8 +66,4 @@
   td { padding: 0.45rem 0.6rem; border-bottom: 1px solid #21262d; color: #e6edf3; }
   .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #8b949e; }
   .detail { font-size: 0.78rem; color: #8b949e; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .action-badge { font-size: 0.7rem; font-weight: 600; padding: 0.15em 0.45em; border-radius: 4px; background: rgba(88,166,255,0.1); color: #58a6ff; }
-  .pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: 0.82rem; color: #8b949e; }
-  .pagination button { padding: 0.35rem 0.8rem; background: #21262d; border: 1px solid #30363d; color: #e6edf3; border-radius: 6px; cursor: pointer; font-size: 0.78rem; }
-  .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>

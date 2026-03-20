@@ -1,6 +1,7 @@
 <script lang="ts">
   import { env } from '$env/dynamic/public';
   import { adminSession, adminFetch } from '$lib/stores/admin';
+  import Badge from '$lib/components/ui/Badge.svelte';
 
   const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
@@ -48,8 +49,8 @@
   {#each alerts as a}
     <div class="alert-card alert--{a.severity}" class:resolved={a.resolved}>
       <div class="alert-head">
-        <span class="alert-type">{a.alert_type}</span>
-        <span class="alert-severity">{a.severity}</span>
+        <Badge label={a.alert_type} variant="default" size="sm" />
+        <Badge label={a.severity} variant={a.severity === 'critical' ? 'danger' : a.severity === 'warning' ? 'warning' : 'info'} size="sm" />
         <span class="alert-date">{a.created_at.slice(0, 16).replace('T', ' ')}</span>
       </div>
       <p class="alert-msg">{a.message}</p>
@@ -80,11 +81,6 @@
   .alert--info { border-left: 3px solid #58a6ff; }
 
   .alert-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem; }
-  .alert-type { font-weight: 700; font-size: 0.8rem; color: #e6edf3; }
-  .alert-severity { font-size: 0.68rem; text-transform: uppercase; padding: 0.1em 0.4em; border-radius: 3px; font-weight: 600; }
-  .alert--warning .alert-severity { background: rgba(210,153,34,0.2); color: #d29922; }
-  .alert--critical .alert-severity { background: rgba(248,81,73,0.2); color: #f85149; }
-  .alert--info .alert-severity { background: rgba(88,166,255,0.2); color: #58a6ff; }
   .alert-date { font-size: 0.72rem; color: #8b949e; margin-left: auto; font-family: 'JetBrains Mono', monospace; }
 
   .alert-msg { margin: 0; font-size: 0.85rem; color: #e6edf3; }

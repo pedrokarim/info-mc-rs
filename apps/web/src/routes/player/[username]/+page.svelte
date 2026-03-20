@@ -8,6 +8,7 @@
   import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
   import CapePreview from '$lib/components/ui/CapePreview.svelte';
   import SkinViewer3D from '$lib/components/ui/SkinViewer3D.svelte';
+  import Badge from '$lib/components/ui/Badge.svelte';
   import StatusPill from '$lib/components/ui/StatusPill.svelte';
   import type { PageData } from './$types';
 
@@ -323,14 +324,14 @@
             <div class="card-body capes-row">
               {#if data.player.cape?.url}
                 <div class="cape-tile">
-                  <div class="cape-badge cape-badge--mojang">Officielle Mojang</div>
+                  <Badge label="Officielle Mojang" variant="success" size="sm" />
                   <CapePreview url={data.player.cape.url} scale={8} />
                   <a class="cape-link" href={data.player.cape.url} target="_blank" rel="noreferrer">PNG ↗</a>
                 </div>
               {/if}
               {#if data.player.optifine_cape?.url}
                 <div class="cape-tile">
-                  <div class="cape-badge cape-badge--optifine">OptiFine{#if data.player.optifine_cape.active === false} (inactive){/if}</div>
+                  <Badge label={`OptiFine${data.player.optifine_cape.active === false ? ' (inactive)' : ''}`} variant="info" size="sm" />
                   <CapePreview url={`${data.apiBase}${data.player.optifine_cape.url}`} scale={8} />
                   <a class="cape-link" href={`${data.apiBase}${data.player.optifine_cape.url}`} target="_blank" rel="noreferrer">PNG ↗</a>
                 </div>
@@ -390,22 +391,6 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-  }
-  .cape-badge {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 0.2em 0.6em;
-    border-radius: 4px;
-  }
-  .cape-badge--mojang {
-    background: #1a6b3c;
-    color: #7fffc2;
-  }
-  .cape-badge--optifine {
-    background: #3b2a6b;
-    color: #b89fff;
   }
   .cape-link {
     font-size: 0.75rem;

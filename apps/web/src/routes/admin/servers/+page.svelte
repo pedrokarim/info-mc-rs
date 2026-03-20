@@ -1,6 +1,9 @@
 <script lang="ts">
   import { env } from '$env/dynamic/public';
   import { adminSession, adminFetch } from '$lib/stores/admin';
+  import Badge from '$lib/components/ui/Badge.svelte';
+  import Spinner from '$lib/components/ui/Spinner.svelte';
+  import Pagination from '$lib/components/ui/Pagination.svelte';
 
   const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
@@ -10,8 +13,13 @@
   let sort = $state('last_seen_at');
   let offset = $state(0);
   let loading = $state(false);
+  let currentPage = $state(1);
 
   const limit = 20;
+
+  const statusVariant: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'default'> = {
+    active: 'success', banned: 'danger', flagged: 'warning', verified: 'info', pinned: 'warning'
+  };
 
   async function load() {
     const sess = $adminSession;
@@ -30,8 +38,7 @@
 
   $effect(() => { load(); });
 
-  function nextPage() { offset += limit; load(); }
-  function prevPage() { offset = Math.max(0, offset - limit); load(); }
+  function goToPage(page: number) { offset = (page - 1) * limit; currentPage = page; load(); }
 
   async function moderate(address: string, action: Record<string, any>) {
     const sess = $adminSession;
@@ -57,8 +64,8 @@
   <h2>Serveurs ({total})</h2>
 
   <div class="toolbar">
-    <input class="search-input" type="text" placeholder="Rechercher un serveur..." bind:value={search} onkeydown={(e) => { if (e.key === 'Enter') { offset = 0; load(); } }} />
-    <select class="sort-select" bind:value={sort} onchange={() => { offset = 0; load(); }}>
+    <input class="search-input" type="text" placeholder="Rechercher un serveur..." bind:value={search} onkeydown={(e) => { if (e.key === 'Enter') { offset = 0; currentPage = 1; load(); } }} />
+    <select class="sort-select" bind:value={sort} onchange={() => { offset = 0; currentPage = 1; load(); }}>
       <option value="last_seen_at">Récents</option>
       <option value="views">Vues</option>
       <option value="likes">Likes</option>
@@ -66,7 +73,7 @@
     </select>
   </div>
 
-  {#if loading}<p class="loading">Chargement...</p>{/if}
+  {#if loading}<div class="loading"><Spinner size="sm" /> <span>Chargement...</span></div>{/if}
 
   <div class="table-wrap">
     <table>
@@ -88,7 +95,7 @@
             <td><a href="/server/{encodeURIComponent(s.address)}" target="_blank">{s.address}</a></td>
             <td>{s.edition}</td>
             <td class="mono">{s.version_name ?? '—'}</td>
-            <td><span class="badge badge--{s.status}">{s.status}</span></td>
+            <td><Badge label={s.status} variant={statusVariant[s.status] ?? 'default'} size="sm" /></td>
             <td>{s.views}</td>
             <td>{s.likes}</td>
             <td class="mono">{s.last_seen_at.slice(0, 10)}</td>
@@ -109,16 +116,12 @@
     </table>
   </div>
 
-  <div class="pagination">
-    <button disabled={offset === 0} onclick={prevPage}>Précédent</button>
-    <span>{offset + 1}–{Math.min(offset + limit, total)} / {total}</span>
-    <button disabled={offset + limit >= total} onclick={nextPage}>Suivant</button>
-  </div>
+  <Pagination current={currentPage} {total} perPage={limit} onchange={goToPage} />
 </div>
 
 <style>
   .admin-page h2 { margin: 0 0 1rem; font-family: 'Teko', sans-serif; font-size: 1.8rem; color: #e6edf3; }
-  .loading { color: #8b949e; }
+  .loading { color: #8b949e; display: flex; align-items: center; gap: 0.5rem; }
   .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
   .search-input { flex: 1; padding: 0.5rem 0.7rem; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; }
   .search-input:focus { outline: none; border-color: #58a6ff; }
@@ -131,12 +134,6 @@
   td a:hover { text-decoration: underline; }
   .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #8b949e; }
   tr.banned { opacity: 0.5; }
-  .badge { font-size: 0.68rem; font-weight: 600; padding: 0.15em 0.5em; border-radius: 4px; text-transform: uppercase; }
-  .badge--active { background: rgba(35,134,54,0.2); color: #3fb950; }
-  .badge--banned { background: rgba(248,81,73,0.2); color: #f85149; }
-  .badge--flagged { background: rgba(210,153,34,0.2); color: #d29922; }
-  .badge--verified { background: rgba(88,166,255,0.2); color: #58a6ff; }
-  .badge--pinned { background: rgba(210,153,34,0.2); color: #d29922; }
   .actions { display: flex; gap: 0.3rem; flex-wrap: wrap; }
   .act-btn { font-size: 0.7rem; padding: 0.2rem 0.5rem; border: 1px solid #30363d; background: #21262d; color: #8b949e; border-radius: 4px; cursor: pointer; }
   .act-btn:hover { color: #e6edf3; border-color: #8b949e; }
@@ -144,7 +141,4 @@
   .act-btn--danger:hover { background: rgba(248,81,73,0.15); }
   .act-btn--ok { color: #3fb950; border-color: rgba(63,185,80,0.3); }
   .act-btn--ok:hover { background: rgba(63,185,80,0.15); }
-  .pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: 0.82rem; color: #8b949e; }
-  .pagination button { padding: 0.35rem 0.8rem; background: #21262d; border: 1px solid #30363d; color: #e6edf3; border-radius: 6px; cursor: pointer; font-size: 0.78rem; }
-  .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
