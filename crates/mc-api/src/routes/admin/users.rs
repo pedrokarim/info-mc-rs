@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::{Extension, Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ApiError;
@@ -73,7 +73,11 @@ pub async fn add_admin(
     // Validate role
     match body.role.as_str() {
         "admin" | "super_admin" => {}
-        _ => return Err(ApiError::InvalidAddress("role must be 'admin' or 'super_admin'".into())),
+        _ => {
+            return Err(ApiError::InvalidAddress(
+                "role must be 'admin' or 'super_admin'".into(),
+            ));
+        }
     }
 
     // Validate discord_id (numeric string)
@@ -123,7 +127,7 @@ pub async fn update_admin(
             _ => {
                 return Err(ApiError::InvalidAddress(
                     "role must be 'admin' or 'super_admin'".into(),
-                ))
+                ));
             }
         }
 

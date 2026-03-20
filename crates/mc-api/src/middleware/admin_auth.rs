@@ -30,11 +30,7 @@ pub async fn admin_auth_middleware(
             "error": "unauthorized",
             "message": "Missing or invalid authentication token"
         });
-        (
-            axum::http::StatusCode::UNAUTHORIZED,
-            axum::Json(body),
-        )
-            .into_response()
+        (axum::http::StatusCode::UNAUTHORIZED, axum::Json(body)).into_response()
     };
 
     let forbidden = |msg: &str| {
@@ -42,11 +38,7 @@ pub async fn admin_auth_middleware(
             "error": "forbidden",
             "message": msg
         });
-        (
-            axum::http::StatusCode::FORBIDDEN,
-            axum::Json(body),
-        )
-            .into_response()
+        (axum::http::StatusCode::FORBIDDEN, axum::Json(body)).into_response()
     };
 
     // IP whitelist check

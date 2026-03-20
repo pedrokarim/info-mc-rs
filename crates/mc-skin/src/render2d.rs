@@ -154,7 +154,10 @@ mod tests {
     #[test]
     fn test_render_face_dimensions() {
         let skin = dummy_skin();
-        let opts = RenderOptions { size: 8, overlay: true };
+        let opts = RenderOptions {
+            size: 8,
+            overlay: true,
+        };
         let result = render_face(&skin, &opts).unwrap();
         assert_eq!(result.dimensions(), (8, 8));
     }
@@ -170,7 +173,10 @@ mod tests {
     #[test]
     fn test_render_head_dimensions() {
         let skin = dummy_skin();
-        let opts = RenderOptions { size: 64, overlay: true };
+        let opts = RenderOptions {
+            size: 64,
+            overlay: true,
+        };
         let result = render_head(&skin, &opts).unwrap();
         assert_eq!(result.dimensions(), (64, 64));
     }
@@ -178,7 +184,10 @@ mod tests {
     #[test]
     fn test_render_full_body_dimensions() {
         let skin = dummy_skin();
-        let opts = RenderOptions { size: 16, overlay: true };
+        let opts = RenderOptions {
+            size: 16,
+            overlay: true,
+        };
         let result = render_full_body(&skin, &opts).unwrap();
         // width = size, height = size * 2
         assert_eq!(result.dimensions(), (16, 32));
@@ -187,7 +196,10 @@ mod tests {
     #[test]
     fn test_render_face_with_overlay() {
         let skin = dummy_skin();
-        let opts = RenderOptions { size: 32, overlay: true };
+        let opts = RenderOptions {
+            size: 32,
+            overlay: true,
+        };
         let result = render_face(&skin, &opts);
         assert!(result.is_ok());
     }
@@ -195,7 +207,10 @@ mod tests {
     #[test]
     fn test_render_face_without_overlay() {
         let skin = dummy_skin();
-        let opts = RenderOptions { size: 32, overlay: false };
+        let opts = RenderOptions {
+            size: 32,
+            overlay: false,
+        };
         let result = render_face(&skin, &opts);
         assert!(result.is_ok());
     }

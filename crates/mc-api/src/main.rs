@@ -7,7 +7,10 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::http::{HeaderValue, Method};
-use axum::{Extension, Router, middleware as axum_mw, routing::{get, post}};
+use axum::{
+    Extension, Router, middleware as axum_mw,
+    routing::{get, post},
+};
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tracing_subscriber::EnvFilter;
@@ -48,10 +51,7 @@ async fn main() {
 
     // Admin routes — public (no auth required)
     let admin_public = Router::new()
-        .route(
-            "/api/v1/admin/auth/login",
-            get(routes::admin::auth::login),
-        )
+        .route("/api/v1/admin/auth/login", get(routes::admin::auth::login))
         .route(
             "/api/v1/admin/auth/callback",
             get(routes::admin::auth::callback),
@@ -63,10 +63,7 @@ async fn main() {
 
     // Admin routes — protected (JWT auth required)
     let admin_protected = Router::new()
-        .route(
-            "/api/v1/admin/auth/me",
-            get(routes::admin::auth::me),
-        )
+        .route("/api/v1/admin/auth/me", get(routes::admin::auth::me))
         .route(
             "/api/v1/admin/auth/logout",
             post(routes::admin::auth::logout),
@@ -111,8 +108,7 @@ async fn main() {
         // Admin users — CRUD (super_admin only, enforced in handlers)
         .route(
             "/api/v1/admin/users",
-            get(routes::admin::users::list_admins)
-                .post(routes::admin::users::add_admin),
+            get(routes::admin::users::list_admins).post(routes::admin::users::add_admin),
         )
         .route(
             "/api/v1/admin/users/{discord_id}",
@@ -120,15 +116,11 @@ async fn main() {
                 .delete(routes::admin::users::delete_admin),
         )
         // Audit log
-        .route(
-            "/api/v1/admin/audit",
-            get(routes::admin::audit::list_audit),
-        )
+        .route("/api/v1/admin/audit", get(routes::admin::audit::list_audit))
         // Config
         .route(
             "/api/v1/admin/config",
-            get(routes::admin::config::get_config)
-                .patch(routes::admin::config::update_config),
+            get(routes::admin::config::get_config).patch(routes::admin::config::update_config),
         )
         // Alerts
         .route(
@@ -218,10 +210,7 @@ async fn main() {
                 .delete(routes::likes::unlike_server),
         )
         // Favorites
-        .route(
-            "/api/v1/favorites",
-            get(routes::favorites::list_favorites),
-        )
+        .route("/api/v1/favorites", get(routes::favorites::list_favorites))
         .route(
             "/api/v1/favorites/{uuid}",
             get(routes::favorites::is_favorite)

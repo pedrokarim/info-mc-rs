@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::{Deserialize, Serialize};
 
 use crate::state::AppState;
@@ -16,9 +16,7 @@ fn is_valid_uuid(s: &str) -> bool {
 
 /// Validate a Minecraft username (1-16 chars, alphanumeric + underscore).
 fn is_valid_username(s: &str) -> bool {
-    !s.is_empty()
-        && s.len() <= 16
-        && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+    !s.is_empty() && s.len() <= 16 && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -61,13 +59,11 @@ pub async fn is_favorite(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let exists = sqlx::query_scalar::<_, i32>(
-        "SELECT COUNT(*) FROM favorites WHERE uuid = ?",
-    )
-    .bind(&uuid)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let exists = sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM favorites WHERE uuid = ?")
+        .bind(&uuid)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(FavoriteStatus {
         favorited: exists > 0,

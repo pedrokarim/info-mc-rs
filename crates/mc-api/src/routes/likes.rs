@@ -1,10 +1,10 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::{ConnectInfo, Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -53,13 +53,11 @@ pub async fn like_player(
     let ip_hash = hash_ip(&addr.ip().to_string(), &state.ip_salt);
 
     // Check the player exists in our index
-    let exists = sqlx::query_scalar::<_, i32>(
-        "SELECT COUNT(*) FROM players WHERE uuid = ?",
-    )
-    .bind(&uuid)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let exists = sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM players WHERE uuid = ?")
+        .bind(&uuid)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if exists == 0 {
         return Err(StatusCode::NOT_FOUND);
@@ -148,13 +146,11 @@ pub async fn like_server(
 ) -> Result<impl IntoResponse, StatusCode> {
     let ip_hash = hash_ip(&addr.ip().to_string(), &state.ip_salt);
 
-    let exists = sqlx::query_scalar::<_, i32>(
-        "SELECT COUNT(*) FROM servers WHERE address = ?",
-    )
-    .bind(&address)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let exists = sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM servers WHERE address = ?")
+        .bind(&address)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if exists == 0 {
         return Err(StatusCode::NOT_FOUND);

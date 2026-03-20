@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::{Extension, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use jsonwebtoken::{EncodingKey, Header};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -63,9 +63,7 @@ fn generate_random_hex(len: usize) -> String {
 }
 
 /// GET /api/v1/admin/auth/login — returns Discord OAuth URL
-pub async fn login(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<LoginResponse>, ApiError> {
+pub async fn login(State(state): State<Arc<AppState>>) -> Result<Json<LoginResponse>, ApiError> {
     if state.discord_client_id.is_empty() {
         return Err(ApiError::InternalError(
             "Discord OAuth not configured".into(),
@@ -73,8 +71,7 @@ pub async fn login(
     }
 
     let state_token = generate_random_hex(16);
-    let redirect_uri =
-        urlencoding::encode(&state.discord_redirect_uri).into_owned();
+    let redirect_uri = urlencoding::encode(&state.discord_redirect_uri).into_owned();
 
     let url = format!(
         "https://discord.com/api/oauth2/authorize?client_id={}&redirect_uri={}&response_type=code&scope=identify&state={}",
@@ -130,7 +127,10 @@ pub async fn callback(
     let user_resp = state
         .admin_http
         .get("https://discord.com/api/users/@me")
-        .header("Authorization", format!("Bearer {}", token_data.access_token))
+        .header(
+            "Authorization",
+            format!("Bearer {}", token_data.access_token),
+        )
         .send()
         .await
         .map_err(|e| ApiError::InternalError(format!("Discord user fetch failed: {e}")))?;
@@ -174,15 +174,14 @@ pub async fn callback(
     .ok();
 
     // 5. Check if 2FA is enabled (confirmed secret without "pending:" prefix)
-    let totp_secret: Option<String> = sqlx::query_scalar(
-        "SELECT totp_secret FROM admin_users WHERE discord_id = ?",
-    )
-    .bind(&discord_user.id)
-    .fetch_optional(&state.db)
-    .await
-    .ok()
-    .flatten()
-    .flatten();
+    let totp_secret: Option<String> =
+        sqlx::query_scalar("SELECT totp_secret FROM admin_users WHERE discord_id = ?")
+            .bind(&discord_user.id)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten()
+            .flatten();
 
     let has_2fa = totp_secret
         .as_ref()
@@ -227,15 +226,13 @@ pub async fn callback(
     let now = chrono::Utc::now();
     let expires_at = now + chrono::Duration::hours(24);
 
-    sqlx::query(
-        "INSERT INTO admin_sessions (id, discord_id, expires_at) VALUES (?, ?, ?)",
-    )
-    .bind(&session_id)
-    .bind(&discord_user.id)
-    .bind(expires_at.to_rfc3339())
-    .execute(&state.db)
-    .await
-    .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    sqlx::query("INSERT INTO admin_sessions (id, discord_id, expires_at) VALUES (?, ?, ?)")
+        .bind(&session_id)
+        .bind(&discord_user.id)
+        .bind(expires_at.to_rfc3339())
+        .execute(&state.db)
+        .await
+        .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     // 7. Cleanup expired sessions
     sqlx::query("DELETE FROM admin_sessions WHERE expires_at < datetime('now')")
@@ -261,13 +258,11 @@ pub async fn callback(
     .map_err(|e| ApiError::InternalError(format!("JWT encoding failed: {e}")))?;
 
     // 9. Audit log
-    sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action) VALUES (?, 'login')",
-    )
-    .bind(&discord_user.id)
-    .execute(&state.db)
-    .await
-    .ok();
+    sqlx::query("INSERT INTO admin_audit_log (discord_id, action) VALUES (?, 'login')")
+        .bind(&discord_user.id)
+        .execute(&state.db)
+        .await
+        .ok();
 
     Ok(Json(AuthResponse {
         token,
@@ -310,13 +305,11 @@ pub async fn logout(
         .await
         .ok();
 
-    sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action) VALUES (?, 'logout')",
-    )
-    .bind(&claims.sub)
-    .execute(&state.db)
-    .await
-    .ok();
+    sqlx::query("INSERT INTO admin_audit_log (discord_id, action) VALUES (?, 'logout')")
+        .bind(&claims.sub)
+        .execute(&state.db)
+        .await
+        .ok();
 
     Ok(StatusCode::NO_CONTENT)
 }

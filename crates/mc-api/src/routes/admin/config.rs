@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
-use axum::extract::{Extension, State};
 use axum::Json;
+use axum::extract::{Extension, State};
 use serde::{Deserialize, Serialize};
 
 use crate::error::ApiError;
@@ -36,12 +36,11 @@ pub async fn get_config(
     State(state): State<Arc<AppState>>,
     Extension(_claims): Extension<AdminClaims>,
 ) -> Result<Json<Vec<ConfigEntry>>, ApiError> {
-    let rows: Vec<ConfigEntry> = sqlx::query_as(
-        "SELECT key, value, updated_at FROM admin_config ORDER BY key ASC",
-    )
-    .fetch_all(&state.db)
-    .await
-    .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    let rows: Vec<ConfigEntry> =
+        sqlx::query_as("SELECT key, value, updated_at FROM admin_config ORDER BY key ASC")
+            .fetch_all(&state.db)
+            .await
+            .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     Ok(Json(rows))
 }
@@ -60,7 +59,9 @@ pub async fn update_config(
 
     for (key, value) in &body.values {
         if !ALLOWED_KEYS.contains(&key.as_str()) {
-            return Err(ApiError::InvalidAddress(format!("unknown config key: {key}")));
+            return Err(ApiError::InvalidAddress(format!(
+                "unknown config key: {key}"
+            )));
         }
 
         // Validate specific keys

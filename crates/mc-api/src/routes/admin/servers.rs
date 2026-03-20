@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ApiError;
@@ -65,14 +65,12 @@ pub async fn list_servers(
         .unwrap_or_default();
 
     let total: i64 = if has_search {
-        sqlx::query_scalar(
-            "SELECT COUNT(*) FROM servers WHERE address LIKE ? OR hostname LIKE ?",
-        )
-        .bind(&search_pattern)
-        .bind(&search_pattern)
-        .fetch_one(&state.db)
-        .await
-        .map_err(|e| ApiError::InternalError(e.to_string()))?
+        sqlx::query_scalar("SELECT COUNT(*) FROM servers WHERE address LIKE ? OR hostname LIKE ?")
+            .bind(&search_pattern)
+            .bind(&search_pattern)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|e| ApiError::InternalError(e.to_string()))?
     } else {
         sqlx::query_scalar("SELECT COUNT(*) FROM servers")
             .fetch_one(&state.db)

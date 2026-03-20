@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::{Extension, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::{Deserialize, Serialize};
 use totp_rs::{Algorithm, Secret, TOTP};
 
@@ -43,14 +43,13 @@ pub async fn setup_2fa(
     Extension(claims): Extension<AdminClaims>,
 ) -> Result<Json<TotpSetupResponse>, ApiError> {
     // Check if already enabled
-    let existing: Option<String> = sqlx::query_scalar(
-        "SELECT totp_secret FROM admin_users WHERE discord_id = ?",
-    )
-    .bind(&claims.sub)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::InternalError(e.to_string()))?
-    .flatten();
+    let existing: Option<String> =
+        sqlx::query_scalar("SELECT totp_secret FROM admin_users WHERE discord_id = ?")
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| ApiError::InternalError(e.to_string()))?
+            .flatten();
 
     if existing.is_some() {
         return Err(ApiError::InvalidAddress(
@@ -92,14 +91,13 @@ pub async fn confirm_2fa(
     Extension(claims): Extension<AdminClaims>,
     Json(body): Json<TotpCodeBody>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let stored: Option<String> = sqlx::query_scalar(
-        "SELECT totp_secret FROM admin_users WHERE discord_id = ?",
-    )
-    .bind(&claims.sub)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::InternalError(e.to_string()))?
-    .flatten();
+    let stored: Option<String> =
+        sqlx::query_scalar("SELECT totp_secret FROM admin_users WHERE discord_id = ?")
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| ApiError::InternalError(e.to_string()))?
+            .flatten();
 
     let stored = stored.ok_or(ApiError::InvalidAddress("no 2FA setup in progress".into()))?;
 
@@ -111,7 +109,10 @@ pub async fn confirm_2fa(
 
     let totp = build_totp(secret, &claims.username)?;
 
-    if !totp.check_current(&body.code).map_err(|e| ApiError::InternalError(e.to_string()))? {
+    if !totp
+        .check_current(&body.code)
+        .map_err(|e| ApiError::InternalError(e.to_string()))?
+    {
         return Err(ApiError::InvalidAddress("invalid TOTP code".into()));
     }
 
@@ -123,13 +124,11 @@ pub async fn confirm_2fa(
         .await
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action) VALUES (?, '2fa_enabled')",
-    )
-    .bind(&claims.sub)
-    .execute(&state.db)
-    .await
-    .ok();
+    sqlx::query("INSERT INTO admin_audit_log (discord_id, action) VALUES (?, '2fa_enabled')")
+        .bind(&claims.sub)
+        .execute(&state.db)
+        .await
+        .ok();
 
     Ok(StatusCode::OK)
 }
@@ -147,13 +146,11 @@ pub async fn disable_2fa(
         .await
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action) VALUES (?, '2fa_disabled')",
-    )
-    .bind(&claims.sub)
-    .execute(&state.db)
-    .await
-    .ok();
+    sqlx::query("INSERT INTO admin_audit_log (discord_id, action) VALUES (?, '2fa_disabled')")
+        .bind(&claims.sub)
+        .execute(&state.db)
+        .await
+        .ok();
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -193,36 +190,38 @@ pub async fn verify_2fa(
     }
 
     // Fetch TOTP secret
-    let totp_secret: Option<String> = sqlx::query_scalar(
-        "SELECT totp_secret FROM admin_users WHERE discord_id = ?",
-    )
-    .bind(&temp_claims.sub)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::InternalError(e.to_string()))?
-    .flatten();
+    let totp_secret: Option<String> =
+        sqlx::query_scalar("SELECT totp_secret FROM admin_users WHERE discord_id = ?")
+            .bind(&temp_claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| ApiError::InternalError(e.to_string()))?
+            .flatten();
 
     let secret = totp_secret.ok_or(ApiError::Unauthorized)?;
 
     // Must be confirmed (no "pending:" prefix)
     if secret.starts_with("pending:") {
-        return Err(ApiError::InvalidAddress("2FA setup not confirmed yet".into()));
+        return Err(ApiError::InvalidAddress(
+            "2FA setup not confirmed yet".into(),
+        ));
     }
 
     let totp = build_totp(&secret, &temp_claims.username)?;
 
-    if !totp.check_current(&body.code).map_err(|e| ApiError::InternalError(e.to_string()))? {
+    if !totp
+        .check_current(&body.code)
+        .map_err(|e| ApiError::InternalError(e.to_string()))?
+    {
         return Err(ApiError::InvalidAddress("invalid TOTP code".into()));
     }
 
     // Fetch the real role
-    let role: String = sqlx::query_scalar(
-        "SELECT role FROM admin_users WHERE discord_id = ?",
-    )
-    .bind(&temp_claims.sub)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    let role: String = sqlx::query_scalar("SELECT role FROM admin_users WHERE discord_id = ?")
+        .bind(&temp_claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     // Create a real session
     let session_id = {
@@ -235,15 +234,13 @@ pub async fn verify_2fa(
     let now = chrono::Utc::now();
     let expires_at = now + chrono::Duration::hours(24);
 
-    sqlx::query(
-        "INSERT INTO admin_sessions (id, discord_id, expires_at) VALUES (?, ?, ?)",
-    )
-    .bind(&session_id)
-    .bind(&temp_claims.sub)
-    .bind(expires_at.to_rfc3339())
-    .execute(&state.db)
-    .await
-    .map_err(|e| ApiError::InternalError(e.to_string()))?;
+    sqlx::query("INSERT INTO admin_sessions (id, discord_id, expires_at) VALUES (?, ?, ?)")
+        .bind(&session_id)
+        .bind(&temp_claims.sub)
+        .bind(expires_at.to_rfc3339())
+        .execute(&state.db)
+        .await
+        .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     let claims = AdminClaims {
         sub: temp_claims.sub.clone(),
@@ -261,13 +258,11 @@ pub async fn verify_2fa(
     )
     .map_err(|e| ApiError::InternalError(format!("JWT encoding failed: {e}")))?;
 
-    sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action) VALUES (?, '2fa_verified')",
-    )
-    .bind(&temp_claims.sub)
-    .execute(&state.db)
-    .await
-    .ok();
+    sqlx::query("INSERT INTO admin_audit_log (discord_id, action) VALUES (?, '2fa_verified')")
+        .bind(&temp_claims.sub)
+        .execute(&state.db)
+        .await
+        .ok();
 
     Ok(Json(TotpVerifyResponse {
         token,

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use axum::extract::{Extension, State};
 use axum::Json;
+use axum::extract::{Extension, State};
 use serde::Serialize;
 
 use crate::error::ApiError;

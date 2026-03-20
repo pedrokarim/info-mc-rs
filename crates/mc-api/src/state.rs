@@ -48,8 +48,8 @@ impl AppState {
             .build()
             .expect("failed to build admin HTTP client");
 
-        let ip_salt = std::env::var("IP_HASH_SALT")
-            .unwrap_or_else(|_| "mcinfo-default-salt".to_string());
+        let ip_salt =
+            std::env::var("IP_HASH_SALT").unwrap_or_else(|_| "mcinfo-default-salt".to_string());
 
         let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
             let secret: String = rand::thread_rng()
@@ -57,7 +57,9 @@ impl AppState {
                 .take(32)
                 .map(char::from)
                 .collect();
-            tracing::warn!("JWT_SECRET not set, using random secret (sessions won't survive restarts)");
+            tracing::warn!(
+                "JWT_SECRET not set, using random secret (sessions won't survive restarts)"
+            );
             secret
         });
 
@@ -225,18 +227,19 @@ impl AppState {
         // Seed default config values
         for (key, value) in [
             ("maintenance_mode", "false"),
-            ("maintenance_message", "Service temporarily unavailable for maintenance"),
+            (
+                "maintenance_message",
+                "Service temporarily unavailable for maintenance",
+            ),
             ("like_alert_threshold", "50"),
             ("admin_ip_whitelist", ""),
         ] {
-            sqlx::query(
-                "INSERT OR IGNORE INTO admin_config (key, value) VALUES (?, ?)",
-            )
-            .bind(key)
-            .bind(value)
-            .execute(&db)
-            .await
-            .ok();
+            sqlx::query("INSERT OR IGNORE INTO admin_config (key, value) VALUES (?, ?)")
+                .bind(key)
+                .bind(value)
+                .execute(&db)
+                .await
+                .ok();
         }
 
         // Load maintenance mode flag from DB

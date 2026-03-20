@@ -48,7 +48,9 @@ pub async fn export_players(
     .await
     .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    let mut csv = String::from("uuid,username,skin_url,skin_model,status,views,likes,first_seen_at,last_seen_at\n");
+    let mut csv = String::from(
+        "uuid,username,skin_url,skin_model,status,views,likes,first_seen_at,last_seen_at\n",
+    );
     for r in &rows {
         csv.push_str(&format!(
             "{},{},{},{},{},{},{},{},{}\n",
@@ -120,7 +122,9 @@ pub async fn export_servers(
     .await
     .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    let mut csv = String::from("address,hostname,ip,port,edition,version_name,motd_clean,max_players,status,views,likes,first_seen_at,last_seen_at,last_online_at\n");
+    let mut csv = String::from(
+        "address,hostname,ip,port,edition,version_name,motd_clean,max_players,status,views,likes,first_seen_at,last_seen_at,last_online_at\n",
+    );
     for r in &rows {
         csv.push_str(&format!(
             "{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",

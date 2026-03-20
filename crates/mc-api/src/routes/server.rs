@@ -293,11 +293,19 @@ fn format_error(e: &mc_protocol::McProtocolError) -> String {
 
 /// Normalize server address for use as DB key: "hostname:port"
 fn normalize_address(resp: &ServerResponse) -> String {
-    let default_port = if resp.edition == "bedrock" { 19132 } else { 25565 };
+    let default_port = if resp.edition == "bedrock" {
+        19132
+    } else {
+        25565
+    };
     if resp.address.port == default_port {
         resp.address.hostname.to_lowercase()
     } else {
-        format!("{}:{}", resp.address.hostname.to_lowercase(), resp.address.port)
+        format!(
+            "{}:{}",
+            resp.address.hostname.to_lowercase(),
+            resp.address.port
+        )
     }
 }
 
@@ -340,7 +348,10 @@ async fn persist_server(db: &sqlx::SqlitePool, resp: &ServerResponse) -> Option<
     .await;
 
     if upsert_result.is_err() {
-        tracing::warn!("failed to persist server {address}: {:?}", upsert_result.err());
+        tracing::warn!(
+            "failed to persist server {address}: {:?}",
+            upsert_result.err()
+        );
         return None;
     }
 

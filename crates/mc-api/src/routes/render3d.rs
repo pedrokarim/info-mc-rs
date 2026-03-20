@@ -5,7 +5,7 @@ use axum::http::header;
 use axum::response::IntoResponse;
 use serde::Deserialize;
 
-use mc_render3d::{render_skin_png, BackEquipment, RenderParams};
+use mc_render3d::{BackEquipment, RenderParams, render_skin_png};
 use mc_skin::fetch_skin;
 
 use crate::error::ApiError;
@@ -52,7 +52,10 @@ pub async fn render_skin_3d(
                 url: s.url,
                 model: format!("{:?}", s.model).to_lowercase(),
             }),
-            cape: profile.cape.map(|c| CapeResponse { url: c.url, active: None }),
+            cape: profile.cape.map(|c| CapeResponse {
+                url: c.url,
+                active: None,
+            }),
             optifine_cape: None,
             labymod_cape: None,
             retrieved_at: chrono::Utc::now().to_rfc3339(),
@@ -68,7 +71,11 @@ pub async fn render_skin_3d(
         .map(|s| s.url.clone())
         .ok_or_else(|| ApiError::NotFound("player has no skin".into()))?;
 
-    let slim = player.skin.as_ref().map(|s| s.model == "slim").unwrap_or(false);
+    let slim = player
+        .skin
+        .as_ref()
+        .map(|s| s.model == "slim")
+        .unwrap_or(false);
 
     let back_equipment = match params.back.as_deref() {
         Some("elytra") => BackEquipment::Elytra,
@@ -98,13 +105,25 @@ pub async fn render_skin_3d(
 
     let png_bytes = render_skin_png(
         &skin_rgba,
-        &RenderParams { width, height, slim, theta, phi, time, cape_rgba, back_equipment },
+        &RenderParams {
+            width,
+            height,
+            slim,
+            theta,
+            phi,
+            time,
+            cape_rgba,
+            back_equipment,
+        },
     )
     .await
     .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    Ok(([
-        (header::CONTENT_TYPE, "image/png"),
-        (header::CACHE_CONTROL, "no-cache, no-store, must-revalidate"),
-    ], png_bytes))
+    Ok((
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "no-cache, no-store, must-revalidate"),
+        ],
+        png_bytes,
+    ))
 }
