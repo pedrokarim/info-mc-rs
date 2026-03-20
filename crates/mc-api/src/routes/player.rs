@@ -92,7 +92,10 @@ pub async fn get_player(
             url: s.url,
             model: format!("{:?}", s.model).to_lowercase(),
         }),
-        cape: profile.cape.map(|c| CapeResponse { url: c.url, active: None }),
+        cape: profile.cape.map(|c| CapeResponse {
+            url: c.url,
+            active: None,
+        }),
         optifine_cape,
         labymod_cape,
         retrieved_at: now,
@@ -172,13 +175,13 @@ async fn persist_player(
 async fn check_optifine_cape(http: &reqwest::Client, username: &str) -> Option<CapeResponse> {
     // Try active cape first
     let active_url = format!("https://optifine.net/capes/{username}.png");
-    if let Ok(resp) = http.head(&active_url).send().await {
-        if resp.status().is_success() {
-            return Some(CapeResponse {
-                url: active_url,
-                active: Some(true),
-            });
-        }
+    if let Ok(resp) = http.head(&active_url).send().await
+        && resp.status().is_success()
+    {
+        return Some(CapeResponse {
+            url: active_url,
+            active: Some(true),
+        });
     }
     // Fallback to inactive cape
     let inactive_url = format!("https://optifine.net/capes/inactive/{username}.png");

@@ -35,11 +35,11 @@ pub async fn proxy_cape(
     // Try each URL until one succeeds
     let mut resp = None;
     for url in &urls {
-        if let Ok(r) = state.http.get(url).send().await {
-            if r.status().is_success() {
-                resp = Some(r);
-                break;
-            }
+        if let Ok(r) = state.http.get(url).send().await
+            && r.status().is_success()
+        {
+            resp = Some(r);
+            break;
         }
     }
     let resp = match resp {

@@ -61,7 +61,7 @@ pub async fn query_basic(address: &str, port: u16, config: &QueryConfig) -> Resu
     socket
         .connect((address, port))
         .await
-        .map_err(|e| McProtocolError::Io(e))?;
+        .map_err(McProtocolError::Io)?;
 
     let session_id = generate_session_id();
     let challenge = handshake(&socket, session_id, config.timeout).await?;
@@ -73,16 +73,13 @@ pub async fn query_basic(address: &str, port: u16, config: &QueryConfig) -> Resu
     request.extend_from_slice(&session_id.to_be_bytes());
     request.extend_from_slice(&challenge.to_be_bytes());
 
-    socket
-        .send(&request)
-        .await
-        .map_err(|e| McProtocolError::Io(e))?;
+    socket.send(&request).await.map_err(McProtocolError::Io)?;
 
     let mut buf = [0u8; 4096];
     let len = timeout(config.timeout, socket.recv(&mut buf))
         .await
         .map_err(|_| McProtocolError::Timeout(config.timeout))?
-        .map_err(|e| McProtocolError::Io(e))?;
+        .map_err(McProtocolError::Io)?;
 
     parse_basic_stat(&buf[..len])
 }
@@ -93,7 +90,7 @@ pub async fn query_full(address: &str, port: u16, config: &QueryConfig) -> Resul
     socket
         .connect((address, port))
         .await
-        .map_err(|e| McProtocolError::Io(e))?;
+        .map_err(McProtocolError::Io)?;
 
     let session_id = generate_session_id();
     let challenge = handshake(&socket, session_id, config.timeout).await?;

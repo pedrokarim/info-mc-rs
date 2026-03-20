@@ -112,31 +112,31 @@ fn parse_component(value: &serde_json::Value, parent_style: &MotdStyle, nodes: &
     }
 
     // Extract text
-    if let Some(text) = obj.get("text").and_then(|v| v.as_str()) {
-        if !text.is_empty() {
-            // The text itself might contain legacy codes
-            let mut text_nodes = Vec::new();
-            parse_legacy_string(text, &mut text_nodes);
+    if let Some(text) = obj.get("text").and_then(|v| v.as_str())
+        && !text.is_empty()
+    {
+        // The text itself might contain legacy codes
+        let mut text_nodes = Vec::new();
+        parse_legacy_string(text, &mut text_nodes);
 
-            if text_nodes.is_empty() {
-                nodes.push(MotdNode {
-                    text: text.to_string(),
-                    style: style.clone(),
-                });
-            } else {
-                // Merge parent component style with parsed legacy styles
-                for mut node in text_nodes {
-                    if node.style.color.is_none() {
-                        node.style.color = style.color.clone();
-                    }
-                    if !node.style.bold {
-                        node.style.bold = style.bold;
-                    }
-                    if !node.style.italic {
-                        node.style.italic = style.italic;
-                    }
-                    nodes.push(node);
+        if text_nodes.is_empty() {
+            nodes.push(MotdNode {
+                text: text.to_string(),
+                style: style.clone(),
+            });
+        } else {
+            // Merge parent component style with parsed legacy styles
+            for mut node in text_nodes {
+                if node.style.color.is_none() {
+                    node.style.color = style.color.clone();
                 }
+                if !node.style.bold {
+                    node.style.bold = style.bold;
+                }
+                if !node.style.italic {
+                    node.style.italic = style.italic;
+                }
+                nodes.push(node);
             }
         }
     }

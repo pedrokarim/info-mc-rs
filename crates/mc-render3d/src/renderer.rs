@@ -35,7 +35,7 @@ impl Default for RenderParams {
             height: 360,
             slim: false,
             theta: std::f32::consts::FRAC_PI_6, // 30°
-            phi: 0.366,                          // ~21°
+            phi: 0.366,                         // ~21°
             time: 90.0,
             cape_rgba: None,
             back_equipment: BackEquipment::None,
@@ -72,7 +72,11 @@ pub async fn render_skin_png(
 
     let color_tex = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("color"),
-        size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+        size: wgpu::Extent3d {
+            width: w,
+            height: h,
+            depth_or_array_layers: 1,
+        },
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
@@ -84,7 +88,11 @@ pub async fn render_skin_png(
 
     let depth_tex = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("depth"),
-        size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+        size: wgpu::Extent3d {
+            width: w,
+            height: h,
+            depth_or_array_layers: 1,
+        },
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
@@ -212,11 +220,7 @@ pub async fn render_skin_png(
     // ── Matrices ─────────────────────────────────────────────────────
     let aspect = w as f32 / h as f32;
     let proj = Mat4::perspective_rh(38f32.to_radians(), aspect, 40.0, 80.0);
-    let view = Mat4::look_at_rh(
-        Vec3::new(0.0, 0.0, 60.0),
-        Vec3::ZERO,
-        Vec3::Y,
-    );
+    let view = Mat4::look_at_rh(Vec3::new(0.0, 0.0, 60.0), Vec3::ZERO, Vec3::Y);
     // Character rotation (centered at origin, matching NameMC)
     let rot = Mat4::from_euler(glam::EulerRot::XYZ, params.phi, params.theta, 0.0);
     let model_base = rot;
@@ -228,9 +232,7 @@ pub async fn render_skin_png(
 
     // Back equipment parts (cape or elytra) — use cape texture
     let back_parts: Vec<Part> = match (&params.cape_rgba, params.back_equipment) {
-        (Some(cape), BackEquipment::Cape) => {
-            build_cape(cape.width() as f32, cape.height() as f32)
-        }
+        (Some(cape), BackEquipment::Cape) => build_cape(cape.width() as f32, cape.height() as f32),
         (Some(cape), BackEquipment::Elytra) => {
             build_elytra(cape.width() as f32, cape.height() as f32)
         }
@@ -270,7 +272,12 @@ pub async fn render_skin_png(
                 view: &color_view,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }),
+                    load: wgpu::LoadOp::Clear(wgpu::Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.0,
+                    }),
                     store: wgpu::StoreOp::Store,
                 },
             })],
@@ -287,6 +294,7 @@ pub async fn render_skin_png(
         pass.set_pipeline(&pipeline);
 
         // Helper: render a list of parts with a given texture view
+        #[allow(clippy::too_many_arguments)]
         fn render_parts<'a>(
             pass: &mut wgpu::RenderPass<'a>,
             device: &wgpu::Device,
@@ -317,9 +325,18 @@ pub async fn render_skin_png(
                     label: None,
                     layout: bgl,
                     entries: &[
-                        wgpu::BindGroupEntry { binding: 0, resource: uniform_buf.as_entire_binding() },
-                        wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(tex_view) },
-                        wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::Sampler(sampler) },
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: uniform_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(tex_view),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(sampler),
+                        },
                     ],
                 });
 
@@ -342,11 +359,31 @@ pub async fn render_skin_png(
         }
 
         // Pass 1: skin parts
-        render_parts(&mut pass, &device, &bgl, &skin_view, &sampler, &proj, &view, &model_base, &skin_parts);
+        render_parts(
+            &mut pass,
+            &device,
+            &bgl,
+            &skin_view,
+            &sampler,
+            &proj,
+            &view,
+            &model_base,
+            &skin_parts,
+        );
 
         // Pass 2: back equipment (cape/elytra) with cape texture
         if let Some(ref ctv) = cape_tex_view {
-            render_parts(&mut pass, &device, &bgl, ctv, &sampler, &proj, &view, &model_base, &back_parts);
+            render_parts(
+                &mut pass,
+                &device,
+                &bgl,
+                ctv,
+                &sampler,
+                &proj,
+                &view,
+                &model_base,
+                &back_parts,
+            );
         }
     }
 
@@ -368,13 +405,19 @@ pub async fn render_skin_png(
                 rows_per_image: Some(h),
             },
         },
-        wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+        wgpu::Extent3d {
+            width: w,
+            height: h,
+            depth_or_array_layers: 1,
+        },
     );
     queue.submit([encoder.finish()]);
 
     let slice = readback.slice(..);
     let (tx, rx) = tokio::sync::oneshot::channel();
-    slice.map_async(wgpu::MapMode::Read, move |r| { let _ = tx.send(r); });
+    slice.map_async(wgpu::MapMode::Read, move |r| {
+        let _ = tx.send(r);
+    });
     device.poll(wgpu::Maintain::Wait);
     rx.await.unwrap()?;
 

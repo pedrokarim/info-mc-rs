@@ -27,12 +27,12 @@ fn is_private_ip(ip: &IpAddr) -> bool {
 }
 
 fn reject_private_ip(ip: &str) -> Result<()> {
-    if let Ok(parsed) = ip.parse::<IpAddr>() {
-        if is_private_ip(&parsed) {
-            return Err(McProtocolError::DnsFailure(
-                "address resolves to a private/internal IP".to_string(),
-            ));
-        }
+    if let Ok(parsed) = ip.parse::<IpAddr>()
+        && is_private_ip(&parsed)
+    {
+        return Err(McProtocolError::DnsFailure(
+            "address resolves to a private/internal IP".to_string(),
+        ));
     }
     Ok(())
 }
@@ -110,12 +110,12 @@ fn parse_address(address: &str) -> (&str, Option<u16>) {
     }
 
     // Handle host:port format (only if there's exactly one colon, not IPv6)
-    if let Some(colon_pos) = address.rfind(':') {
-        if address.matches(':').count() == 1 {
-            let host = &address[..colon_pos];
-            let port = address[colon_pos + 1..].parse().ok();
-            return (host, port);
-        }
+    if let Some(colon_pos) = address.rfind(':')
+        && address.matches(':').count() == 1
+    {
+        let host = &address[..colon_pos];
+        let port = address[colon_pos + 1..].parse().ok();
+        return (host, port);
     }
 
     (address, None)
@@ -135,10 +135,10 @@ async fn resolve_srv(resolver: &TokioResolver, hostname: &str) -> Option<(String
 
 async fn resolve_ip(resolver: &TokioResolver, hostname: &str) -> std::result::Result<String, ()> {
     // Try A record first, then AAAA
-    if let Ok(lookup) = resolver.lookup_ip(hostname).await {
-        if let Some(ip) = lookup.iter().next() {
-            return Ok(ip.to_string());
-        }
+    if let Ok(lookup) = resolver.lookup_ip(hostname).await
+        && let Some(ip) = lookup.iter().next()
+    {
+        return Ok(ip.to_string());
     }
     Err(())
 }
@@ -173,8 +173,13 @@ mod tests {
     #[test]
     fn test_is_private_ip() {
         let private_ips = [
-            "127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1",
-            "169.254.1.1", "0.0.0.0", "::1",
+            "127.0.0.1",
+            "10.0.0.1",
+            "172.16.0.1",
+            "192.168.1.1",
+            "169.254.1.1",
+            "0.0.0.0",
+            "::1",
         ];
         for ip in private_ips {
             let parsed: IpAddr = ip.parse().unwrap();
