@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
+  import { onMount } from 'svelte';
   import { adminSession, adminFetch } from '$lib/stores/admin';
+  import { addToast } from '$lib/stores/toasts';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Spinner from '$lib/components/ui/Spinner.svelte';
   import Pagination from '$lib/components/ui/Pagination.svelte';
-
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
   let servers = $state<any[]>([]);
   let total = $state(0);
@@ -14,6 +13,7 @@
   let offset = $state(0);
   let loading = $state(false);
   let currentPage = $state(1);
+  let error = $state('');
 
   const limit = 20;
 
@@ -25,18 +25,22 @@
     const sess = $adminSession;
     if (!sess) return;
     loading = true;
+    error = '';
     try {
       const params = new URLSearchParams({ limit: String(limit), offset: String(offset), sort });
       if (search.trim()) params.set('search', search.trim());
-      const res = await adminFetch(apiBase, `/api/v1/admin/servers?${params}`, sess.token);
+      const res = await adminFetch(`/api/v1/admin/servers?${params}`, sess.token);
+      if (!res.ok) throw new Error('Erreur serveur');
       const data = await res.json();
       servers = data.data;
       total = data.total;
-    } catch { /* ignore */ }
+    } catch {
+      error = 'Impossible de charger les serveurs';
+    }
     loading = false;
   }
 
-  $effect(() => { load(); });
+  onMount(() => { load(); });
 
   function goToPage(page: number) { offset = (page - 1) * limit; currentPage = page; load(); }
 
@@ -44,10 +48,16 @@
     const sess = $adminSession;
     if (!sess) return;
     if (!confirm(`Confirmer l'action sur ${address} ?`)) return;
-    await adminFetch(apiBase, `/api/v1/admin/servers/${encodeURIComponent(address)}`, sess.token, {
-      method: 'PATCH',
-      body: JSON.stringify(action),
-    });
+    try {
+      const res = await adminFetch(`/api/v1/admin/servers/${encodeURIComponent(address)}`, sess.token, {
+        method: 'PATCH',
+        body: JSON.stringify(action),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
+      addToast('Action effectuée', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Erreur lors de la modération', 'error');
+    }
     load();
   }
 
@@ -55,13 +65,23 @@
     const sess = $adminSession;
     if (!sess) return;
     if (!confirm(`Supprimer ${address} de l'index ?`)) return;
-    await adminFetch(apiBase, `/api/v1/admin/servers/${encodeURIComponent(address)}`, sess.token, { method: 'DELETE' });
+    try {
+      const res = await adminFetch(`/api/v1/admin/servers/${encodeURIComponent(address)}`, sess.token, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
+      addToast('Serveur supprimé', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Erreur lors de la suppression', 'error');
+    }
     load();
   }
 </script>
 
 <div class="admin-page">
   <h2>Serveurs ({total})</h2>
+
+  {#if error}
+    <div class="admin-error">{error}</div>
+  {/if}
 
   <div class="toolbar">
     <input class="search-input" type="text" placeholder="Rechercher un serveur..." bind:value={search} onkeydown={(e) => { if (e.key === 'Enter') { offset = 0; currentPage = 1; load(); } }} />
@@ -121,6 +141,7 @@
 
 <style>
   .admin-page h2 { margin: 0 0 1rem; font-family: 'Teko', sans-serif; font-size: 1.8rem; color: #e6edf3; }
+  .admin-error { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.4); color: #f85149; border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.82rem; margin-bottom: 1rem; }
   .loading { color: #8b949e; display: flex; align-items: center; gap: 0.5rem; }
   .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
   .search-input { flex: 1; padding: 0.5rem 0.7rem; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; }

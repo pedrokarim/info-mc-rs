@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
+  import { onMount } from 'svelte';
   import { adminSession, adminFetch } from '$lib/stores/admin';
+  import { addToast } from '$lib/stores/toasts';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Avatar from '$lib/components/ui/Avatar.svelte';
-
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
   let admins = $state<any[]>([]);
   let newId = $state('');
@@ -16,19 +15,22 @@
     const sess = $adminSession;
     if (!sess) return;
     try {
-      const res = await adminFetch(apiBase, '/api/v1/admin/users', sess.token);
+      const res = await adminFetch('/api/v1/admin/users', sess.token);
       if (res.ok) admins = await res.json();
       else if (res.status === 403) error = 'Accès réservé aux super_admin';
-    } catch { /* ignore */ }
+      else error = 'Impossible de charger les admins';
+    } catch {
+      error = 'Impossible de charger les admins';
+    }
   }
 
-  $effect(() => { load(); });
+  onMount(() => { load(); });
 
   async function addAdmin() {
     const sess = $adminSession;
     if (!sess || !newId.trim() || !newUsername.trim()) return;
     error = '';
-    const res = await adminFetch(apiBase, '/api/v1/admin/users', sess.token, {
+    const res = await adminFetch('/api/v1/admin/users', sess.token, {
       method: 'POST',
       body: JSON.stringify({ discord_id: newId.trim(), discord_username: newUsername.trim(), role: newRole }),
     });
@@ -39,6 +41,7 @@
     }
     newId = '';
     newUsername = '';
+    addToast('Admin ajouté', 'success');
     load();
   }
 
@@ -46,17 +49,29 @@
     const sess = $adminSession;
     if (!sess) return;
     if (!confirm(`Supprimer l'admin ${id} ?`)) return;
-    await adminFetch(apiBase, `/api/v1/admin/users/${id}`, sess.token, { method: 'DELETE' });
+    try {
+      const res = await adminFetch(`/api/v1/admin/users/${id}`, sess.token, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
+      addToast('Admin supprimé', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Erreur lors de la suppression', 'error');
+    }
     load();
   }
 
   async function changeRole(id: string, role: string) {
     const sess = $adminSession;
     if (!sess) return;
-    await adminFetch(apiBase, `/api/v1/admin/users/${id}`, sess.token, {
-      method: 'PATCH',
-      body: JSON.stringify({ role }),
-    });
+    try {
+      const res = await adminFetch(`/api/v1/admin/users/${id}`, sess.token, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
+      addToast('Rôle modifié', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Erreur lors du changement de rôle', 'error');
+    }
     load();
   }
 </script>

@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
+  import { onMount } from 'svelte';
   import { adminSession, adminFetch } from '$lib/stores/admin';
+  import { addToast } from '$lib/stores/toasts';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Spinner from '$lib/components/ui/Spinner.svelte';
   import Pagination from '$lib/components/ui/Pagination.svelte';
-
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
   let players = $state<any[]>([]);
   let total = $state(0);
@@ -13,6 +12,7 @@
   let sort = $state('last_seen_at');
   let offset = $state(0);
   let loading = $state(false);
+  let error = $state('');
 
   const limit = 20;
   let currentPage = $state(1);
@@ -25,18 +25,22 @@
     const sess = $adminSession;
     if (!sess) return;
     loading = true;
+    error = '';
     try {
       const params = new URLSearchParams({ limit: String(limit), offset: String(offset), sort });
       if (search.trim()) params.set('search', search.trim());
-      const res = await adminFetch(apiBase, `/api/v1/admin/players?${params}`, sess.token);
+      const res = await adminFetch(`/api/v1/admin/players?${params}`, sess.token);
+      if (!res.ok) throw new Error('Erreur serveur');
       const data = await res.json();
       players = data.data;
       total = data.total;
-    } catch { /* ignore */ }
+    } catch {
+      error = 'Impossible de charger les joueurs';
+    }
     loading = false;
   }
 
-  $effect(() => { load(); });
+  onMount(() => { load(); });
 
   function goToPage(page: number) { offset = (page - 1) * limit; currentPage = page; load(); }
 
@@ -44,10 +48,16 @@
     const sess = $adminSession;
     if (!sess) return;
     if (!confirm(`Confirmer l'action sur ${uuid} ?`)) return;
-    await adminFetch(apiBase, `/api/v1/admin/players/${uuid}`, sess.token, {
-      method: 'PATCH',
-      body: JSON.stringify(action),
-    });
+    try {
+      const res = await adminFetch(`/api/v1/admin/players/${uuid}`, sess.token, {
+        method: 'PATCH',
+        body: JSON.stringify(action),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
+      addToast('Action effectuée', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Erreur lors de la modération', 'error');
+    }
     load();
   }
 
@@ -55,7 +65,13 @@
     const sess = $adminSession;
     if (!sess) return;
     if (!confirm(`Supprimer ${uuid} de l'index ?`)) return;
-    await adminFetch(apiBase, `/api/v1/admin/players/${uuid}`, sess.token, { method: 'DELETE' });
+    try {
+      const res = await adminFetch(`/api/v1/admin/players/${uuid}`, sess.token, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
+      addToast('Joueur supprimé', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Erreur lors de la suppression', 'error');
+    }
     load();
   }
 </script>
@@ -63,8 +79,12 @@
 <div class="admin-page">
   <h2>Joueurs ({total})</h2>
 
+  {#if error}
+    <div class="admin-error">{error}</div>
+  {/if}
+
   <div class="toolbar">
-    <input class="search-input" type="text" placeholder="Rechercher un joueur..." bind:value={search} onkeydown={(e) => { if (e.key === 'Enter') { offset = 0; load(); } }} />
+    <input class="search-input" type="text" placeholder="Rechercher un joueur..." bind:value={search} onkeydown={(e) => { if (e.key === 'Enter') { offset = 0; currentPage = 1; load(); } }} />
     <select class="sort-select" bind:value={sort} onchange={() => { offset = 0; load(); }}>
       <option value="last_seen_at">Récents</option>
       <option value="views">Vues</option>
@@ -119,6 +139,7 @@
 
 <style>
   .admin-page h2 { margin: 0 0 1rem; font-family: 'Teko', sans-serif; font-size: 1.8rem; color: #e6edf3; }
+  .admin-error { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.4); color: #f85149; border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.82rem; margin-bottom: 1rem; }
   .loading { color: #8b949e; display: flex; align-items: center; gap: 0.5rem; }
 
   .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }

@@ -1,47 +1,59 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
+  import { onMount } from 'svelte';
   import { adminSession, adminFetch } from '$lib/stores/admin';
-
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
   let configs = $state<{ key: string; value: string; updated_at: string }[]>([]);
   let editValues = $state<Record<string, string>>({});
   let saving = $state(false);
   let message = $state('');
+  let error = $state('');
 
   async function load() {
     const sess = $adminSession;
     if (!sess) return;
-    const res = await adminFetch(apiBase, '/api/v1/admin/config', sess.token);
-    if (res.ok) {
-      configs = await res.json();
-      editValues = Object.fromEntries(configs.map(c => [c.key, c.value]));
+    try {
+      const res = await adminFetch('/api/v1/admin/config', sess.token);
+      if (res.ok) {
+        configs = await res.json();
+        editValues = Object.fromEntries(configs.map(c => [c.key, c.value]));
+      } else {
+        error = 'Impossible de charger la config';
+      }
+    } catch {
+      error = 'Impossible de charger la config';
     }
   }
 
-  $effect(() => { load(); });
+  onMount(() => { load(); });
 
   async function save() {
     const sess = $adminSession;
     if (!sess) return;
     saving = true;
     message = '';
-    const changed: Record<string, string> = {};
+    const changed: Record<string, string | boolean> = {};
     for (const c of configs) {
-      if (editValues[c.key] !== c.value) changed[c.key] = editValues[c.key];
+      if (editValues[c.key] !== c.value) {
+        const v = editValues[c.key];
+        changed[c.key] = v === 'true' ? true : v === 'false' ? false : v;
+      }
     }
     if (Object.keys(changed).length === 0) { message = 'Aucun changement'; saving = false; return; }
-    const res = await adminFetch(apiBase, '/api/v1/admin/config', sess.token, {
-      method: 'PATCH',
-      body: JSON.stringify({ values: changed }),
-    });
-    if (res.ok) {
-      configs = await res.json();
-      editValues = Object.fromEntries(configs.map(c => [c.key, c.value]));
-      message = 'Config sauvegardée';
-    } else {
-      const d = await res.json().catch(() => ({}));
-      message = d.message || 'Erreur';
+    try {
+      const res = await adminFetch('/api/v1/admin/config', sess.token, {
+        method: 'PATCH',
+        body: JSON.stringify({ values: changed }),
+      });
+      if (res.ok) {
+        configs = await res.json();
+        editValues = Object.fromEntries(configs.map(c => [c.key, c.value]));
+        message = 'Config sauvegardée';
+      } else {
+        const d = await res.json().catch(() => ({}));
+        message = d.message || 'Erreur';
+      }
+    } catch {
+      message = 'Erreur réseau';
     }
     saving = false;
   }
@@ -49,6 +61,10 @@
 
 <div class="admin-page">
   <h2>Configuration</h2>
+
+  {#if error}
+    <div class="admin-error">{error}</div>
+  {/if}
 
   {#if message}
     <div class="msg">{message}</div>
@@ -78,6 +94,7 @@
 
 <style>
   .admin-page h2 { margin: 0 0 1rem; font-family: 'Teko', sans-serif; font-size: 1.8rem; color: #e6edf3; }
+  .admin-error { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.4); color: #f85149; border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.82rem; margin-bottom: 1rem; }
   .msg { padding: 0.5rem 0.8rem; background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.3); color: #58a6ff; border-radius: 6px; font-size: 0.82rem; margin-bottom: 1rem; }
 
   .config-grid { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.2rem; }

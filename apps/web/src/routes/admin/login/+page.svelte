@@ -2,10 +2,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
-  import { env } from '$env/dynamic/public';
-  import { adminSession, saveSession } from '$lib/stores/admin';
-
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
+  import { adminSession, saveSession, API_BASE } from '$lib/stores/admin';
 
   let loading = $state(false);
   let error = $state('');
@@ -34,7 +31,7 @@
     loading = true;
     error = '';
     try {
-      const res = await fetch(`${apiBase}/api/v1/admin/auth/login`);
+      const res = await fetch(`${API_BASE}/api/v1/admin/auth/login`);
       const data = await res.json();
       if (!res.ok) {
         error = data.message || 'Erreur lors de la connexion';
@@ -53,7 +50,7 @@
     loading = true;
     error = '';
     try {
-      const res = await fetch(`${apiBase}/api/v1/admin/auth/callback?code=${encodeURIComponent(code)}`);
+      const res = await fetch(`${API_BASE}/api/v1/admin/auth/callback?code=${encodeURIComponent(code)}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -92,7 +89,7 @@
     loading = true;
     error = '';
     try {
-      const res = await fetch(`${apiBase}/api/v1/admin/auth/2fa/verify`, {
+      const res = await fetch(`${API_BASE}/api/v1/admin/auth/2fa/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ temp_token: tempToken, code: totpCode }),

@@ -1,40 +1,54 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
+  import { onMount } from 'svelte';
   import { adminSession, adminFetch } from '$lib/stores/admin';
+  import { addToast } from '$lib/stores/toasts';
   import Badge from '$lib/components/ui/Badge.svelte';
-
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
   let alerts = $state<any[]>([]);
   let total = $state(0);
   let filter = $state('active');
   let offset = $state(0);
+  let error = $state('');
   const limit = 30;
 
   async function load() {
     const sess = $adminSession;
     if (!sess) return;
-    const params = new URLSearchParams({ limit: String(limit), offset: String(offset), filter });
-    const res = await adminFetch(apiBase, `/api/v1/admin/alerts?${params}`, sess.token);
-    if (res.ok) {
+    error = '';
+    try {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset), filter });
+      const res = await adminFetch(`/api/v1/admin/alerts?${params}`, sess.token);
+      if (!res.ok) throw new Error('Erreur serveur');
       const data = await res.json();
       alerts = data.data;
       total = data.total;
+    } catch {
+      error = 'Impossible de charger les alertes';
     }
   }
 
-  $effect(() => { load(); });
+  onMount(() => { load(); });
 
   async function resolve(id: number) {
     const sess = $adminSession;
     if (!sess) return;
-    await adminFetch(apiBase, `/api/v1/admin/alerts/${id}`, sess.token, { method: 'PATCH' });
+    try {
+      const res = await adminFetch(`/api/v1/admin/alerts/${id}`, sess.token, { method: 'PATCH' });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
+      addToast('Alerte résolue', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Erreur lors de la résolution', 'error');
+    }
     load();
   }
 </script>
 
 <div class="admin-page">
   <h2>Alertes ({total})</h2>
+
+  {#if error}
+    <div class="admin-error">{error}</div>
+  {/if}
 
   <div class="toolbar">
     {#each ['active', 'resolved', 'all'] as f}
@@ -68,6 +82,7 @@
 
 <style>
   .admin-page h2 { margin: 0 0 1rem; font-family: 'Teko', sans-serif; font-size: 1.8rem; color: #e6edf3; }
+  .admin-error { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.4); color: #f85149; border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.82rem; margin-bottom: 1rem; }
   .empty { color: #8b949e; }
 
   .toolbar { display: flex; gap: 0.3rem; margin-bottom: 1rem; }

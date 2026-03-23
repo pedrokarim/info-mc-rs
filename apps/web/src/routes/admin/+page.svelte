@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { env } from '$env/dynamic/public';
+  import { onMount } from 'svelte';
   import { adminSession, adminFetch } from '$lib/stores/admin';
-
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
 
   interface Metrics {
     total_players: number;
@@ -19,11 +17,14 @@
   let metrics = $state<Metrics | null>(null);
   let error = $state('');
 
-  $effect(() => {
+  onMount(() => {
     const sess = $adminSession;
     if (!sess) return;
-    adminFetch(apiBase, '/api/v1/admin/dashboard', sess.token)
-      .then(r => r.json())
+    adminFetch('/api/v1/admin/dashboard', sess.token)
+      .then(r => {
+        if (!r.ok) throw new Error('Erreur serveur');
+        return r.json();
+      })
       .then(d => { metrics = d; })
       .catch(() => { error = 'Impossible de charger les métriques'; });
   });

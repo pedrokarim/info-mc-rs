@@ -4,12 +4,10 @@
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
   import { adminSession, clearSession, adminFetch } from '$lib/stores/admin';
-  import { env } from '$env/dynamic/public';
   import Avatar from '$lib/components/ui/Avatar.svelte';
+  import Toast from '$lib/components/ui/Toast.svelte';
 
   let { children } = $props();
-
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3001';
 
   const navItems = [
     { label: 'Dashboard', href: '/admin', icon: '📊' },
@@ -34,7 +32,7 @@
   async function logout() {
     const sess = $adminSession;
     if (sess) {
-      await adminFetch(apiBase, '/api/v1/admin/auth/logout', sess.token, { method: 'POST' }).catch(() => {});
+      await adminFetch('/api/v1/admin/auth/logout', sess.token, { method: 'POST' }).catch(() => {});
     }
     clearSession();
     goto('/admin/login');
@@ -92,6 +90,8 @@
     </main>
   </div>
 {/if}
+
+<Toast />
 
 <style>
   .admin-shell {

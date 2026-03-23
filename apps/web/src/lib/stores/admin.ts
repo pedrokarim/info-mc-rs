@@ -1,5 +1,8 @@
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
+import { env } from '$env/dynamic/public';
+
+export const API_BASE = env.PUBLIC_API_BASE || 'http://127.0.0.1:3001';
 
 export interface AdminUser {
   discord_id: string;
@@ -48,13 +51,11 @@ export function clearSession() {
   adminSession.set(null);
 }
 
-export function adminFetch(apiBase: string, path: string, token: string, options: RequestInit = {}) {
-  return fetch(`${apiBase}${path}`, {
-    ...options,
-    headers: {
-      ...options.headers as Record<string, string>,
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+export function adminFetch(path: string, token: string, options: RequestInit = {}) {
+  const headers = new Headers(options.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  return fetch(`${API_BASE}${path}`, { ...options, headers });
 }
