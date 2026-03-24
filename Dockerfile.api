@@ -33,6 +33,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    libvulkan1 mesa-vulkan-drivers libgl1-mesa-dri \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -r -s /bin/false appuser
 

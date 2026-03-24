@@ -50,14 +50,25 @@ pub async fn render_skin_png(
 ) -> Result<Vec<u8>, RenderError> {
     // ── wgpu device ─────────────────────────────────────────────────
     let instance = wgpu::Instance::default();
-    let adapter = instance
+    // Try hardware GPU first, fall back to software renderer (Docker/headless)
+    let adapter = match instance
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::None,
             compatible_surface: None,
             force_fallback_adapter: false,
         })
         .await
-        .ok_or(RenderError::AdapterNotFound)?;
+    {
+        Some(a) => a,
+        None => instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::None,
+                compatible_surface: None,
+                force_fallback_adapter: true,
+            })
+            .await
+            .ok_or(RenderError::AdapterNotFound)?,
+    };
 
     let (device, queue) = adapter
         .request_device(&wgpu::DeviceDescriptor::default(), None)
