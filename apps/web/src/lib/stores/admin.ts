@@ -2,7 +2,8 @@ import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
 
-export const API_BASE = env.PUBLIC_API_BASE || 'http://127.0.0.1:3001';
+// Empty = relative URLs (proxied via SvelteKit hooks), fallback for local dev
+export const API_BASE = env.PUBLIC_API_BASE || '';
 
 export interface AdminUser {
   discord_id: string;

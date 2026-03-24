@@ -1,11 +1,18 @@
-import { env } from '$env/dynamic/public';
+import { env as publicEnv } from '$env/dynamic/public';
+import { env as privateEnv } from '$env/dynamic/private';
 
 import type { ApiErrorResponse, PlayerApiResponse, PopularPlayerEntry, PopularServerEntry, ServerApiResponse, ServerEdition } from '$lib/types';
 
-const FALLBACK_API_BASE = 'http://127.0.0.1:3002';
+const FALLBACK_API_BASE = 'http://127.0.0.1:3001';
 
+/** Internal API base for SSR fetch (Docker network or localhost) */
 export function getApiBase(): string {
-  return env.PUBLIC_API_BASE || FALLBACK_API_BASE;
+  return privateEnv.API_BASE_INTERNAL || publicEnv.PUBLIC_API_BASE || FALLBACK_API_BASE;
+}
+
+/** Public API base for browser-side URLs (empty = relative, proxied via hooks) */
+export function getPublicApiBase(): string {
+  return publicEnv.PUBLIC_API_BASE || '';
 }
 
 function extractError(payload: unknown, fallback: string): string {

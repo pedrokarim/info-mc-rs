@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SEO from '$lib/components/SEO.svelte';
   import GameChip from '$lib/components/ui/GameChip.svelte';
   import MotdBlock from '$lib/components/ui/MotdBlock.svelte';
   import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
@@ -50,6 +51,19 @@
     both: 'Java + Bedrock'
   };
 </script>
+
+<SEO
+  title="Serveurs Minecraft — Statut en temps réel"
+  description="Liste des serveurs Minecraft populaires avec statut en direct, MOTD visuel et joueurs connectés. Hypixel, CubeCraft, Wynncraft, serveurs français et plus."
+  canonical="/servers"
+  jsonLd={{
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Serveurs Minecraft populaires',
+    description: 'Annuaire des serveurs Minecraft avec statut temps réel, MOTD visuel et compteur de joueurs.',
+    url: 'https://mcinfo.ascencia.re/servers'
+  }}
+/>
 
 <main class="page">
   <section class="hero hero-server">

@@ -3,8 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    ports:
-      - "${API_PORT:-3001}:3001"
     environment:
       - PORT=3001
       - RUST_LOG=info
@@ -24,7 +22,8 @@ services:
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
-      - PUBLIC_API_BASE=http://api:3001
+      - API_BASE_INTERNAL=http://api:3001
+      - PUBLIC_API_BASE=
       - PORT=3000
       - ORIGIN=http://localhost:${WEB_PORT:-3000}
     depends_on:

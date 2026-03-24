@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
+  import SEO from '$lib/components/SEO.svelte';
   import GameChip from '$lib/components/ui/GameChip.svelte';
   import KeyValueGrid from '$lib/components/ui/KeyValueGrid.svelte';
   import NoticeBanner from '$lib/components/ui/NoticeBanner.svelte';
@@ -123,6 +124,25 @@
       : []
   );
 </script>
+
+<SEO
+  title={`${data.username} — Skin Minecraft 3D, Cape & Détails`}
+  description={`Voir le skin Minecraft de ${data.username} en 3D interactif. Télécharger le skin, voir les capes Mojang, OptiFine et l'elytra.`}
+  canonical={`/player/${encodeURIComponent(data.username)}`}
+  ogImage={`${data.apiBase}/api/v1/render3d/${encodeURIComponent(data.username)}?width=600&height=600&theta=30&phi=21`}
+  jsonLd={{
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    name: `${data.username} — Skin Minecraft`,
+    description: `Skin 3D et détails du joueur Minecraft ${data.username}.`,
+    url: `https://mcinfo.ascencia.re/player/${encodeURIComponent(data.username)}`,
+    mainEntity: {
+      '@type': 'Person',
+      name: data.username,
+      ...(data.player?.uuid ? { identifier: data.player.uuid } : {})
+    }
+  }}
+/>
 
 <main class="page">
   <section class="hero hero-player">

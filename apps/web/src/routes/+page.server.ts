@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { fetchPopularPlayers, fetchPopularServers, fetchServerSnapshot, getApiBase } from '$lib/server/mc-api';
+import { fetchPopularPlayers, fetchPopularServers, fetchServerSnapshot, getPublicApiBase } from '$lib/server/mc-api';
 
 const SPOTLIGHT_ADDRESSES = [
   'play.hypixel.net', 'play.cubecraft.net', 'play.wynncraft.com',
@@ -35,6 +35,6 @@ export const load: PageServerLoad = async ({ fetch }) => {
     popularPlayers,
     popularServers,
     motdMap,
-    apiBase: getApiBase(),
+    apiBase: getPublicApiBase(),
   };
 };

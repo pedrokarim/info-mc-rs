@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import SEO from '$lib/components/SEO.svelte';
   import GameChip from '$lib/components/ui/GameChip.svelte';
   import HeroBleed from '$lib/components/ui/HeroBleed.svelte';
   import MotdBlock from '$lib/components/ui/MotdBlock.svelte';
@@ -76,6 +77,24 @@
     return `${apiBase}/api/v1/render3d/${encodeURIComponent(username)}?width=256&height=256&theta=30&phi=21`;
   }
 </script>
+
+<SEO
+  title="Statut serveur Minecraft, Skin Viewer 3D & API"
+  description="MCInfo : vérifiez le statut de n'importe quel serveur Minecraft, explorez les skins en 3D, rendus de capes et elytra. API ouverte et gratuite pour les développeurs."
+  canonical="/"
+  jsonLd={{
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'MCInfo',
+    url: 'https://mcinfo.ascencia.re',
+    description: 'Statut serveur Minecraft, skin viewer 3D et API ouverte.',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://mcinfo.ascencia.re/player/{search_term_string}',
+      'query-input': 'required name=search_term_string'
+    }
+  }}
+/>
 
 <HeroBleed
   eyebrow="Minecraft Intelligence"

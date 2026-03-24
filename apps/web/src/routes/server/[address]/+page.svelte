@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import type { PageData } from './$types';
   import type { ServerEdition } from '$lib/types';
+  import SEO from '$lib/components/SEO.svelte';
   import GameChip from '$lib/components/ui/GameChip.svelte';
   import KeyValueGrid from '$lib/components/ui/KeyValueGrid.svelte';
   import MotdBlock from '$lib/components/ui/MotdBlock.svelte';
@@ -87,6 +88,9 @@
     return n.toString();
   }
 
+  const playerCount = $derived(data.server?.players ? `${data.server.players.online}/${data.server.players.max} joueurs` : '');
+  const versionName = $derived(data.server?.version?.name ?? '');
+
   const serverDetails = $derived(data.server
     ? [
         { key: 'Hostname', value: data.server.address.hostname },
@@ -100,6 +104,20 @@
       ]
     : []);
 </script>
+
+<SEO
+  title={`${data.address} — Statut Serveur Minecraft`}
+  description={`Statut en temps réel du serveur Minecraft ${data.address}. ${data.server?.online ? `En ligne — ${playerCount}${versionName ? ` — ${versionName}` : ''}` : 'Hors ligne'}. MOTD visuel, latence et détails.`}
+  canonical={`/server/${encodeURIComponent(data.address)}`}
+  jsonLd={{
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: `${data.address} — Statut Serveur`,
+    url: `https://mcinfo.ascencia.re/server/${encodeURIComponent(data.address)}`,
+    applicationCategory: 'GameApplication',
+    operatingSystem: 'Minecraft Java / Bedrock'
+  }}
+/>
 
 <main class="page">
   <section class="hero hero-server">

@@ -2,13 +2,14 @@
   import { page } from '$app/state';
   import { env } from '$env/dynamic/public';
 
-  const apiBase = env.PUBLIC_API_BASE || 'http://127.0.0.1:3002';
+  const apiBase = env.PUBLIC_API_BASE || '';
 
   const links = [
     { href: '/', label: 'Accueil' },
     { href: '/servers', label: 'Serveurs' },
     { href: '/skins', label: 'Skins' },
-    { href: '/player/Notch', label: 'Joueurs' }
+    { href: '/player/Notch', label: 'Joueurs' },
+    { href: '/docs', label: 'API' }
   ];
 
   function isActive(pathname: string, href: string): boolean {

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import SEO from '$lib/components/SEO.svelte';
   import SkinTile from '$lib/components/ui/SkinTile.svelte';
   import SectionHeading from '$lib/components/ui/SectionHeading.svelte';
   import SearchInputRow from '$lib/components/ui/SearchInputRow.svelte';
@@ -53,6 +54,19 @@
     return `${apiBase}/api/v1/render3d/${encodeURIComponent(username)}?width=256&height=256&theta=30&phi=21`;
   }
 </script>
+
+<SEO
+  title="Skins Minecraft populaires — Galerie 3D"
+  description="Explorez les skins Minecraft les plus populaires en rendu 3D. Viewer interactif, détection de capes, téléchargement PNG. Mis à jour en temps réel."
+  canonical="/skins"
+  jsonLd={{
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Skins Minecraft populaires',
+    description: 'Galerie des skins Minecraft les plus recherchés avec rendu 3D interactif.',
+    url: 'https://mcinfo.ascencia.re/skins'
+  }}
+/>
 
 <main class="page">
   <section class="hero hero-skins">

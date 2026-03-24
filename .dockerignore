@@ -1,0 +1,9 @@
+target/
+node_modules/
+.git/
+.github/
+.svelte-kit/
+.reference/
+.obsidian/
+*.swp
+*.swo

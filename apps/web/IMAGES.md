@@ -81,6 +81,12 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | skin-placeholder-head-v01.png | Placeholder head | 256x256 | png | done | `/skins`, `/player/[username]` | transparent |
 | skin-placeholder-full-v01.png | Placeholder full body | 256x512 | png | done | `/player/[username]` | transparent |
 
+## SEO / Open Graph (`/images/`)
+
+| Fichier | Usage | Dimension cible | Format | Statut | Page(s) | Notes |
+|---|---|---:|---|---|---|---|
+| og-default.png | Image OG par défaut (partage réseaux sociaux) | 1200x630 | png | todo | toutes | référencée dans `SEO.svelte` |
+
 ## UI (`/images/ui/`)
 
 | Fichier | Usage | Dimension cible | Format | Statut | Page(s) | Notes |
@@ -220,6 +226,20 @@ Focused minecraft-inspired voxel environment for player skin detail page, centra
 NEGATIVE:
 realistic human body, sci-fi city, cluttered center, over-detailed noise, low contrast, text, logo, watermark.
 ```
+
+### og-default.png
+
+- Taille: `1200x630` (ratio OG standard)
+
+```txt
+PROMPT:
+Wide banner for social media sharing (Open Graph), minecraft-inspired voxel world, panoramic blocky landscape with iconic elements (grass blocks, torches, cubic trees, stone fortress), bright vibrant colors, strong center composition, large clean area center for branding overlay "MCInfo", premium gaming website feel, high contrast, sharp edges, no text, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real humans, anime, dark moody, low contrast, blurry, busy composition with no focal point, vertical framing, text, logo, watermark.
+```
+
+> Note: ajouter le texte "MCInfo" + tagline en post-prod (Figma/Canva) sur la zone clean centrale.
 
 ### skin-placeholder-head-v01.png
 

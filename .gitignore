@@ -6,6 +6,7 @@ Cargo.lock
 # IDE
 .idea/
 .vscode/
+.obsidian/
 *.swp
 *.swo
 *~
@@ -53,3 +54,9 @@ bun.lockb
 coverage/
 apps/*/coverage/
 data
+
+# Skills (agent tools)
+.agents/
+.agent/
+skills/
+skills-lock.json
