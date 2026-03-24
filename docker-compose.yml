@@ -20,7 +20,7 @@ services:
       context: .
       dockerfile: Dockerfile.web
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "${WEB_PORT:-4060}:3000"
     environment:
       - API_BASE_INTERNAL=http://api:3001
       - PUBLIC_API_BASE=
