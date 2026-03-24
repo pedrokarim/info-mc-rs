@@ -8,6 +8,7 @@
     twitterCard?: 'summary' | 'summary_large_image';
     noindex?: boolean;
     jsonLd?: Record<string, unknown>;
+    breadcrumbs?: { name: string; href: string }[];
   }
 
   const SITE_NAME = 'MCInfo';
@@ -23,11 +24,22 @@
     twitterCard = 'summary_large_image',
     noindex = false,
     jsonLd,
+    breadcrumbs,
   }: Props = $props();
 
   const fullTitle = $derived(title ? `${title} | ${SITE_NAME}` : SITE_NAME);
   const canonicalUrl = $derived(canonical ? `${SITE_URL}${canonical}` : undefined);
   const ogImageUrl = $derived(ogImage ?? DEFAULT_OG_IMAGE);
+  const breadcrumbLd = $derived(breadcrumbs ? {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbs.map((b, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: b.name,
+      item: `${SITE_URL}${b.href}`,
+    })),
+  } : undefined);
 </script>
 
 <svelte:head>
@@ -62,5 +74,8 @@
   <!-- JSON-LD Structured Data -->
   {#if jsonLd}
     {@html `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`}
+  {/if}
+  {#if breadcrumbLd}
+    {@html `<script type="application/ld+json">${JSON.stringify(breadcrumbLd)}</script>`}
   {/if}
 </svelte:head>

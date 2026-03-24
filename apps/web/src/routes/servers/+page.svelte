@@ -69,7 +69,7 @@
   <section class="hero hero-server">
     <div class="hero-copy">
       <p class="eyebrow">Serveurs</p>
-      <h2>Les serveurs Minecraft populaires</h2>
+      <h1>Serveurs Minecraft — Statut en temps réel</h1>
       <p>
         Sélectionne un serveur pour voir son statut en temps réel, ses joueurs connectés et son MOTD visuel.
       </p>
@@ -148,6 +148,30 @@
     <div class="quick-actions">
       <GameChip label="Analyser un serveur" href="/" />
     </div>
+  </section>
+
+  <section class="surface lookup-panel seo-content">
+    <h2>Vérifier le statut d'un serveur Minecraft</h2>
+    <p>
+      MCInfo permet de vérifier le <strong>statut de n'importe quel serveur Minecraft</strong> en temps réel,
+      qu'il soit <strong>Java</strong> ou <strong>Bedrock</strong>. Entrez simplement l'adresse (ex: play.hypixel.net)
+      pour obtenir un snapshot complet : version, nombre de joueurs, latence et MOTD visuel avec les couleurs Minecraft.
+    </p>
+    <p>
+      Notre outil résout automatiquement les enregistrements <strong>SRV DNS</strong>, détecte l'édition du serveur
+      et affiche le MOTD tel qu'il apparaît dans le client Minecraft, avec les codes de formatage et les couleurs.
+    </p>
+    <h3>Serveurs populaires Minecraft</h3>
+    <p>
+      Retrouvez les serveurs les plus populaires : <a href="/server/play.hypixel.net">Hypixel</a>,
+      <a href="/server/play.cubecraft.net">CubeCraft</a>, <a href="/server/play.wynncraft.com">Wynncraft</a>,
+      et les serveurs français comme <a href="/server/play.epicube.fr">Epicube</a> et <a href="/server/play.funcraft.net">FunCraft</a>.
+      Chaque fiche serveur est mise à jour en direct à chaque visite.
+    </p>
+    <p>
+      MCInfo est aussi une <a href="/docs">API ouverte</a> : intégrez le statut de vos serveurs Minecraft dans vos propres projets,
+      bots Discord ou sites web. Consultez également notre <a href="/skins">galerie de skins 3D</a>.
+    </p>
   </section>
 </main>
 

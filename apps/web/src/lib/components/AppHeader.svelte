@@ -29,7 +29,7 @@
     <a class="brand" href="/">
       <img class="brand-mark" src="/images/logo/logo-mark-v01.png" alt="MCInfo logo" width="36" height="36" />
       <div>
-        <h1>MCInfo</h1>
+        <span class="brand-name">MCInfo</span>
         <p>Minecraft Intelligence</p>
       </div>
     </a>

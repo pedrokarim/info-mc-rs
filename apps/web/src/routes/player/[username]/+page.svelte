@@ -142,13 +142,18 @@
       ...(data.player?.uuid ? { identifier: data.player.uuid } : {})
     }
   }}
+  breadcrumbs={[
+    { name: 'Accueil', href: '/' },
+    { name: 'Skins', href: '/skins' },
+    { name: data.username, href: `/player/${encodeURIComponent(data.username)}` },
+  ]}
 />
 
 <main class="page">
   <section class="hero hero-player">
     <div class="hero-copy">
       <p class="eyebrow">Player Detail</p>
-      <h2>{data.username}</h2>
+      <h1>{data.username} — Skin Minecraft 3D</h1>
       <p>
         Viewer 3D interactif + rendu 2D depuis notre API Rust.
         Drag pour faire pivoter le skin.

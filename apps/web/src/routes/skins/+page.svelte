@@ -72,7 +72,7 @@
   <section class="hero hero-skins">
     <div class="hero-copy">
       <p class="eyebrow">Skin Explorer</p>
-      <h2>Skins Minecraft populaires</h2>
+      <h1>Skins Minecraft populaires</h1>
       <p>Galerie 3D générée par notre API Rust. Clique sur un skin pour voir le détail, le viewer interactif et les capes.</p>
       <div class="hero-tags">
         <span class="status neutral">Rendu 3D</span>
@@ -117,6 +117,27 @@
         />
       {/each}
     </div>
+  </section>
+
+  <section class="surface lookup-panel seo-content">
+    <h2>Minecraft Skin Viewer 3D — Rendu en temps réel</h2>
+    <p>
+      MCInfo propose un <strong>viewer de skins Minecraft en 3D</strong> interactif, alimenté par notre API Rust haute performance.
+      Chaque skin est rendu côté serveur puis affiché dans un viewer WebGL que vous pouvez faire pivoter librement.
+    </p>
+    <p>
+      Notre outil détecte automatiquement les <strong>capes Minecraft</strong> (Mojang, OptiFine, LabyMod) et permet de visualiser
+      l'<strong>elytra en 3D</strong>. Vous pouvez aussi télécharger le skin au format PNG pour l'utiliser dans votre launcher.
+    </p>
+    <h3>Comment utiliser le skin viewer ?</h3>
+    <p>
+      Entrez un pseudo Minecraft dans la barre de recherche ci-dessus. MCInfo récupère le skin depuis les serveurs Mojang,
+      génère un rendu 3D et affiche la fiche complète du joueur : UUID, modèle (slim ou classic), capes et statistiques de popularité.
+    </p>
+    <p>
+      Alternative à <strong>NameMC</strong> et aux autres skin viewers, MCInfo se distingue par ses rendus 3D temps réel,
+      sa détection multi-capes et son <a href="/docs">API ouverte et gratuite</a> pour les développeurs.
+    </p>
   </section>
 </main>
 

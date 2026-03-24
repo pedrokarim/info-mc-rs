@@ -116,7 +116,7 @@ a {
   flex-shrink: 0;
 }
 
-.brand h1 {
+.brand .brand-name {
   margin: 0;
   font-size: 1rem;
   letter-spacing: 0.07em;
@@ -230,6 +230,7 @@ a {
   font-weight: 700;
 }
 
+.hero h1,
 .hero h2 {
   margin: 0;
   font-family: 'Teko', 'Chakra Petch', sans-serif;
@@ -455,6 +456,7 @@ a {
   color: #b5d8ff;
 }
 
+.hero-description h1,
 .hero-description h2 {
   margin: 0;
   font-family: 'Teko', 'Chakra Petch', sans-serif;
@@ -1119,4 +1121,42 @@ a {
     right: 0.66rem;
     bottom: 0.66rem;
   }
+}
+
+/* ── SEO content blocks ── */
+.seo-content {
+  max-width: 72ch;
+}
+
+.seo-content h2 {
+  margin: 0 0 0.5rem;
+  font-family: 'Teko', 'Chakra Petch', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--ink-0);
+}
+
+.seo-content h3 {
+  margin: 1rem 0 0.4rem;
+  font-family: 'Teko', 'Chakra Petch', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink-0);
+}
+
+.seo-content p {
+  margin: 0 0 0.6rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ink-1);
+}
+
+.seo-content a {
+  color: #2a6fb5;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.seo-content a:hover {
+  color: #0e3a62;
 }

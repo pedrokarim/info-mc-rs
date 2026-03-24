@@ -117,13 +117,18 @@
     applicationCategory: 'GameApplication',
     operatingSystem: 'Minecraft Java / Bedrock'
   }}
+  breadcrumbs={[
+    { name: 'Accueil', href: '/' },
+    { name: 'Serveurs', href: '/servers' },
+    { name: data.address, href: `/server/${encodeURIComponent(data.address)}` },
+  ]}
 />
 
 <main class="page">
   <section class="hero hero-server">
     <div class="hero-copy">
       <p class="eyebrow">Server Intel</p>
-      <h2>{data.address}</h2>
+      <h1>{data.address} — Statut Serveur Minecraft</h1>
       <p>
         Snapshot live de ton serveur Minecraft: statut, version, joueurs, latence
         et MOTD visuel dans la meme DA que le reste du site.

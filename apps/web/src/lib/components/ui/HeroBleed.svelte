@@ -36,7 +36,7 @@
     ></div>
     <div class="hero-description">
       <p class="eyebrow">{eyebrow}</p>
-      <h2>{title}</h2>
+      <h1>{title}</h1>
       <p>{description}</p>
       <div class="quick-actions">
         <a class="btn btn-primary" href={primaryHref}>{primaryLabel}</a>
