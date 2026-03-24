@@ -56,6 +56,33 @@ impl RateLimiter {
     }
 }
 
+/// Check if IP is a trusted proxy (loopback or Docker private network).
+fn is_trusted_proxy(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            v4.is_loopback()
+                || v4.octets()[0] == 172 && (16..=31).contains(&v4.octets()[1]) // Docker bridge
+                || v4.octets()[0] == 10 // 10.0.0.0/8
+        }
+        IpAddr::V6(v6) => v6.is_loopback(),
+    }
+}
+
+/// Extract real client IP from X-Forwarded-For header or fall back to ConnectInfo.
+fn real_ip(headers: &axum::http::HeaderMap, connect_ip: IpAddr) -> IpAddr {
+    if is_trusted_proxy(connect_ip) {
+        if let Some(xff) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
+            // First IP in X-Forwarded-For is the original client
+            if let Some(first) = xff.split(',').next() {
+                if let Ok(ip) = first.trim().parse::<IpAddr>() {
+                    return ip;
+                }
+            }
+        }
+    }
+    connect_ip
+}
+
 /// Axum middleware layer for rate limiting.
 pub async fn rate_limit_middleware(
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
@@ -63,12 +90,14 @@ pub async fn rate_limit_middleware(
     request: Request<axum::body::Body>,
     next: Next,
 ) -> Response {
+    let client_ip = real_ip(request.headers(), addr.ip());
+
     // Skip rate limiting for loopback IPs (trusted SSR calls from SvelteKit)
-    if addr.ip().is_loopback() {
+    if client_ip.is_loopback() {
         return next.run(request).await;
     }
 
-    if !limiter.check(addr.ip()).await {
+    if !limiter.check(client_ip).await {
         let body = serde_json::json!({
             "error": "rate_limit_exceeded",
             "message": "Too many requests. Please try again later."
