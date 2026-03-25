@@ -482,6 +482,8 @@
     border-collapse: collapse;
     font-size: 0.8rem;
     margin-bottom: 0.7rem;
+    display: block;
+    overflow-x: auto;
   }
 
   .params-table th {

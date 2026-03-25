@@ -546,5 +546,9 @@
     .viewer-col {
       align-items: center;
     }
+    .popularity-strip {
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
   }
 </style>

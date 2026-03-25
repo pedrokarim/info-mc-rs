@@ -163,4 +163,10 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
+
+  @media (max-width: 420px) {
+    .skin-gallery {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
 </style>
