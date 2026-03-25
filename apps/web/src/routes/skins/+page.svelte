@@ -14,9 +14,9 @@
 
   // Hardcoded skins to always fill the gallery
   const fallbackSkins = [
-    'hiruai', 'sweetily', 'Mxodz', 'saphyras', 'cakeycat', 'Hamazushi14422',
+    'sweetily', 'Mxodz', 'saphyras', 'cakeycat', 'Hamazushi14422',
     'marlowwwwwww', '1441', 'Sumugi', 'Sunlity', 'dhfjdhfjkhgdkhs', 'menuchah',
-    'ee9e', 'Xekial_', 'Vietnamesin', 'tempvrance', 'ccquetel', 'quiet',
+    'ee9e', 'Vietnamesin', 'tempvrance', 'ccquetel', 'quiet',
     'Sucie', 'Alesitu', 'ciubun', 'coldreason', 'Transgenres',
     'DeadbyTuesday0', 'Voilta_', 'MochiBud'
   ];
@@ -95,7 +95,7 @@
       light={true}
     />
     <form class="lookup-form" onsubmit={submitSearch}>
-      <SearchInputRow bind:value={query} placeholder="Notch, Dream, hiruai..." actionLabel="Voir le skin" />
+      <SearchInputRow bind:value={query} placeholder="Notch, Dream, sweetily..." actionLabel="Voir le skin" />
     </form>
   </section>
 

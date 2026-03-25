@@ -44,11 +44,12 @@
   let likeCount = $state(data.player?.popularity?.likes ?? 0);
   let viewCount = $state(data.player?.popularity?.views ?? 0);
 
-  // Reset to 3D + unpause when player changes
+  // Reset view state when player changes
   $effect(() => {
     data.username;
     viewMode = '3d';
     animPaused = false;
+    backEquipment = 'cape';
   });
 
   // Check favorite + like status on load
@@ -186,8 +187,12 @@
     </form>
 
     {#if data.error}
-      <div style="margin-top: 0.8rem;">
-        <NoticeBanner message={data.error} />
+      <div class="not-found-block">
+        <img class="not-found-img" src="/images/ui/player-not-found-v01.png" alt="Joueur introuvable" />
+        <div class="not-found-text">
+          <h3>Joueur introuvable</h3>
+          <p>{data.error}</p>
+        </div>
       </div>
     {/if}
   </section>
@@ -239,8 +244,8 @@
               onclick={toggleLike}
               disabled={likeLoading}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16">
-                <path d="M2 8.5l4 4.5 8-9" stroke={isLiked ? '#5e90ff' : 'currentColor'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill={isLiked ? '#5e90ff' : 'none'} stroke={isLiked ? '#5e90ff' : 'currentColor'} stroke-width="1.2">
+                <path d="M4.7 14H2.5a1 1 0 01-1-1V8a1 1 0 011-1h2.2m0 7V7m0 7H11a1.5 1.5 0 001.45-1.12l1.1-4A1.5 1.5 0 0012.1 7H9.5V3.5A1.5 1.5 0 008 2L4.7 7"/>
               </svg>
               <span class="toolbar-count">{formatNumber(likeCount)}</span>
             </button>
@@ -265,7 +270,7 @@
         {/if}
 
         {#if viewMode === '3d' && browser && data.player.skin?.url}
-          {#key data.player.skin.url}
+          {#key `${data.username}-${data.player.skin.url}`}
             <SkinViewer3D
               skinUrl={data.player.skin.url}
               capeUrl={data.player.cape?.url ?? (data.player.optifine_cape?.url ? `${data.apiBase}${data.player.optifine_cape.url}` : undefined)}

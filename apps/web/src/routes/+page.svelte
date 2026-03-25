@@ -34,7 +34,7 @@
     goto(`/player/${encodeURIComponent(clean)}`);
   }
 
-  const fallbackSkins = ['Notch', 'Dream', 'Technoblade', 'Skeppy', 'hiruai', 'sweetily', 'Mxodz', 'saphyras'];
+  const fallbackSkins = ['Notch', 'Dream', 'Technoblade', 'Skeppy', 'sweetily', 'Mxodz', 'saphyras', 'cakeycat'];
   const popularNames = new Set(data.popularPlayers.map(p => p.username.toLowerCase()));
   const fillSkins = fallbackSkins.filter(u => !popularNames.has(u.toLowerCase()));
 

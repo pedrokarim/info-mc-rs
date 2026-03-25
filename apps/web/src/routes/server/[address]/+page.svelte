@@ -175,8 +175,20 @@
     </form>
 
     {#if data.error}
-      <div style="margin-top: 0.8rem;">
-        <NoticeBanner message={data.error} />
+      <div class="not-found-block">
+        <img class="not-found-img" src="/images/ui/server-not-found-v01.png" alt="Serveur introuvable" />
+        <div class="not-found-text">
+          <h3>Serveur introuvable</h3>
+          <p>{data.error}</p>
+        </div>
+      </div>
+    {:else if data.server && !data.server.online}
+      <div class="not-found-block">
+        <img class="not-found-img" src="/images/ui/server-offline-v01.png" alt="Serveur offline" />
+        <div class="not-found-text">
+          <h3>Serveur hors ligne</h3>
+          <p>Le serveur {data.address} ne répond pas actuellement.</p>
+        </div>
       </div>
     {/if}
   </section>

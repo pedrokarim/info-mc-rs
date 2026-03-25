@@ -96,6 +96,14 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | glow-orb-gold-v01.png | Glow décoratif or | 800x800 | png | todo | global | alpha douce |
 | divider-tech-v01.svg | Séparateur section | 1600x80 | svg | todo | global | scalable |
 
+## Not Found / Empty States (`/images/states/`)
+
+| Fichier | Usage | Dimension cible | Format | Statut | Page(s) | Notes |
+|---|---|---:|---|---|---|---|
+| player-not-found-v01.png | Joueur introuvable | 800x600 | png | integrated | `/player/[username]` | style comic 3D, perso qui cherche partout, fond transparent |
+| server-not-found-v01.png | Serveur introuvable | 800x600 | png | integrated | `/server/[address]` | style comic 3D, perso devant portail cassé, fond transparent |
+| server-offline-v01.png | Serveur offline | 800x600 | png | integrated | `/server/[address]` | style comic 3D, perso qui tape sur redstone éteint, fond transparent |
+
 ---
 
 ## Images actuellement présentes
@@ -264,3 +272,52 @@ Minimal minecraft-inspired voxel full-body placeholder silhouette, centered, cle
 NEGATIVE:
 photoreal person, environment background, clutter, text, logo, watermark.
 ```
+
+### player-not-found-v01.png
+
+- Taille: `800x600` (4:3, fond transparent)
+- Usage: affiche quand un pseudo est introuvable
+- Style: **comic/cartoon 3D Minecraft** — personnage expressif, pas un décor vide
+- Note: fournir le skin du personnage voulu dans le prompt ChatGPT
+
+```txt
+PROMPT:
+3D render of a Minecraft character in a comic cartoon style, the character is confused and searching everywhere, looking behind a grass block, scratching its blocky head, holding a wooden sign with a big "?" on it, exaggerated funny pose, expressive body language, another character's footprints disappearing into thin air, transparent background, sticker-like clean edges, bright colors, playful mood, Minecraft voxel aesthetic, no environment background, no text, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real human, dark moody, horror, scary, environment scene, full landscape, blurry, low quality, text, logo, watermark.
+```
+
+> Note: dans ChatGPT, joindre le skin PNG du personnage et demander "utilise ce skin Minecraft pour le personnage".
+
+### server-not-found-v01.png
+
+- Taille: `800x600` (4:3, fond transparent)
+- Usage: affiche quand une adresse serveur est introuvable
+- Style: **comic/cartoon 3D Minecraft** — personnage devant portail cassé
+
+```txt
+PROMPT:
+3D render of a Minecraft character in a comic cartoon style, standing in front of a broken nether portal with no glow, the character looks lost and disappointed, arms spread in a "where did it go?" gesture, cracked obsidian blocks scattered on the ground, a small redstone torch flickering next to them, exaggerated expressive pose, playful and slightly sad mood, transparent background, sticker-like clean edges, Minecraft voxel aesthetic, no environment background, no text, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real human, active glowing portal, dark horror, full landscape scene, blurry, low quality, text, logo, watermark.
+```
+
+> Note: dans ChatGPT, joindre le skin PNG du personnage et demander "utilise ce skin Minecraft pour le personnage".
+
+### server-offline-v01.png
+
+- Taille: `800x600` (4:3, fond transparent)
+- Usage: affiche quand un serveur est offline / ne repond pas
+- Style: **comic/cartoon 3D Minecraft** — personnage qui tape sur un bloc éteint
+
+```txt
+PROMPT:
+3D render of a Minecraft character in a comic cartoon style, frustrated and tapping on a redstone lamp that is turned off, the character is poking it with a stick, sparks flying, a small "zzz" sleep cloud above the lamp, comic exaggerated annoyed expression through body language, one foot tapping impatiently, transparent background, sticker-like clean edges, bright playful colors, Minecraft voxel aesthetic, no environment background, no text, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real human, dark horror, full environment scene, working redstone, glowing lamp, blurry, low quality, text, logo, watermark.
+```
+
+> Note: dans ChatGPT, joindre le skin PNG du personnage et demander "utilise ce skin Minecraft pour le personnage".
