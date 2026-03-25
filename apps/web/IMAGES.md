@@ -85,7 +85,7 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 
 | Fichier | Usage | Dimension cible | Format | Statut | Page(s) | Notes |
 |---|---|---:|---|---|---|---|
-| og-default.png | Image OG par défaut (partage réseaux sociaux) | 1200x630 | png | todo | toutes | référencée dans `SEO.svelte` |
+| og-default.png | Image OG par défaut (partage réseaux sociaux) | 1200x630 | png | integrated | toutes | référencée dans `SEO.svelte` |
 
 ## UI (`/images/ui/`)
 
