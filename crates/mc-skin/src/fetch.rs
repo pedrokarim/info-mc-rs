@@ -3,8 +3,7 @@ use image::RgbaImage;
 use crate::{Result, SkinError};
 
 /// Fetch a skin PNG from a URL and return it as an RGBA image.
-pub async fn fetch_skin(url: &str) -> Result<RgbaImage> {
-    let client = reqwest::Client::new();
+pub async fn fetch_skin(client: &reqwest::Client, url: &str) -> Result<RgbaImage> {
     let bytes = client
         .get(url)
         .send()

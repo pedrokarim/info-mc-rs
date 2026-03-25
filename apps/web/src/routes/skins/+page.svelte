@@ -51,7 +51,7 @@
   }
 
   function render3dUrl(username: string): string {
-    return `${apiBase}/api/v1/render3d/${encodeURIComponent(username)}?width=256&height=256&theta=30&phi=21`;
+    return `${apiBase}/api/v1/render3d/${encodeURIComponent(username)}?width=256&height=256&theta=30&phi=21&back=none`;
   }
 </script>
 

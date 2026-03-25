@@ -58,7 +58,7 @@ pub async fn render_skin(
         .ok_or_else(|| ApiError::Internal("player has no skin".into()))?;
 
     // Fetch skin image
-    let skin_img = mc_skin::fetch_skin(skin_url)
+    let skin_img = mc_skin::fetch_skin(&state.http, skin_url)
         .await
         .map_err(|e| ApiError::Internal(format!("failed to fetch skin: {e}")))?;
 
@@ -82,7 +82,10 @@ pub async fn render_skin(
         .map_err(|e| ApiError::Internal(format!("PNG encode failed: {e}")))?;
 
     Ok((
-        [(header::CONTENT_TYPE, "image/png")],
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "public, max-age=300"),
+        ],
         png_bytes.into_inner(),
     )
         .into_response())

@@ -15,6 +15,9 @@ use crate::routes::server::ServerResponse;
 pub struct AppState {
     pub server_cache: TtlCache<String, ServerResponse>,
     pub player_cache: TtlCache<String, PlayerResponse>,
+    #[allow(dead_code)]
+    pub texture_cache: TtlCache<String, Vec<u8>>,
+    pub render3d_cache: TtlCache<String, Vec<u8>>,
     pub mojang: MojangClient,
     pub http: reqwest::Client,
     pub admin_http: reqwest::Client,
@@ -256,6 +259,8 @@ impl AppState {
         Self {
             server_cache: TtlCache::new(Duration::from_secs(60), 10_000),
             player_cache: TtlCache::new(Duration::from_secs(300), 10_000),
+            texture_cache: TtlCache::new(Duration::from_secs(600), 500),
+            render3d_cache: TtlCache::new(Duration::from_secs(300), 1_000),
             mojang: MojangClient::new(),
             http,
             admin_http,

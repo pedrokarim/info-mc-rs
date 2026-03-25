@@ -1,5 +1,7 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
+use axum::http::header;
+use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 
 use mc_protocol::{SlpConfig, SlpResponse};
@@ -73,7 +75,7 @@ pub async fn get_server(
     State(state): State<SharedState>,
     Path(address): Path<String>,
     Query(query): Query<ServerQuery>,
-) -> Result<Json<ServerResponse>, ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     // Validate address (basic check)
     let address = address.trim().to_string();
     if address.is_empty() || address.len() > 253 {
@@ -87,7 +89,7 @@ pub async fn get_server(
 
     // Check cache
     if let Some(cached) = state.server_cache.get(&cache_key).await {
-        return Ok(Json((*cached).clone()));
+        return Ok(([(header::CACHE_CONTROL, "public, max-age=60")], Json((*cached).clone())));
     }
 
     // Resolve DNS
@@ -135,7 +137,7 @@ pub async fn get_server(
     // Cache the response
     state.server_cache.insert(cache_key, response.clone()).await;
 
-    Ok(Json(response))
+    Ok(([(header::CACHE_CONTROL, "public, max-age=60")], Json(response)))
 }
 
 async fn ping_java(

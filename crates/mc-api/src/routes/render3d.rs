@@ -31,6 +31,31 @@ pub async fn render_skin_3d(
     let identifier = identifier.trim().to_string();
     let cache_key = identifier.to_lowercase();
 
+    let width = params.width.unwrap_or(240).clamp(8, 512);
+    let height = params.height.unwrap_or(360).clamp(8, 512);
+    let theta_deg = params.theta.unwrap_or(30.0);
+    let phi_deg = params.phi.unwrap_or(21.0);
+    let time = params.time.unwrap_or(90.0);
+    let back_str = params.back.as_deref().unwrap_or("cape");
+
+    let back_equipment = match back_str {
+        "elytra" => BackEquipment::Elytra,
+        "none" => BackEquipment::None,
+        _ => BackEquipment::Cape,
+    };
+
+    // Check render cache first
+    let render_key = format!("{cache_key}_{width}_{height}_{theta_deg}_{phi_deg}_{time}_{back_str}");
+    if let Some(cached_png) = state.render3d_cache.get(&render_key).await {
+        return Ok((
+            [
+                (header::CONTENT_TYPE, "image/png"),
+                (header::CACHE_CONTROL, "public, max-age=300"),
+            ],
+            (*cached_png).clone(),
+        ));
+    }
+
     let player: PlayerResponse = if let Some(cached) = state.player_cache.get(&cache_key).await {
         (*cached).clone()
     } else {
@@ -77,19 +102,13 @@ pub async fn render_skin_3d(
         .map(|s| s.model == "slim")
         .unwrap_or(false);
 
-    let back_equipment = match params.back.as_deref() {
-        Some("elytra") => BackEquipment::Elytra,
-        Some("none") => BackEquipment::None,
-        _ => BackEquipment::Cape, // default
-    };
+    // Fetch skin texture (with cache)
+    let skin_rgba = fetch_skin(&state.http, &skin_url).await.map_err(ApiError::from)?;
 
-    // Fetch skin texture
-    let skin_rgba = fetch_skin(&skin_url).await.map_err(ApiError::from)?;
-
-    // Fetch cape texture if needed
+    // Fetch cape texture if needed (with cache)
     let cape_rgba = if back_equipment != BackEquipment::None {
         if let Some(cape_url) = player.cape.as_ref().map(|c| &c.url) {
-            fetch_skin(cape_url).await.ok()
+            fetch_skin(&state.http, cape_url).await.ok()
         } else {
             None
         }
@@ -97,11 +116,8 @@ pub async fn render_skin_3d(
         None
     };
 
-    let width = params.width.unwrap_or(240).clamp(8, 512);
-    let height = params.height.unwrap_or(360).clamp(8, 512);
-    let theta = params.theta.unwrap_or(30.0).to_radians();
-    let phi = params.phi.unwrap_or(21.0).to_radians();
-    let time = params.time.unwrap_or(90.0);
+    let theta = theta_deg.to_radians();
+    let phi = phi_deg.to_radians();
 
     let png_bytes = render_skin_png(
         &skin_rgba,
@@ -119,10 +135,13 @@ pub async fn render_skin_3d(
     .await
     .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
+    // Cache the rendered PNG
+    state.render3d_cache.insert(render_key, png_bytes.clone()).await;
+
     Ok((
         [
             (header::CONTENT_TYPE, "image/png"),
-            (header::CACHE_CONTROL, "no-cache, no-store, must-revalidate"),
+            (header::CACHE_CONTROL, "public, max-age=300"),
         ],
         png_bytes,
     ))

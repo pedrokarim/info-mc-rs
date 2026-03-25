@@ -1,5 +1,7 @@
 use axum::Json;
 use axum::extract::{Path, State};
+use axum::http::header;
+use axum::response::IntoResponse;
 use serde::Serialize;
 
 use crate::error::ApiError;
@@ -35,7 +37,7 @@ pub struct CapeResponse {
 pub async fn get_player(
     State(state): State<SharedState>,
     Path(identifier): Path<String>,
-) -> Result<Json<PlayerResponse>, ApiError> {
+) -> Result<impl IntoResponse, ApiError> {
     let identifier = identifier.trim().to_string();
     if identifier.is_empty() {
         return Err(ApiError::InvalidAddress("empty player identifier".into()));
@@ -44,7 +46,7 @@ pub async fn get_player(
     // Check cache
     let cache_key = identifier.to_lowercase();
     if let Some(cached) = state.player_cache.get(&cache_key).await {
-        return Ok(Json((*cached).clone()));
+        return Ok(([(header::CACHE_CONTROL, "public, max-age=60")], Json((*cached).clone())));
     }
 
     let profile = state
@@ -119,7 +121,7 @@ pub async fn get_player(
 
     state.player_cache.insert(cache_key, response.clone()).await;
 
-    Ok(Json(response))
+    Ok(([(header::CACHE_CONTROL, "public, max-age=60")], Json(response)))
 }
 
 /// Upsert player into the persistent index and return popularity stats.
