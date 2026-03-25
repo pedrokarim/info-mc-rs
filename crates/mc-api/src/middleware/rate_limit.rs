@@ -90,6 +90,13 @@ pub async fn rate_limit_middleware(
     request: Request<axum::body::Body>,
     next: Next,
 ) -> Response {
+    let path = request.uri().path();
+
+    // Skip rate limiting for static asset routes (renders are cached & heavy to load in grids)
+    if path.starts_with("/api/v1/render") || path.starts_with("/api/v1/cape/") {
+        return next.run(request).await;
+    }
+
     let client_ip = real_ip(request.headers(), addr.ip());
 
     // Skip rate limiting for loopback IPs (trusted SSR calls from SvelteKit)
