@@ -85,9 +85,10 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 
 | Fichier | Usage | Dimension cible | Format | Statut | Page(s) | Notes |
 |---|---|---:|---|---|---|---|
-| tool-motd-editor-v01.png | Icône outil MOTD Editor | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
-| tool-skin-editor-v01.png | Icône outil Skin Editor | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
-| tool-cape-editor-v01.png | Icône outil Cape Editor | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-motd-editor-v01.png | Icône outil MOTD Editor | 512x512 | png | integrated | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-skin-editor-v01.png | Icône outil Skin Editor | 512x512 | png | integrated | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-cape-editor-v01.png | Icône outil Cape Editor | 512x512 | png | integrated | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-cape-gallery-v01.png | Icône Galerie des Capes | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
 ## SEO / Open Graph (`/images/`)
 
@@ -372,4 +373,18 @@ PROMPT:
 
 NEGATIVE:
 photorealistic, real fabric, real scissors, fashion studio, dark moody, full environment scene, realistic cloth physics, blurry, low quality, text, logo, watermark.
+```
+
+### tool-cape-gallery-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône de la Galerie des Capes sur la page `/tools`
+- Style: **3D isométrique Minecraft** — collection de capes exposées comme dans un musée
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style cape museum gallery, a row of three armor stands displaying different colored capes (red Mojang cape, green Minecon cape, blue translator cape), the stands are on small quartz pedestals with tiny golden plaques, warm torch lighting from above, a magnifying glass floating near one cape as if inspecting it, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real museum, real fabric, modern art gallery, dark moody, full environment scene, realistic mannequins, blurry, low quality, text, logo, watermark.
 ```

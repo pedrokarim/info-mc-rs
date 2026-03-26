@@ -6,19 +6,25 @@
       href: '/tools/motd-editor',
       title: 'Éditeur MOTD',
       description: 'Créez des MOTD colorés pour votre serveur Minecraft. Couleurs, dégradés, formats et export multi-format.',
-      icon: 'motd',
+      image: '/images/ui/tool-motd-editor-v01.png',
     },
     {
       href: '/tools/skin-editor',
       title: 'Éditeur de Skin',
       description: 'Dessinez votre skin Minecraft pixel par pixel avec prévisualisation 3D en temps réel.',
-      icon: 'skin',
+      image: '/images/ui/tool-skin-editor-v01.png',
     },
     {
       href: '/tools/cape-editor',
       title: 'Éditeur de Cape',
       description: 'Créez vos capes Minecraft. Mode OptiFine, presets officiels, vue elytra et peinture 3D.',
-      icon: 'cape',
+      image: '/images/ui/tool-cape-editor-v01.png',
+    },
+    {
+      href: '/capes',
+      title: 'Galerie des Capes',
+      description: 'Découvrez toutes les capes officielles Minecraft avec leur histoire, rareté et prévisualisation 3D.',
+      image: '/images/ui/tool-cape-gallery-v01.png',
     },
   ];
 </script>
@@ -39,10 +45,10 @@
       <a class="tool-card" href={tool.href}>
         <img
           class="tool-icon-img"
-          src="/images/ui/tool-{tool.icon}-editor-v01.png"
+          src={tool.image}
           alt={tool.title}
-          width="64"
-          height="64"
+          width="100"
+          height="100"
           loading="lazy"
         />
         <div class="tool-info">
