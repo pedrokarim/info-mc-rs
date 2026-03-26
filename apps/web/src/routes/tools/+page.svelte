@@ -37,30 +37,14 @@
   <div class="tools-grid">
     {#each tools as tool}
       <a class="tool-card" href={tool.href}>
-        <div class="tool-icon">
-          {#if tool.icon === 'motd'}
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" />
-              <path d="M8 21h8" />
-              <path d="M12 17v4" />
-              <path d="M7 8h4" />
-              <path d="M7 11h10" />
-            </svg>
-          {:else if tool.icon === 'cape'}
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 4c2 0 3 1 4 3s2 3 4 3 3-1 4-3 2-3 4-3v14c-2 0-3-1-4-3s-2-3-4-3-3 1-4 3-2 3-4 3V4Z" />
-            </svg>
-          {:else if tool.icon === 'skin'}
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="8" y="2" width="8" height="8" rx="1" />
-              <rect x="6" y="10" width="12" height="10" rx="1" />
-              <rect x="2" y="10" width="4" height="9" rx="1" />
-              <rect x="18" y="10" width="4" height="9" rx="1" />
-              <rect x="8" y="20" width="3" height="4" rx="0.5" />
-              <rect x="13" y="20" width="3" height="4" rx="0.5" />
-            </svg>
-          {/if}
-        </div>
+        <img
+          class="tool-icon-img"
+          src="/images/ui/tool-{tool.icon}-editor-v01.png"
+          alt={tool.title}
+          width="64"
+          height="64"
+          loading="lazy"
+        />
         <div class="tool-info">
           <h2 class="tool-name">{tool.title}</h2>
           <p class="tool-desc">{tool.description}</p>
@@ -128,16 +112,13 @@
     box-shadow: var(--shadow-sm, 0 8px 18px rgba(16, 45, 72, 0.16));
   }
 
-  .tool-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 56px;
-    height: 56px;
+  .tool-icon-img {
+    width: 100px;
+    height: 100px;
     border-radius: var(--radius-md, 12px);
-    background: rgba(94, 144, 255, 0.1);
-    color: var(--blue-0, #5e90ff);
     flex-shrink: 0;
+    object-fit: contain;
+    image-rendering: auto;
   }
 
   .tool-info {

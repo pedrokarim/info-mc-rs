@@ -81,6 +81,14 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | skin-placeholder-head-v01.png | Placeholder head | 256x256 | png | done | `/skins`, `/player/[username]` | transparent |
 | skin-placeholder-full-v01.png | Placeholder full body | 256x512 | png | done | `/player/[username]` | transparent |
 
+## Tools (`/images/tools/`)
+
+| Fichier | Usage | Dimension cible | Format | Statut | Page(s) | Notes |
+|---|---|---:|---|---|---|---|
+| tool-motd-editor-v01.png | Icône outil MOTD Editor | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-skin-editor-v01.png | Icône outil Skin Editor | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-cape-editor-v01.png | Icône outil Cape Editor | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+
 ## SEO / Open Graph (`/images/`)
 
 | Fichier | Usage | Dimension cible | Format | Statut | Page(s) | Notes |
@@ -321,3 +329,47 @@ photorealistic, real human, dark horror, full environment scene, working redston
 ```
 
 > Note: dans ChatGPT, joindre le skin PNG du personnage et demander "utilise ce skin Minecraft pour le personnage".
+
+---
+
+### tool-motd-editor-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône de l'outil Éditeur MOTD sur la page `/tools`
+- Style: **3D isométrique Minecraft** — panneau avec texte coloré
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style server message board, a blocky oak sign panel floating at an angle, the sign displays colorful rainbow gradient text lines (§ color codes style), small colored wool blocks scattered around as decoration (red, green, blue, yellow), a glowing redstone torch next to the sign for warm lighting, clean composition centered, transparent background, sticker-like sharp edges, vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real monitor screen, modern computer, dark moody, full environment scene, realistic wood texture, blurry, low quality, text, logo, watermark.
+```
+
+### tool-skin-editor-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône de l'outil Éditeur de Skin sur la page `/tools`
+- Style: **3D isométrique Minecraft** — personnage avec pinceau/palette
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style skin editing scene, a small blocky Steve character standing on a crafting table, next to him a floating painter's palette with Minecraft dye colors (red, blue, green, yellow, white, black), a tiny pixelated paintbrush leaning against the character, the character's skin is half-painted showing raw grid on one side and colorful skin on the other, clean composition centered, transparent background, sticker-like sharp edges, bright playful Minecraft voxel aesthetic, game icon style, no text, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real human, real paintbrush, modern art studio, dark moody, full environment scene, blurry, low quality, text, logo, watermark.
+```
+
+### tool-cape-editor-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône de l'outil Éditeur de Cape sur la page `/tools`
+- Style: **3D isométrique Minecraft** — cape sur armor stand avec outils
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style cape editing scene, a floating blocky red cape (Mojang style) displayed on an armor stand, next to it a pair of pixelated scissors and colored dye bottles (red, blue, purple, green), the cape is slightly unfurled showing its front design, a small elytra wing piece visible behind the stand as a hint, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real fabric, real scissors, fashion studio, dark moody, full environment scene, realistic cloth physics, blurry, low quality, text, logo, watermark.
+```
