@@ -14,3 +14,8 @@ export { default as SkinTile } from './components/ui/SkinTile.svelte';
 export { default as SkinViewer3D } from './components/ui/SkinViewer3D.svelte';
 export { default as StatusPill } from './components/ui/StatusPill.svelte';
 export { default as TogglePills } from './components/ui/TogglePills.svelte';
+
+export { default as McColorPalette } from './components/ui/McColorPalette.svelte';
+export { default as FormatToolbar } from './components/ui/FormatToolbar.svelte';
+export { default as GradientPicker } from './components/ui/GradientPicker.svelte';
+export { default as MotdPresetGrid } from './components/ui/MotdPresetGrid.svelte';

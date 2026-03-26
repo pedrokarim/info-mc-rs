@@ -1,5 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Teko:wght@500;600;700&display=swap');
 
+@font-face {
+  font-family: 'Minecraft';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('https://cdn.jsdelivr.net/npm/@south-paw/typeface-minecraft/files/minecraft.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/npm/@south-paw/typeface-minecraft/files/minecraft.woff') format('woff');
+}
+
 :root {
   --bg-top: #050608;
   --bg-top-2: #0b131c;

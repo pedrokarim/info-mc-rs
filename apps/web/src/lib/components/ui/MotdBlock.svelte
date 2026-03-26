@@ -31,17 +31,20 @@
 
   .motd-inner {
     background:
-      linear-gradient(135deg, rgba(60, 60, 60, 0.4) 0%, transparent 50%),
-      #313131;
-    padding: 8px 12px;
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+      linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+      url('/images/ui/mc_dirt.jpg');
+    background-size: auto, 128px 128px;
+    background-repeat: repeat;
+    image-rendering: pixelated;
+    padding: 10px 14px;
+    font-family: 'Minecraft', 'JetBrains Mono', 'Courier New', monospace;
     font-size: 0.78rem;
-    line-height: 1.4;
+    line-height: 1.5;
     color: #aaaaaa;
     white-space: pre-wrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
     text-align: center;
   }
 
@@ -58,7 +61,7 @@
   }
 
   .motd-fallback {
-    color: #555555;
+    color: #999999;
     font-style: italic;
   }
 </style>
