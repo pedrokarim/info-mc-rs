@@ -63,14 +63,12 @@
   <aside class="editor-left">
     <ToolBar />
     <HistoryControls />
-    <div class="left-colors">
-      <ColorPicker bind:color={editorState.primaryColor} showAlpha={true} onchange={handlePickerChange} />
-      <ColorPalette
-        selected={editorState.primaryColor}
-        recentColors={editorState.recentColors}
-        onselect={handlePaletteSelect}
-      />
-    </div>
+    <ColorPicker bind:color={editorState.primaryColor} showAlpha={true} onchange={handlePickerChange} />
+    <ColorPalette
+      selected={editorState.primaryColor}
+      recentColors={editorState.recentColors}
+      onselect={handlePaletteSelect}
+    />
   </aside>
 
   <!-- Center: 3D viewer (main editing surface) -->
@@ -113,23 +111,13 @@
   .editor-left {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     align-self: start;
     position: sticky;
     top: 80px;
     max-height: calc(100vh - 100px);
     overflow-y: auto;
     padding: 8px;
-  }
-
-  .left-colors {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-    background: var(--surface-1, #edf5fa);
-    border-radius: var(--radius-md, 12px);
-    border: 1px solid var(--line-0, rgba(46, 94, 143, 0.34));
   }
 
   /* ── Center: 3D main area ── */

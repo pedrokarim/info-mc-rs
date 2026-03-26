@@ -67,8 +67,8 @@
 
 <style>
   .toolbar {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 4px;
     padding: 8px;
     background: var(--surface-1, #edf5fa);
@@ -109,5 +109,5 @@
   }
 
   .tool-btn--sub { width: 36px; height: 36px; align-self: center; }
-  .toolbar-divider { height: 1px; margin: 4px 0; background: var(--line-0, rgba(46, 94, 143, 0.34)); }
+  .toolbar-divider { grid-column: 1 / -1; height: 1px; margin: 4px 0; background: var(--line-0, rgba(46, 94, 143, 0.34)); }
 </style>

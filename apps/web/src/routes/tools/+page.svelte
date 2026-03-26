@@ -14,6 +14,12 @@
       description: 'Dessinez votre skin Minecraft pixel par pixel avec prévisualisation 3D en temps réel.',
       icon: 'skin',
     },
+    {
+      href: '/tools/cape-editor',
+      title: 'Éditeur de Cape',
+      description: 'Créez vos capes Minecraft. Mode OptiFine, presets officiels, vue elytra et peinture 3D.',
+      icon: 'cape',
+    },
   ];
 </script>
 
@@ -39,6 +45,10 @@
               <path d="M12 17v4" />
               <path d="M7 8h4" />
               <path d="M7 11h10" />
+            </svg>
+          {:else if tool.icon === 'cape'}
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4c2 0 3 1 4 3s2 3 4 3 3-1 4-3 2-3 4-3v14c-2 0-3-1-4-3s-2-3-4-3-3 1-4 3-2 3-4 3V4Z" />
             </svg>
           {:else if tool.icon === 'skin'}
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
