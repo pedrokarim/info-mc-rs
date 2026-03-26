@@ -9,6 +9,7 @@
     { href: '/servers', label: 'Serveurs' },
     { href: '/skins', label: 'Skins' },
     { href: '/player/Notch', label: 'Joueurs' },
+    { href: '/tools', label: 'Outils' },
     { href: '/docs', label: 'API' }
   ];
 
