@@ -26,6 +26,18 @@
       description: 'Découvrez toutes les capes officielles Minecraft avec leur histoire, rareté et prévisualisation 3D.',
       image: '/images/ui/tool-cape-gallery-v01.png',
     },
+    {
+      href: '/tools/nbt-viewer',
+      title: 'Visualiseur NBT',
+      description: 'Explorez vos fichiers NBT Minecraft : arbre de tags et rendu 3D des structures en couleurs.',
+      image: '/images/ui/tool-cape-gallery-v01.png',
+    },
+    {
+      href: '/tools/seed-map',
+      title: 'Carte de Seed',
+      description: 'Visualisez les biomes et slime chunks de votre monde Minecraft à partir de sa seed.',
+      image: '/images/ui/tool-seed-map-v01.png',
+    },
   ];
 </script>
 
