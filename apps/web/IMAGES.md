@@ -88,7 +88,9 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | tool-motd-editor-v01.png | Icône outil MOTD Editor | 512x512 | png | integrated | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-skin-editor-v01.png | Icône outil Skin Editor | 512x512 | png | integrated | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-cape-editor-v01.png | Icône outil Cape Editor | 512x512 | png | integrated | `/tools` | fond transparent, style isométrique Minecraft |
-| tool-cape-gallery-v01.png | Icône Galerie des Capes | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-cape-gallery-v01.png | Icône Galerie des Capes | 512x512 | png | integrated | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-nbt-viewer-v01.png | Icône Visualiseur NBT | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-seed-map-v01.png | Icône Carte de Seed | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
 ## SEO / Open Graph (`/images/`)
 
@@ -387,4 +389,32 @@ PROMPT:
 
 NEGATIVE:
 photorealistic, real museum, real fabric, modern art gallery, dark moody, full environment scene, realistic mannequins, blurry, low quality, text, logo, watermark.
+```
+
+### tool-nbt-viewer-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône du Visualiseur NBT sur la page `/tools`
+- Style: **3D isométrique Minecraft** — structure en blocs avec loupe d'inspection
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style NBT structure viewer scene, a small blocky igloo or ruined portal structure made of stone bricks and obsidian blocks sitting on a quartz platform, a large floating magnifying glass inspecting the structure revealing colored data tags (green strings, blue numbers, red compounds) inside the blocks, a tiny open book with binary code next to it, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real magnifying glass, real book, modern office, dark moody, full environment scene, realistic glass reflections, blurry, low quality, text, logo, watermark.
+```
+
+### tool-seed-map-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône de la Carte de Seed sur la page `/tools`
+- Style: **3D isométrique Minecraft** — carte du monde vue du dessus avec biomes colorés
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style seed map viewer scene, a large floating parchment map showing a top-down view of colorful blocky biomes (green plains, yellow desert, white snow, dark green forest, blue ocean), the map is slightly curled at the edges, a compass rose in one corner, small colored pins stuck in the map marking locations, a tiny slime bouncing on a highlighted green chunk, a magnifying glass hovering over the map revealing chunk grid lines, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real paper map, satellite photo, Google Maps style, modern GPS, dark moody, full environment scene, realistic paper texture, blurry, low quality, text, logo, watermark.
 ```

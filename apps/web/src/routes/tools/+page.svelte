@@ -30,7 +30,7 @@
       href: '/tools/nbt-viewer',
       title: 'Visualiseur NBT',
       description: 'Explorez vos fichiers NBT Minecraft : arbre de tags et rendu 3D des structures en couleurs.',
-      image: '/images/ui/tool-cape-gallery-v01.png',
+      image: '/images/ui/tool-nbt-viewer-v01.png',
     },
     {
       href: '/tools/seed-map',

@@ -267,6 +267,196 @@ const WOOD_TYPES = [
   'cherry', 'mangrove', 'bamboo', 'crimson', 'warped',
 ];
 
+export interface BlockFaceTextures {
+  right: string;
+  left: string;
+  top: string;
+  bottom: string;
+  front: string;
+  back: string;
+}
+
+const FACE_TEXTURE_OVERRIDES: Record<string, Partial<BlockFaceTextures>> = {
+  grass_block: {
+    right: 'grass_block_side',
+    left: 'grass_block_side',
+    front: 'grass_block_side',
+    back: 'grass_block_side',
+    top: 'grass_block_top',
+    bottom: 'dirt',
+  },
+  podzol: {
+    right: 'podzol_side',
+    left: 'podzol_side',
+    front: 'podzol_side',
+    back: 'podzol_side',
+    top: 'podzol_top',
+    bottom: 'dirt',
+  },
+  mycelium: {
+    right: 'mycelium_side',
+    left: 'mycelium_side',
+    front: 'mycelium_side',
+    back: 'mycelium_side',
+    top: 'mycelium_top',
+    bottom: 'dirt',
+  },
+  dirt_path: {
+    right: 'dirt_path_side',
+    left: 'dirt_path_side',
+    front: 'dirt_path_side',
+    back: 'dirt_path_side',
+    top: 'dirt_path_top',
+    bottom: 'dirt',
+  },
+  sandstone: {
+    right: 'sandstone',
+    left: 'sandstone',
+    front: 'sandstone',
+    back: 'sandstone',
+    top: 'sandstone_top',
+    bottom: 'sandstone_bottom',
+  },
+  red_sandstone: {
+    right: 'red_sandstone',
+    left: 'red_sandstone',
+    front: 'red_sandstone',
+    back: 'red_sandstone',
+    top: 'red_sandstone_top',
+    bottom: 'red_sandstone_bottom',
+  },
+  crafting_table: {
+    right: 'crafting_table_side',
+    left: 'crafting_table_side',
+    front: 'crafting_table_front',
+    back: 'crafting_table_side',
+    top: 'crafting_table_top',
+    bottom: 'oak_planks',
+  },
+  furnace: {
+    right: 'furnace_side',
+    left: 'furnace_side',
+    front: 'furnace_front',
+    back: 'furnace_side',
+    top: 'furnace_top',
+    bottom: 'furnace_top',
+  },
+  blast_furnace: {
+    right: 'blast_furnace_side',
+    left: 'blast_furnace_side',
+    front: 'blast_furnace_front',
+    back: 'blast_furnace_side',
+    top: 'blast_furnace_top',
+    bottom: 'blast_furnace_top',
+  },
+  smoker: {
+    right: 'smoker_side',
+    left: 'smoker_side',
+    front: 'smoker_front',
+    back: 'smoker_side',
+    top: 'smoker_top',
+    bottom: 'smoker_top',
+  },
+  bee_nest: {
+    right: 'bee_nest_side',
+    left: 'bee_nest_side',
+    front: 'bee_nest_front',
+    back: 'bee_nest_side',
+    top: 'bee_nest_top',
+    bottom: 'bee_nest_bottom',
+  },
+  beehive: {
+    right: 'beehive_side',
+    left: 'beehive_side',
+    front: 'beehive_front',
+    back: 'beehive_side',
+    top: 'beehive_end',
+    bottom: 'beehive_end',
+  },
+  barrel: {
+    right: 'barrel_side',
+    left: 'barrel_side',
+    front: 'barrel_side',
+    back: 'barrel_side',
+    top: 'barrel_top',
+    bottom: 'barrel_bottom',
+  },
+  hay_block: {
+    right: 'hay_block_side',
+    left: 'hay_block_side',
+    front: 'hay_block_side',
+    back: 'hay_block_side',
+    top: 'hay_block_top',
+    bottom: 'hay_block_top',
+  },
+  bone_block: {
+    right: 'bone_block_side',
+    left: 'bone_block_side',
+    front: 'bone_block_side',
+    back: 'bone_block_side',
+    top: 'bone_block_top',
+    bottom: 'bone_block_top',
+  },
+  melon: {
+    right: 'melon_side',
+    left: 'melon_side',
+    front: 'melon_side',
+    back: 'melon_side',
+    top: 'melon_top',
+    bottom: 'melon_top',
+  },
+  pumpkin: {
+    right: 'pumpkin_side',
+    left: 'pumpkin_side',
+    front: 'pumpkin_side',
+    back: 'pumpkin_side',
+    top: 'pumpkin_top',
+    bottom: 'pumpkin_top',
+  },
+  jack_o_lantern: {
+    right: 'pumpkin_side',
+    left: 'pumpkin_side',
+    front: 'jack_o_lantern',
+    back: 'pumpkin_side',
+    top: 'pumpkin_top',
+    bottom: 'pumpkin_top',
+  },
+  bookshelf: {
+    right: 'bookshelf',
+    left: 'bookshelf',
+    front: 'bookshelf',
+    back: 'bookshelf',
+    top: 'oak_planks',
+    bottom: 'oak_planks',
+  },
+};
+
+const AXIS_END_TEXTURE_BLOCKS = [
+  '_log',
+  '_stem',
+  '_wood',
+  '_hyphae',
+  'bone_block',
+  'hay_block',
+  'purpur_pillar',
+  'quartz_pillar',
+];
+
+function withUniformFaces(side: string): BlockFaceTextures {
+  return {
+    right: side,
+    left: side,
+    top: side,
+    bottom: side,
+    front: side,
+    back: side,
+  };
+}
+
+function isAxisTextureBlock(short: string): boolean {
+  return AXIS_END_TEXTURE_BLOCKS.some((suffix) => short.endsWith(suffix) || short === suffix);
+}
+
 /**
  * Get the texture filename for a block.
  * Returns the filename without .png extension.
@@ -306,4 +496,63 @@ export function getTextureFileName(blockName: string): string {
   }
 
   return short;
+}
+
+export function getBlockFaceTextures(
+  blockName: string,
+  props?: Record<string, string>
+): BlockFaceTextures {
+  const short = blockName.replace('minecraft:', '');
+  const base = getTextureFileName(blockName);
+
+  const explicit = FACE_TEXTURE_OVERRIDES[short];
+  if (explicit) {
+    const side = explicit.front ?? explicit.back ?? explicit.right ?? explicit.left ?? base;
+    return {
+      right: explicit.right ?? side,
+      left: explicit.left ?? side,
+      top: explicit.top ?? side,
+      bottom: explicit.bottom ?? side,
+      front: explicit.front ?? side,
+      back: explicit.back ?? side,
+    };
+  }
+
+  if (isAxisTextureBlock(short)) {
+    const end = `${base}_top`;
+    const axis = props?.axis ?? 'y';
+
+    if (axis === 'x') {
+      return {
+        right: end,
+        left: end,
+        top: base,
+        bottom: base,
+        front: base,
+        back: base,
+      };
+    }
+
+    if (axis === 'z') {
+      return {
+        right: base,
+        left: base,
+        top: base,
+        bottom: base,
+        front: end,
+        back: end,
+      };
+    }
+
+    return {
+      right: base,
+      left: base,
+      top: end,
+      bottom: end,
+      front: base,
+      back: base,
+    };
+  }
+
+  return withUniformFaces(base);
 }
