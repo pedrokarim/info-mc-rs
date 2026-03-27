@@ -11,7 +11,7 @@
   let tree = $state<NbtTag | null>(null);
   let structure = $state<StructureData | null>(null);
   let layerY = $state(-1);
-  let brightness = $state(70);
+  let brightness = $state(100);
   let loading = $state(false);
   let error = $state('');
   let fileName = $state('');

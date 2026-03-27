@@ -63,6 +63,64 @@ const TEXTURE_OVERRIDES: Record<string, string> = {
   'lantern': 'lantern',
   'soul_lantern': 'soul_lantern',
   'redstone_torch': 'redstone_torch',
+
+  // Legacy block names (pre-1.13 "The Flattening")
+  'planks': 'oak_planks',
+  'fence': 'oak_planks',
+  'wooden_slab': 'oak_planks',
+  'double_wooden_slab': 'oak_planks',
+  'wooden_door': 'oak_door_top',
+  'trapdoor': 'oak_trapdoor',
+  'wooden_button': 'oak_planks',
+  'wooden_pressure_plate': 'oak_planks',
+  'log': 'oak_log',
+  'log2': 'dark_oak_log',
+  'leaves': 'oak_leaves',
+  'leaves2': 'dark_oak_leaves',
+  'sapling': 'oak_sapling',
+  'stonebrick': 'stone_bricks',
+  'stained_hardened_clay': 'terracotta',
+  'stained_glass': 'glass',
+  'stained_glass_pane': 'glass',
+  'wool': 'white_wool',
+  'stone_slab2': 'red_sandstone',
+  'double_stone_slab': 'smooth_stone',
+  'double_stone_slab2': 'red_sandstone',
+  'nether_brick_fence': 'nether_bricks',
+  'lit_pumpkin': 'jack_o_lantern',
+  'lit_furnace': 'furnace_front',
+  'lit_redstone_lamp': 'redstone_lamp',
+  'unlit_redstone_torch': 'redstone_torch',
+  'powered_repeater': 'repeater',
+  'unpowered_repeater': 'repeater',
+  'powered_comparator': 'comparator',
+  'unpowered_comparator': 'comparator',
+  'standing_sign': 'oak_planks',
+  'wall_sign': 'oak_planks',
+  'standing_banner': 'oak_planks',
+  'wall_banner': 'oak_planks',
+  'banner': 'oak_planks',
+  'illager_captain_wall_banner': 'oak_planks',
+
+  // More legacy names (pre-1.13)
+  'web': 'cobweb',
+  'monster_egg': 'stone',
+  'carpet': 'white_wool',
+  'bed': 'red_wool',
+  'sign': 'oak_planks',
+  'smooth_stone_slab': 'smooth_stone',
+  'magma_block': 'magma',
+  'cactus': 'cactus_side',
+  'lava': 'lava_still',
+  'coral_block': 'brain_coral_block',
+
+  // Non-renderable / abstract blocks
+  'jigsaw': 'jigsaw_top',
+  'splash_potion': 'glass',
+  'weakness': 'glass',
+  'empty': 'glass',
+  'feature': 'glass',
+  'chests': 'oak_planks',
   'wall_torch': 'torch',
   'soul_wall_torch': 'soul_torch',
   'redstone_wall_torch': 'redstone_torch',
@@ -177,19 +235,75 @@ const TEXTURE_OVERRIDES: Record<string, string> = {
   'infested_stone': 'stone',
   'infested_cobblestone': 'cobblestone',
   'infested_deepslate': 'deepslate',
+
+  // Coral wall fans → coral fan texture
+  'tube_coral_wall_fan': 'tube_coral_fan',
+  'brain_coral_wall_fan': 'brain_coral_fan',
+  'bubble_coral_wall_fan': 'bubble_coral_fan',
+  'fire_coral_wall_fan': 'fire_coral_fan',
+  'horn_coral_wall_fan': 'horn_coral_fan',
+  'dead_tube_coral_wall_fan': 'dead_tube_coral_fan',
+  'dead_brain_coral_wall_fan': 'dead_brain_coral_fan',
+  'dead_bubble_coral_wall_fan': 'dead_bubble_coral_fan',
+  'dead_fire_coral_wall_fan': 'dead_fire_coral_fan',
+  'dead_horn_coral_wall_fan': 'dead_horn_coral_fan',
 };
+
+/**
+ * Suffixes that indicate a variant of a base block.
+ * For these, we strip the suffix and use the base block's texture.
+ */
+const VARIANT_SUFFIXES = [
+  '_slab', '_stairs', '_wall', '_fence', '_fence_gate',
+  '_button', '_pressure_plate', '_sign', '_wall_sign',
+  '_hanging_sign', '_wall_hanging_sign',
+];
+
+/**
+ * Wood types — used to map fence/gate/etc to planks texture.
+ */
+const WOOD_TYPES = [
+  'oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak',
+  'cherry', 'mangrove', 'bamboo', 'crimson', 'warped',
+];
 
 /**
  * Get the texture filename for a block.
  * Returns the filename without .png extension.
  */
 export function getTextureFileName(blockName: string): string {
-  // Remove minecraft: prefix
   const short = blockName.replace('minecraft:', '');
 
-  // Check overrides first
+  // Check explicit overrides first
   if (TEXTURE_OVERRIDES[short]) return TEXTURE_OVERRIDES[short];
 
-  // Default: use block name directly
+  // Auto-resolve variant suffixes (slab, stairs, wall, fence, etc.)
+  for (const suffix of VARIANT_SUFFIXES) {
+    if (short.endsWith(suffix)) {
+      const base = short.slice(0, -suffix.length);
+
+      // Wood variants → planks (for any suffix: slab, stairs, fence, sign, etc.)
+      for (const wood of WOOD_TYPES) {
+        if (base === wood) return `${wood}_planks`;
+      }
+
+      // Check if the base block has an explicit override
+      if (TEXTURE_OVERRIDES[base]) return TEXTURE_OVERRIDES[base];
+
+      // Return the base block name
+      return base;
+    }
+  }
+
+  // Block entities / non-renderable blocks → use a generic fallback
+  const ENTITY_BLOCKS = [
+    'chest', 'trapped_chest', 'ender_chest', 'shulker_box',
+    'banner', 'wall_banner', 'bed', 'head', 'wall_head', 'skull', 'wall_skull',
+    'sign', 'wall_sign', 'hanging_sign', 'wall_hanging_sign',
+  ];
+  for (const eb of ENTITY_BLOCKS) {
+    if (short === eb || short.endsWith(`_${eb}`)) return 'oak_planks';
+  }
+
   return short;
 }

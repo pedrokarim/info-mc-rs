@@ -8,12 +8,76 @@
   let {
     structure,
     layerY = -1,
-    brightness = 70,
+    brightness = 100,
   }: {
     structure: StructureData;
     layerY?: number;
     brightness?: number;
   } = $props();
+
+  /**
+   * Resolve block name using properties for blocks that have color/type variants.
+   * e.g. minecraft:coral_block + {coral_color: "tube"} → minecraft:tube_coral_block
+   */
+  function resolveBlockName(name: string, props?: Record<string, string>): string {
+    if (!props) return name;
+    const short = name.replace('minecraft:', '');
+
+    // Legacy variant property (pre-1.13 "The Flattening")
+    // e.g. minecraft:stone + variant=granite → minecraft:granite
+    if (props.variant) {
+      const v = props.variant;
+      // Stone variants
+      if (short === 'stone' && v !== 'stone') return `minecraft:${v}`;
+      // Dirt variants
+      if (short === 'dirt' && v !== 'dirt') return `minecraft:${v}`;
+      // Sand variants
+      if (short === 'sand' && v !== 'sand') return `minecraft:${v}`;
+      // Planks / logs
+      if (short === 'planks') return `minecraft:${v}_planks`;
+      if (short === 'log') return `minecraft:${v}_log`;
+      if (short === 'log2') return `minecraft:${v}_log`;
+      if (short === 'sapling') return `minecraft:${v}_sapling`;
+      if (short === 'leaves') return `minecraft:${v}_leaves`;
+      if (short === 'leaves2') return `minecraft:${v}_leaves`;
+      // Stonebrick variants
+      if (short === 'stonebrick') {
+        if (v === 'default' || v === 'stonebrick') return 'minecraft:stone_bricks';
+        if (v === 'mossy') return 'minecraft:mossy_stone_bricks';
+        if (v === 'cracked') return 'minecraft:cracked_stone_bricks';
+        if (v === 'chiseled') return 'minecraft:chiseled_stone_bricks';
+      }
+      // Prismarine
+      if (short === 'prismarine') {
+        if (v === 'default' || v === 'prismarine') return 'minecraft:prismarine';
+        if (v === 'bricks') return 'minecraft:prismarine_bricks';
+        if (v === 'dark') return 'minecraft:dark_prismarine';
+      }
+    }
+
+    // Coral blocks: coral_block + coral_color → {color}_coral_block
+    if (short === 'coral_block' && props.coral_color) {
+      return `minecraft:${props.dead === 'true' ? 'dead_' : ''}${props.coral_color}_coral_block`;
+    }
+    if (short === 'coral_block' && !props.coral_color) {
+      // Old format — no color specified, use brain_coral as fallback
+      return 'minecraft:brain_coral_block';
+    }
+    // Coral fans/wall fans
+    if ((short === 'coral_fan' || short === 'coral_wall_fan') && props.coral_color) {
+      return `minecraft:${props.dead === 'true' ? 'dead_' : ''}${props.coral_color}_${short}`;
+    }
+    // Colored blocks
+    if (props.color) {
+      return `minecraft:${props.color}_${short}`;
+    }
+    // Wood type
+    if (props.wood_type) {
+      return `minecraft:${props.wood_type}_${short}`;
+    }
+
+    return name;
+  }
 
   let container: HTMLDivElement;
   let animId: number;
@@ -21,42 +85,66 @@
   let currentStructure: StructureData | null = null;
   let currentLayerY = -1;
 
-  // Material cache (texture or color fallback)
+  // Material cache (texture or missing texture fallback)
   const materialCache = new Map<string, THREE.MeshLambertMaterial>();
   const loader = new THREE.TextureLoader();
   const failedTextures = new Set<string>();
+  let missingTexture: THREE.Texture | null = null;
+
+  /** Generate the classic Minecraft missing texture (black & magenta checkerboard 16×16) */
+  function getMissingTexture(): THREE.Texture {
+    if (missingTexture) return missingTexture;
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d')!;
+    const size = 8;
+    for (let y = 0; y < 2; y++) {
+      for (let x = 0; x < 2; x++) {
+        ctx.fillStyle = (x + y) % 2 === 0 ? '#f800f8' : '#000000';
+        ctx.fillRect(x * size, y * size, size, size);
+      }
+    }
+    missingTexture = new THREE.CanvasTexture(canvas);
+    missingTexture.magFilter = THREE.NearestFilter;
+    missingTexture.minFilter = THREE.NearestFilter;
+    return missingTexture;
+  }
 
   function getBlockMaterial(blockName: string): THREE.MeshLambertMaterial {
     if (materialCache.has(blockName)) return materialCache.get(blockName)!;
 
     const texFileName = getTextureFileName(blockName);
-    const color = getBlockColor(blockName);
 
-    // If we already know this texture doesn't exist, use color directly
+    // If we already know this texture doesn't exist, use missing texture
     if (failedTextures.has(texFileName)) {
-      const mat = new THREE.MeshLambertMaterial({ color: color || '#ff00ff' });
+      const mat = new THREE.MeshLambertMaterial({ map: getMissingTexture() });
       materialCache.set(blockName, mat);
       return mat;
     }
 
-    // Try loading texture
+    // Create material first, then load texture into it
+    // This way the SAME material object gets updated when texture loads or fails
+    const mat = new THREE.MeshLambertMaterial({ map: getMissingTexture() }); // start with missing
+    materialCache.set(blockName, mat);
+
     const tex = loader.load(
       `/images/blocks/${texFileName}.png`,
-      () => { tex.needsUpdate = true; },
+      () => {
+        // Success — swap to real texture
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        mat.map = tex;
+        mat.needsUpdate = true;
+      },
       undefined,
       () => {
-        // Texture not found — swap to color material
+        // Failed — keep missing texture (already set)
         failedTextures.add(texFileName);
-        const fallback = new THREE.MeshLambertMaterial({ color: color || '#ff00ff' });
-        materialCache.set(blockName, fallback);
       }
     );
-    tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.NearestFilter;
-    tex.colorSpace = THREE.SRGBColorSpace;
 
-    const mat = new THREE.MeshLambertMaterial({ map: tex });
-    materialCache.set(blockName, mat);
     return mat;
   }
 
@@ -76,16 +164,20 @@
 
     const { palette, blocks, size } = structure;
 
-    // Group blocks by block name for batching
+    // Group blocks by resolved texture key for batching
     const blockGroups = new Map<string, THREE.Matrix4[]>();
 
     for (const block of blocks) {
-      const blockName = palette[block.state]?.Name ?? 'minecraft:air';
+      const entry = palette[block.state];
+      const blockName = entry?.Name ?? 'minecraft:air';
       if (isAirBlock(blockName)) continue;
       if (layerY >= 0 && block.pos[1] !== layerY) continue;
 
-      let group = blockGroups.get(blockName);
-      if (!group) { group = []; blockGroups.set(blockName, group); }
+      // Resolve block name with properties for texture lookup
+      const resolvedName = resolveBlockName(blockName, entry?.Properties);
+
+      let group = blockGroups.get(resolvedName);
+      if (!group) { group = []; blockGroups.set(resolvedName, group); }
 
       const matrix = new THREE.Matrix4();
       matrix.setPosition(
@@ -209,7 +301,7 @@
   .structure-viewer {
     display: block; width: 100%; height: 100%; min-height: 400px;
     border-radius: var(--radius-md, 12px); overflow: hidden; cursor: grab;
-    background: linear-gradient(135deg, #1a1a2e 0%, #0a0a1a 100%);
+    background: linear-gradient(135deg, #6b8cad 0%, #4a6a8a 100%);
   }
   .structure-viewer:active { cursor: grabbing; }
 </style>
