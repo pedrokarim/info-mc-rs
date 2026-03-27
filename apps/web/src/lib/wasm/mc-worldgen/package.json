@@ -1,0 +1,15 @@
+{
+  "name": "mc-worldgen",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "mc_worldgen_bg.wasm",
+    "mc_worldgen.js",
+    "mc_worldgen.d.ts"
+  ],
+  "main": "mc_worldgen.js",
+  "types": "mc_worldgen.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
