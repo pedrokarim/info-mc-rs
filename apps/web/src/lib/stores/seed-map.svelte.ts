@@ -1,7 +1,15 @@
-export interface ChunkData {
-	biomes: Uint8Array;
-	slime: boolean;
-	resolution: number; // block step size used when computing this chunk
+/// Seed map store — tile-based architecture matching chunkbase's approach.
+/// Multiple workers compute 64x64 RGBA tiles in parallel.
+
+const TILE_SIZE = 64; // samples per tile axis (64x64 = 4096 samples)
+const WORKER_COUNT = Math.min(8, Math.max(2, (navigator?.hardwareConcurrency ?? 4) - 1));
+
+// ===== Tile cache =====
+
+export interface TileData {
+	rgba: Uint8Array;      // TILE_SIZE * TILE_SIZE * 4 bytes
+	biomeIds: Uint8Array;  // TILE_SIZE * TILE_SIZE biome IDs
+	step: number;          // block step used
 }
 
 export interface MapState {
@@ -32,10 +40,11 @@ export interface MapState {
 	canvasWidth: number;
 	canvasHeight: number;
 
-	chunkCache: Map<string, ChunkData>;
+	tileCache: Map<string, TileData>;
+	slimeCache: Map<string, Uint8Array>; // keyed by "regionX,regionZ"
 	renderGeneration: number;
 
-	workerReady: boolean;
+	workersReady: number;
 	computing: boolean;
 }
 
@@ -67,72 +76,112 @@ export const mapState: MapState = $state({
 	canvasWidth: 0,
 	canvasHeight: 0,
 
-	chunkCache: new Map(),
+	tileCache: new Map(),
+	slimeCache: new Map(),
 	renderGeneration: 0,
 
-	workerReady: false,
+	workersReady: 0,
 	computing: false,
 });
 
-// ===== Worker management =====
+// ===== Worker pool =====
 
-let worker: Worker | null = null;
+let workers: Worker[] = [];
+let workerBusy: boolean[] = [];
+let pendingTiles: Array<{ tileX: number; tileZ: number; step: number; dist: number }> = [];
+let tileIdCounter = 0;
 
-export function initWorker() {
-	if (worker) worker.terminate();
+export function initWorkers() {
+	terminateWorkers();
 
-	worker = new Worker(
-		new URL('../workers/seed-map-worker.ts', import.meta.url),
-		{ type: 'module' }
-	);
-
-	worker.onmessage = handleWorkerMessage;
-	worker.onerror = (e) => console.error('[seed-map-worker] error:', e);
-}
-
-export function terminateWorker() {
-	if (worker) {
-		worker.terminate();
-		worker = null;
+	for (let i = 0; i < WORKER_COUNT; i++) {
+		const w = new Worker(
+			new URL('../workers/seed-map-worker.ts', import.meta.url),
+			{ type: 'module' }
+		);
+		w.onmessage = (e) => handleWorkerMessage(i, e);
+		w.onerror = (e) => console.error(`[seed-map-worker-${i}]`, e);
+		workers.push(w);
+		workerBusy.push(false);
 	}
 }
 
-function handleWorkerMessage(e: MessageEvent) {
+export function terminateWorkers() {
+	for (const w of workers) w.terminate();
+	workers = [];
+	workerBusy = [];
+	pendingTiles = [];
+}
+
+function handleWorkerMessage(workerIdx: number, e: MessageEvent) {
 	const msg = e.data;
 
 	if (msg.type === 'ready') {
 		if (msg.generation === mapState.renderGeneration) {
-			mapState.workerReady = true;
-			mapState.computing = false;
-			requestVisibleChunks();
+			mapState.workersReady++;
+			if (mapState.workersReady >= WORKER_COUNT) {
+				requestVisibleTiles();
+			}
 		}
 	}
 
-	if (msg.type === 'chunk-batch') {
-		if (msg.generation !== mapState.renderGeneration) return;
+	if (msg.type === 'tile-result') {
+		workerBusy[workerIdx] = false;
 
-		for (const chunk of msg.chunks) {
-			const key = `${chunk.cx},${chunk.cz}`;
-			mapState.chunkCache.set(key, {
-				biomes: chunk.biomes,
-				slime: chunk.slime,
-				resolution: msg.resolution,
+		if (msg.generation === mapState.renderGeneration) {
+			const key = `${msg.tileX},${msg.tileZ},${msg.step}`;
+			mapState.tileCache.set(key, {
+				rgba: msg.rgba,
+				biomeIds: msg.biomeIds,
+				step: msg.step,
 			});
 		}
-		mapState.computing = false;
-		// Request more chunks if there are still uncached ones visible
-		requestVisibleChunks();
+
+		// Dispatch next pending tile to this worker
+		dispatchNext(workerIdx);
+	}
+
+	if (msg.type === 'slime-result') {
+		workerBusy[workerIdx] = false;
+		if (msg.generation === mapState.renderGeneration) {
+			const key = `${msg.chunkX},${msg.chunkZ}`;
+			mapState.slimeCache.set(key, msg.slime);
+		}
+		dispatchNext(workerIdx);
 	}
 
 	if (msg.type === 'error') {
-		console.error('[seed-map-worker]', msg.message);
-		mapState.computing = false;
+		workerBusy[workerIdx] = false;
+		console.error(`[worker-${workerIdx}]`, msg.message);
+		dispatchNext(workerIdx);
 	}
 }
 
-// ===== Seed parsing (pure JS, no WASM needed) =====
+function dispatchNext(workerIdx: number) {
+	if (pendingTiles.length === 0) {
+		// Check if all workers idle
+		if (workerBusy.every(b => !b)) {
+			mapState.computing = false;
+		}
+		return;
+	}
 
-/** Java's String.hashCode() */
+	const tile = pendingTiles.shift()!;
+	workerBusy[workerIdx] = true;
+
+	workers[workerIdx].postMessage({
+		type: 'tile',
+		tileX: tile.tileX,
+		tileZ: tile.tileZ,
+		tileSize: TILE_SIZE,
+		step: tile.step,
+		generation: mapState.renderGeneration,
+		tileId: tileIdCounter++,
+	});
+}
+
+// ===== Seed / version =====
+
 function javaStringHashCode(s: string): number {
 	let hash = 0;
 	for (const ch of s) {
@@ -141,19 +190,13 @@ function javaStringHashCode(s: string): number {
 	return hash;
 }
 
-/** Parse seed string → {hi, lo} i32 pair for WASM. */
 export function parseSeed(input: string): { hi: number; lo: number } {
 	let seed: bigint;
-
-	// Try parsing as number first
 	try {
 		seed = BigInt(input);
 	} catch {
-		// Text seed — use Java hashCode (returns i32, which is also a valid i64 seed)
 		seed = BigInt(javaStringHashCode(input));
 	}
-
-	// Split i64 into two i32s
 	const lo = Number(BigInt.asIntN(32, seed));
 	const hi = Number(BigInt.asIntN(32, seed >> 32n));
 	return { hi, lo };
@@ -172,18 +215,23 @@ export function setSeed(input: string) {
 		mapState.seedHi = hi;
 		mapState.seedLo = lo;
 		mapState.seedValid = true;
-		mapState.chunkCache = new Map();
+		mapState.tileCache = new Map();
+		mapState.slimeCache = new Map();
 		mapState.renderGeneration++;
-		mapState.workerReady = false;
+		mapState.workersReady = 0;
 		mapState.computing = false;
+		pendingTiles = [];
 
-		worker?.postMessage({
-			type: 'init',
-			seedHi: hi,
-			seedLo: lo,
-			version: mapState.mcVersion,
-			generation: mapState.renderGeneration,
-		});
+		// Init all workers with new seed
+		for (const w of workers) {
+			w.postMessage({
+				type: 'init',
+				seedHi: hi,
+				seedLo: lo,
+				version: mapState.mcVersion,
+				generation: mapState.renderGeneration,
+			});
+		}
 	} catch (err) {
 		console.error('[seed-map] setSeed error:', err);
 		mapState.seedValid = false;
@@ -193,24 +241,28 @@ export function setSeed(input: string) {
 export function setVersion(version: string) {
 	mapState.mcVersion = version;
 	if (mapState.seedValid) {
-		mapState.chunkCache = new Map();
+		mapState.tileCache = new Map();
+		mapState.slimeCache = new Map();
 		mapState.renderGeneration++;
-		mapState.workerReady = false;
+		mapState.workersReady = 0;
 		mapState.computing = false;
+		pendingTiles = [];
 
-		worker?.postMessage({
-			type: 'init',
-			seedHi: mapState.seedHi,
-			seedLo: mapState.seedLo,
-			version,
-			generation: mapState.renderGeneration,
-		});
+		for (const w of workers) {
+			w.postMessage({
+				type: 'init',
+				seedHi: mapState.seedHi,
+				seedLo: mapState.seedLo,
+				version,
+				generation: mapState.renderGeneration,
+			});
+		}
 	}
 }
 
 // ===== Viewport =====
 
-const ZOOM_LEVELS = [0.125, 0.25, 0.5, 1, 2, 4, 8, 16];
+const ZOOM_LEVELS = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16];
 
 export function zoomIn() {
 	const idx = ZOOM_LEVELS.indexOf(mapState.zoom);
@@ -256,71 +308,81 @@ export function setCenter(x: number, z: number) {
 	mapState.centerZ = z;
 }
 
-// ===== Chunk requests =====
+// ===== Tile system =====
 
-export function getVisibleChunkRange() {
+/** Get the block-step for the current zoom level.
+ * Like chunkbase: higher zoom = finer resolution. */
+export function getStep(): number {
+	// At zoom 16 (most zoomed in): step=4 (native biome res)
+	// At zoom 1: step=4
+	// At zoom 0.25: step=16
+	// At zoom 0.0625: step=64
+	if (mapState.zoom >= 1) return 4;
+	if (mapState.zoom >= 0.25) return 16;
+	if (mapState.zoom >= 0.0625) return 64;
+	return 128;
+}
+
+/** Get visible tile range for the current viewport. */
+export function getVisibleTileRange() {
+	const step = getStep();
+	const tileWorldSize = TILE_SIZE * step; // size of one tile in blocks
+
 	const halfW = mapState.canvasWidth / 2 / mapState.zoom;
 	const halfH = mapState.canvasHeight / 2 / mapState.zoom;
 
+	const minBlockX = mapState.centerX - halfW;
+	const maxBlockX = mapState.centerX + halfW;
+	const minBlockZ = mapState.centerZ - halfH;
+	const maxBlockZ = mapState.centerZ + halfH;
+
 	return {
-		minCX: Math.floor((mapState.centerX - halfW) / 16) - 1,
-		maxCX: Math.floor((mapState.centerX + halfW) / 16) + 1,
-		minCZ: Math.floor((mapState.centerZ - halfH) / 16) - 1,
-		maxCZ: Math.floor((mapState.centerZ + halfH) / 16) + 1,
+		minTX: Math.floor(minBlockX / tileWorldSize) - 1,
+		maxTX: Math.floor(maxBlockX / tileWorldSize) + 1,
+		minTZ: Math.floor(minBlockZ / tileWorldSize) - 1,
+		maxTZ: Math.floor(maxBlockZ / tileWorldSize) + 1,
+		step,
+		tileWorldSize,
 	};
 }
 
-export function getResolution(): number {
-	if (mapState.zoom <= 0.25) return 8;
-	if (mapState.zoom <= 1) return 4;
-	return 1;
-}
+export function requestVisibleTiles() {
+	if (workers.length === 0 || mapState.workersReady < WORKER_COUNT || !mapState.seedValid) return;
 
-export function requestVisibleChunks() {
-	if (!worker || !mapState.workerReady || !mapState.seedValid) return;
-	if (mapState.computing) return;
+	const range = getVisibleTileRange();
+	const centerTX = Math.floor(mapState.centerX / range.tileWorldSize);
+	const centerTZ = Math.floor(mapState.centerZ / range.tileWorldSize);
 
-	const range = getVisibleChunkRange();
-	const centerCX = Math.floor(mapState.centerX / 16);
-	const centerCZ = Math.floor(mapState.centerZ / 16);
+	// Clear old pending tiles
+	pendingTiles = [];
 
-	const pending: Array<{ cx: number; cz: number; dist: number }> = [];
-
-	const currentRes = getResolution();
-
-	for (let cx = range.minCX; cx <= range.maxCX; cx++) {
-		for (let cz = range.minCZ; cz <= range.maxCZ; cz++) {
-			const key = `${cx},${cz}`;
-			const cached = mapState.chunkCache.get(key);
-			// Re-compute if not cached or cached at a coarser resolution than needed
-			if (!cached || cached.resolution > currentRes) {
-				const dx = cx - centerCX;
-				const dz = cz - centerCZ;
-				pending.push({ cx, cz, dist: dx * dx + dz * dz });
+	for (let tx = range.minTX; tx <= range.maxTX; tx++) {
+		for (let tz = range.minTZ; tz <= range.maxTZ; tz++) {
+			const key = `${tx},${tz},${range.step}`;
+			if (!mapState.tileCache.has(key)) {
+				const dx = tx - centerTX;
+				const dz = tz - centerTZ;
+				pendingTiles.push({ tileX: tx, tileZ: tz, step: range.step, dist: dx * dx + dz * dz });
 			}
 		}
 	}
 
-	if (pending.length === 0) return;
+	if (pendingTiles.length === 0) return;
 
-	pending.sort((a, b) => a.dist - b.dist);
-
-	const chunks: number[] = [];
-	const batch = pending.slice(0, 256);
-	for (const p of batch) {
-		chunks.push(p.cx, p.cz);
-	}
+	// Sort by distance to center (closest first)
+	pendingTiles.sort((a, b) => a.dist - b.dist);
 
 	mapState.computing = true;
-	worker.postMessage({
-		type: 'compute',
-		chunks,
-		generation: mapState.renderGeneration,
-		resolution: getResolution(),
-	});
+
+	// Dispatch to all idle workers
+	for (let i = 0; i < workers.length; i++) {
+		if (!workerBusy[i] && pendingTiles.length > 0) {
+			dispatchNext(i);
+		}
+	}
 }
 
-// ===== Biome info (pure JS lookup, no WASM on main thread) =====
+// ===== Biome info =====
 
 const BIOME_NAMES: Record<number, string> = {
 	0: 'Ocean', 1: 'Deep Ocean', 2: 'Frozen Ocean', 3: 'Deep Frozen Ocean',
@@ -361,3 +423,5 @@ export function getBiomeName(id: number): string {
 export function getBiomeColor(id: number): number {
 	return BIOME_COLORS[id] ?? 0xFF00FF;
 }
+
+export { TILE_SIZE };

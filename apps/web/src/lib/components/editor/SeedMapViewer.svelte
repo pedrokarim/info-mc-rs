@@ -4,8 +4,8 @@
   import SeedMapControls from './SeedMapControls.svelte';
   import SeedMapTooltip from './SeedMapTooltip.svelte';
   import {
-    mapState, initWorker, terminateWorker, pan, zoomIn, zoomOut,
-    requestVisibleChunks,
+    mapState, initWorkers, terminateWorkers, pan, zoomIn, zoomOut,
+    requestVisibleTiles,
   } from '$lib/stores/seed-map.svelte';
 
   function handleKeydown(e: KeyboardEvent) {
@@ -18,31 +18,31 @@
       case 'ArrowLeft':
         e.preventDefault();
         pan(-step, 0);
-        requestVisibleChunks();
+        requestVisibleTiles();
         break;
       case 'ArrowRight':
         e.preventDefault();
         pan(step, 0);
-        requestVisibleChunks();
+        requestVisibleTiles();
         break;
       case 'ArrowUp':
         e.preventDefault();
         pan(0, -step);
-        requestVisibleChunks();
+        requestVisibleTiles();
         break;
       case 'ArrowDown':
         e.preventDefault();
         pan(0, step);
-        requestVisibleChunks();
+        requestVisibleTiles();
         break;
       case '+':
       case '=':
         zoomIn();
-        requestVisibleChunks();
+        requestVisibleTiles();
         break;
       case '-':
         zoomOut();
-        requestVisibleChunks();
+        requestVisibleTiles();
         break;
       case 'g':
       case 'G':
@@ -60,11 +60,11 @@
   }
 
   onMount(() => {
-    initWorker();
+    initWorkers();
     window.addEventListener('keydown', handleKeydown);
     return () => {
       window.removeEventListener('keydown', handleKeydown);
-      terminateWorker();
+      terminateWorkers();
     };
   });
 </script>

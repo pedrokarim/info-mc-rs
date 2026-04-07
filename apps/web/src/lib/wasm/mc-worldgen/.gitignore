@@ -1,7 +1,1 @@
 *
-!.gitignore
-!mc_worldgen.d.ts
-!mc_worldgen.js
-!mc_worldgen_bg.wasm
-!mc_worldgen_bg.wasm.d.ts
-!package.json

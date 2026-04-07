@@ -1,5 +1,5 @@
-/// Web Worker for seed map biome/slime chunk computation.
-/// Loads the mc-worldgen WASM module and processes chunk requests off the main thread.
+/// Seed map tile worker — computes biome RGBA tiles via WASM.
+/// Architecture matches chunkbase: one WASM call per tile, returns RGBA directly.
 
 import initWasm, { WorldGen } from '../wasm/mc-worldgen/mc_worldgen';
 
@@ -7,75 +7,68 @@ let wasmReady = false;
 let worldgen: WorldGen | null = null;
 let currentGeneration = 0;
 
-function post(msg: unknown) {
-	(self as unknown as Worker).postMessage(msg);
+function post(msg: unknown, transfer?: Transferable[]) {
+	(self as unknown as Worker).postMessage(msg, transfer ?? []);
 }
 
 self.onmessage = async (e: MessageEvent) => {
 	try {
-		if (e.data.type === 'init') {
-			// Only init WASM once
+		const { type } = e.data;
+
+		if (type === 'init') {
 			if (!wasmReady) {
 				await initWasm();
 				wasmReady = true;
 			}
-
-			// Free previous instance
-			if (worldgen) {
-				worldgen.free();
-			}
+			if (worldgen) worldgen.free();
 
 			worldgen = new WorldGen(e.data.seedHi, e.data.seedLo, e.data.version);
 			currentGeneration = e.data.generation;
-
 			post({ type: 'ready', generation: e.data.generation });
 		}
 
-		if (e.data.type === 'compute') {
+		if (type === 'tile') {
 			if (!worldgen || e.data.generation !== currentGeneration) return;
 
-			const { chunks, generation, resolution } = e.data;
-			const numChunks = chunks.length / 2;
-			const step = Math.max(1, resolution);
-			const gridSize = Math.floor(16 / step);
-			const biomesPerChunk = gridSize * gridSize;
+			const { tileX, tileZ, tileSize, step, generation, tileId } = e.data;
 
-			// Process in batches of 16 chunks for progressive updates
-			const batchSize = 16;
-			for (let batch = 0; batch < numChunks; batch += batchSize) {
-				if (currentGeneration !== generation) return; // Stale
+			// One WASM call: compute biome RGBA for the entire tile
+			const blockX = tileX * step * tileSize;
+			const blockZ = tileZ * step * tileSize;
+			const rgba = worldgen.get_biome_area_rgba(blockX, blockZ, tileSize, tileSize, step);
 
-				const end = Math.min(batch + batchSize, numChunks);
-				const batchCoords = chunks.slice(batch * 2, end * 2);
+			// Also get biome IDs for tooltip lookups
+			const biomeIds = worldgen.get_biome_area(blockX, blockZ, tileSize, tileSize, step);
 
-				const raw = worldgen.compute_chunks(new Int32Array(batchCoords), resolution);
+			// Transfer the buffers (zero-copy)
+			const rgbaBuf = rgba.buffer;
+			const idsBuf = biomeIds.buffer;
 
-				const results: {
-					type: 'chunk-batch';
-					generation: number;
-					resolution: number;
-					chunks: Array<{ cx: number; cz: number; biomes: Uint8Array; slime: boolean }>;
-				} = {
-					type: 'chunk-batch',
-					generation,
-					resolution,
-					chunks: [],
-				};
-
-				let offset = 0;
-				for (let i = batch; i < end; i++) {
-					const cx = chunks[i * 2];
-					const cz = chunks[i * 2 + 1];
-					const biomes = raw.slice(offset, offset + biomesPerChunk);
-					offset += biomesPerChunk;
-					const slime = raw[offset] === 1;
-					offset += 1;
-					results.chunks.push({ cx, cz, biomes, slime });
-				}
-
-				post(results);
-			}
+			post({
+				type: 'tile-result',
+				tileId,
+				tileX, tileZ, tileSize, step,
+				generation,
+				rgba: new Uint8Array(rgbaBuf),
+				biomeIds: new Uint8Array(idsBuf),
+			}, [rgbaBuf, idsBuf]);
 		}
+
+		if (type === 'slime-area') {
+			if (!worldgen || e.data.generation !== currentGeneration) return;
+
+			const { chunkX, chunkZ, width, height, generation } = e.data;
+			const slime = worldgen.get_slime_area(chunkX, chunkZ, width, height);
+			const buf = slime.buffer;
+
+			post({
+				type: 'slime-result',
+				chunkX, chunkZ, width, height,
+				generation,
+				slime: new Uint8Array(buf),
+			}, [buf]);
+		}
+
 	} catch (err) {
 		post({
 			type: 'error',

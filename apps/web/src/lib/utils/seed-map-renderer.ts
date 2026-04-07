@@ -1,35 +1,30 @@
-import type { MapState, ChunkData } from '$lib/stores/seed-map.svelte';
-import { getBiomeColor, getVisibleChunkRange, getResolution } from '$lib/stores/seed-map.svelte';
+import type { MapState, TileData } from '$lib/stores/seed-map.svelte';
+import { getVisibleTileRange, getBiomeColor, getBiomeName, TILE_SIZE } from '$lib/stores/seed-map.svelte';
 
 // ===== Coordinate transforms =====
 
 export function worldToCanvas(
-	worldX: number,
-	worldZ: number,
-	state: MapState
+	worldX: number, worldZ: number, state: MapState
 ): { x: number; y: number } {
-	const cx = state.canvasWidth / 2;
-	const cy = state.canvasHeight / 2;
 	return {
-		x: cx + (worldX - state.centerX) * state.zoom,
-		y: cy + (worldZ - state.centerZ) * state.zoom,
+		x: state.canvasWidth / 2 + (worldX - state.centerX) * state.zoom,
+		y: state.canvasHeight / 2 + (worldZ - state.centerZ) * state.zoom,
 	};
 }
 
 export function canvasToWorld(
-	canvasX: number,
-	canvasY: number,
-	state: MapState
+	canvasX: number, canvasY: number, state: MapState
 ): { x: number; z: number } {
-	const cx = state.canvasWidth / 2;
-	const cy = state.canvasHeight / 2;
 	return {
-		x: state.centerX + (canvasX - cx) / state.zoom,
-		z: state.centerZ + (canvasY - cy) / state.zoom,
+		x: state.centerX + (canvasX - state.canvasWidth / 2) / state.zoom,
+		z: state.centerZ + (canvasY - state.canvasHeight / 2) / state.zoom,
 	};
 }
 
 // ===== Main render =====
+
+// Reusable ImageData cache to avoid allocation per tile per frame
+const tileCanvasCache = new Map<string, ImageData>();
 
 export function renderFrame(ctx: CanvasRenderingContext2D, state: MapState) {
 	ctx.clearRect(0, 0, state.canvasWidth, state.canvasHeight);
@@ -44,7 +39,7 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: MapState) {
 	}
 
 	if (state.showBiomes) {
-		renderBiomes(ctx, state);
+		renderBiomeTiles(ctx, state);
 	}
 
 	if (state.showSlimeChunks) {
@@ -66,84 +61,92 @@ function renderPlaceholder(ctx: CanvasRenderingContext2D, state: MapState) {
 	ctx.fillStyle = '#ffffff40';
 	ctx.font = '16px system-ui, sans-serif';
 	ctx.textAlign = 'center';
-	ctx.fillText(
-		'Entrez une seed pour commencer',
-		state.canvasWidth / 2,
-		state.canvasHeight / 2
-	);
+	ctx.fillText('Entrez une seed pour commencer', state.canvasWidth / 2, state.canvasHeight / 2);
 }
 
-// ===== Biome rendering =====
+// ===== Biome tile rendering =====
 
-// Color cache to avoid re-converting hex each frame
-const colorCache = new Map<number, string>();
+function renderBiomeTiles(ctx: CanvasRenderingContext2D, state: MapState) {
+	const range = getVisibleTileRange();
+	const { step, tileWorldSize } = range;
+	const tilePx = tileWorldSize * state.zoom; // pixel size of one tile on screen
 
-function biomeColorStr(id: number): string {
-	let c = colorCache.get(id);
-	if (!c) {
-		const rgb = getBiomeColor(id);
-		c = `#${rgb.toString(16).padStart(6, '0')}`;
-		colorCache.set(id, c);
-	}
-	return c;
-}
+	for (let tx = range.minTX; tx <= range.maxTX; tx++) {
+		for (let tz = range.minTZ; tz <= range.maxTZ; tz++) {
+			const key = `${tx},${tz},${step}`;
+			const tile = state.tileCache.get(key);
+			if (!tile) continue;
 
-function renderBiomes(ctx: CanvasRenderingContext2D, state: MapState) {
-	const range = getVisibleChunkRange();
-	const blockPx = state.zoom;
+			// World position of tile's top-left corner
+			const worldX = tx * tileWorldSize;
+			const worldZ = tz * tileWorldSize;
+			const screen = worldToCanvas(worldX, worldZ, state);
 
-	for (let cx = range.minCX; cx <= range.maxCX; cx++) {
-		for (let cz = range.minCZ; cz <= range.maxCZ; cz++) {
-			const key = `${cx},${cz}`;
-			const chunk = state.chunkCache.get(key);
-			if (!chunk) continue;
-
-			// Use the resolution this chunk was actually computed at
-			const res = chunk.resolution;
-			const gridSize = Math.floor(16 / res);
-			const cellPx = blockPx * res;
-			const baseWorldX = cx * 16;
-			const baseWorldZ = cz * 16;
-
-			for (let dz = 0; dz < gridSize; dz++) {
-				for (let dx = 0; dx < gridSize; dx++) {
-					const biomeId = chunk.biomes[dz * gridSize + dx];
-					const worldX = baseWorldX + dx * res;
-					const worldZ = baseWorldZ + dz * res;
-					const screen = worldToCanvas(worldX, worldZ, state);
-
-					ctx.fillStyle = biomeColorStr(biomeId);
-					ctx.fillRect(
-						Math.floor(screen.x),
-						Math.floor(screen.y),
-						Math.ceil(cellPx) + 1,
-						Math.ceil(cellPx) + 1
-					);
-				}
-			}
+			// Draw the tile's RGBA data scaled to screen size
+			drawTile(ctx, tile, screen.x, screen.y, tilePx);
 		}
 	}
+}
+
+function drawTile(
+	ctx: CanvasRenderingContext2D,
+	tile: TileData,
+	screenX: number, screenY: number,
+	tilePx: number,
+) {
+	// Create ImageData from RGBA buffer
+	const clamped = new Uint8ClampedArray(tile.rgba.buffer, tile.rgba.byteOffset, tile.rgba.byteLength);
+	const imgData = new ImageData(clamped, TILE_SIZE, TILE_SIZE);
+
+	// Use a temporary canvas to draw at native resolution then scale
+	let tmpCanvas = (drawTile as any)._tmpCanvas as OffscreenCanvas | undefined;
+	if (!tmpCanvas) {
+		tmpCanvas = new OffscreenCanvas(TILE_SIZE, TILE_SIZE);
+		(drawTile as any)._tmpCanvas = tmpCanvas;
+	}
+	const tmpCtx = tmpCanvas.getContext('2d')!;
+	tmpCtx.putImageData(imgData, 0, 0);
+
+	// Draw scaled to screen
+	ctx.imageSmoothingEnabled = false; // pixelated look
+	ctx.drawImage(
+		tmpCanvas,
+		Math.floor(screenX),
+		Math.floor(screenY),
+		Math.ceil(tilePx) + 1,
+		Math.ceil(tilePx) + 1,
+	);
 }
 
 // ===== Slime chunks =====
 
 function renderSlimeChunks(ctx: CanvasRenderingContext2D, state: MapState) {
-	const range = getVisibleChunkRange();
 	const chunkPx = 16 * state.zoom;
+	if (chunkPx < 3) return; // too small to see
+
+	const halfW = state.canvasWidth / 2 / state.zoom;
+	const halfH = state.canvasHeight / 2 / state.zoom;
+	const minCX = Math.floor((state.centerX - halfW) / 16) - 1;
+	const maxCX = Math.floor((state.centerX + halfW) / 16) + 1;
+	const minCZ = Math.floor((state.centerZ - halfH) / 16) - 1;
+	const maxCZ = Math.floor((state.centerZ + halfH) / 16) + 1;
 
 	ctx.fillStyle = 'rgba(80, 255, 80, 0.25)';
 	ctx.strokeStyle = 'rgba(80, 255, 80, 0.6)';
 	ctx.lineWidth = 1;
 
-	for (let cx = range.minCX; cx <= range.maxCX; cx++) {
-		for (let cz = range.minCZ; cz <= range.maxCZ; cz++) {
+	// Check slimeCache — we need to request slime data from worker if not cached
+	// For now use the tile biomeIds (TODO: separate slime worker)
+	for (let cx = minCX; cx <= maxCX; cx++) {
+		for (let cz = minCZ; cz <= maxCZ; cz++) {
 			const key = `${cx},${cz}`;
-			const chunk = state.chunkCache.get(key);
-			if (!chunk || !chunk.slime) continue;
-
-			const screen = worldToCanvas(cx * 16, cz * 16, state);
-			ctx.fillRect(screen.x, screen.y, chunkPx, chunkPx);
-			ctx.strokeRect(screen.x + 0.5, screen.y + 0.5, chunkPx - 1, chunkPx - 1);
+			const area = state.slimeCache.get(key);
+			// Simple: check if we have single-chunk slime data
+			if (area && area[0] === 1) {
+				const screen = worldToCanvas(cx * 16, cz * 16, state);
+				ctx.fillRect(screen.x, screen.y, chunkPx, chunkPx);
+				ctx.strokeRect(screen.x + 0.5, screen.y + 0.5, chunkPx - 1, chunkPx - 1);
+			}
 		}
 	}
 }
@@ -151,51 +154,53 @@ function renderSlimeChunks(ctx: CanvasRenderingContext2D, state: MapState) {
 // ===== Grid =====
 
 function renderGrid(ctx: CanvasRenderingContext2D, state: MapState) {
-	const range = getVisibleChunkRange();
+	const halfW = state.canvasWidth / 2 / state.zoom;
+	const halfH = state.canvasHeight / 2 / state.zoom;
+	const minCX = Math.floor((state.centerX - halfW) / 16);
+	const maxCX = Math.floor((state.centerX + halfW) / 16) + 1;
+	const minCZ = Math.floor((state.centerZ - halfH) / 16);
+	const maxCZ = Math.floor((state.centerZ + halfH) / 16) + 1;
+
 	const chunkPx = 16 * state.zoom;
 
-	// Only draw chunk grid if chunks are big enough to see
 	if (chunkPx >= 8) {
 		ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
 		ctx.lineWidth = 0.5;
-
 		ctx.beginPath();
-		for (let cx = range.minCX; cx <= range.maxCX + 1; cx++) {
-			const screen = worldToCanvas(cx * 16, range.minCZ * 16, state);
-			const screenEnd = worldToCanvas(cx * 16, (range.maxCZ + 1) * 16, state);
-			ctx.moveTo(Math.floor(screen.x) + 0.5, screen.y);
-			ctx.lineTo(Math.floor(screenEnd.x) + 0.5, screenEnd.y);
+		for (let cx = minCX; cx <= maxCX + 1; cx++) {
+			const s = worldToCanvas(cx * 16, minCZ * 16, state);
+			const e = worldToCanvas(cx * 16, (maxCZ + 1) * 16, state);
+			ctx.moveTo(Math.floor(s.x) + 0.5, s.y);
+			ctx.lineTo(Math.floor(e.x) + 0.5, e.y);
 		}
-		for (let cz = range.minCZ; cz <= range.maxCZ + 1; cz++) {
-			const screen = worldToCanvas(range.minCX * 16, cz * 16, state);
-			const screenEnd = worldToCanvas((range.maxCX + 1) * 16, cz * 16, state);
-			ctx.moveTo(screen.x, Math.floor(screen.y) + 0.5);
-			ctx.lineTo(screenEnd.x, Math.floor(screenEnd.y) + 0.5);
+		for (let cz = minCZ; cz <= maxCZ + 1; cz++) {
+			const s = worldToCanvas(minCX * 16, cz * 16, state);
+			const e = worldToCanvas((maxCX + 1) * 16, cz * 16, state);
+			ctx.moveTo(s.x, Math.floor(s.y) + 0.5);
+			ctx.lineTo(e.x, Math.floor(e.y) + 0.5);
 		}
 		ctx.stroke();
 	}
 
-	// Region borders (every 32 chunks = 512 blocks)
+	// Region borders (every 512 blocks)
 	ctx.strokeStyle = 'rgba(255, 200, 50, 0.25)';
 	ctx.lineWidth = 1;
-
-	const regionMinX = Math.floor(range.minCX / 32) * 32;
-	const regionMaxX = Math.ceil(range.maxCX / 32) * 32;
-	const regionMinZ = Math.floor(range.minCZ / 32) * 32;
-	const regionMaxZ = Math.ceil(range.maxCZ / 32) * 32;
-
+	const rMinX = Math.floor(minCX / 32) * 32;
+	const rMaxX = Math.ceil(maxCX / 32) * 32;
+	const rMinZ = Math.floor(minCZ / 32) * 32;
+	const rMaxZ = Math.ceil(maxCZ / 32) * 32;
 	ctx.beginPath();
-	for (let rx = regionMinX; rx <= regionMaxX; rx += 32) {
-		const screen = worldToCanvas(rx * 16, range.minCZ * 16, state);
-		const screenEnd = worldToCanvas(rx * 16, (range.maxCZ + 1) * 16, state);
-		ctx.moveTo(Math.floor(screen.x) + 0.5, screen.y);
-		ctx.lineTo(Math.floor(screenEnd.x) + 0.5, screenEnd.y);
+	for (let rx = rMinX; rx <= rMaxX; rx += 32) {
+		const s = worldToCanvas(rx * 16, minCZ * 16, state);
+		const e = worldToCanvas(rx * 16, (maxCZ + 1) * 16, state);
+		ctx.moveTo(Math.floor(s.x) + 0.5, s.y);
+		ctx.lineTo(Math.floor(e.x) + 0.5, e.y);
 	}
-	for (let rz = regionMinZ; rz <= regionMaxZ; rz += 32) {
-		const screen = worldToCanvas(range.minCX * 16, rz * 16, state);
-		const screenEnd = worldToCanvas((range.maxCX + 1) * 16, rz * 16, state);
-		ctx.moveTo(screen.x, Math.floor(screen.y) + 0.5);
-		ctx.lineTo(screenEnd.x, Math.floor(screenEnd.y) + 0.5);
+	for (let rz = rMinZ; rz <= rMaxZ; rz += 32) {
+		const s = worldToCanvas(minCX * 16, rz * 16, state);
+		const e = worldToCanvas((maxCX + 1) * 16, rz * 16, state);
+		ctx.moveTo(s.x, Math.floor(s.y) + 0.5);
+		ctx.lineTo(e.x, Math.floor(e.y) + 0.5);
 	}
 	ctx.stroke();
 }
@@ -208,7 +213,6 @@ function renderCrosshair(ctx: CanvasRenderingContext2D, state: MapState) {
 
 	ctx.strokeStyle = 'rgba(255, 80, 80, 0.8)';
 	ctx.lineWidth = 2;
-
 	ctx.beginPath();
 	ctx.moveTo(origin.x - size, origin.y);
 	ctx.lineTo(origin.x + size, origin.y);
@@ -216,7 +220,6 @@ function renderCrosshair(ctx: CanvasRenderingContext2D, state: MapState) {
 	ctx.lineTo(origin.x, origin.y + size);
 	ctx.stroke();
 
-	// Small label
 	ctx.fillStyle = 'rgba(255, 80, 80, 0.8)';
 	ctx.font = '10px system-ui';
 	ctx.textAlign = 'left';
@@ -230,12 +233,36 @@ function renderCoordinateOverlay(ctx: CanvasRenderingContext2D, state: MapState)
 
 	const x = state.hoverWorldX;
 	const z = state.hoverWorldZ;
-	const text = `X: ${x}  Z: ${z}  |  Chunk: ${state.hoverChunkX}, ${state.hoverChunkZ}`;
+	const biome = state.hoverBiome || '...';
+	const text = `X: ${x}  Z: ${z}  |  Chunk: ${state.hoverChunkX}, ${state.hoverChunkZ}  |  ${biome}`;
 
 	ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-	ctx.fillRect(8, state.canvasHeight - 28, ctx.measureText(text).width + 16, 22);
+	const w = ctx.measureText(text).width + 16;
+	ctx.fillRect(8, state.canvasHeight - 28, w, 22);
 	ctx.fillStyle = '#fff';
 	ctx.font = '12px monospace';
 	ctx.textAlign = 'left';
 	ctx.fillText(text, 16, state.canvasHeight - 12);
+}
+
+// ===== Biome lookup at world position (for tooltip) =====
+
+export function getBiomeAtWorld(state: MapState, worldX: number, worldZ: number): string {
+	const range = getVisibleTileRange();
+	const { step, tileWorldSize } = range;
+
+	const tx = Math.floor(worldX / tileWorldSize);
+	const tz = Math.floor(worldZ / tileWorldSize);
+	const key = `${tx},${tz},${step}`;
+	const tile = state.tileCache.get(key);
+	if (!tile) return '';
+
+	// Position within the tile
+	const localX = Math.floor((worldX - tx * tileWorldSize) / step);
+	const localZ = Math.floor((worldZ - tz * tileWorldSize) / step);
+
+	if (localX < 0 || localX >= TILE_SIZE || localZ < 0 || localZ >= TILE_SIZE) return '';
+
+	const biomeId = tile.biomeIds[localZ * TILE_SIZE + localX];
+	return getBiomeName(biomeId);
 }

@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    mapState, zoomToward, pan, requestVisibleChunks,
-    getBiomeName, getResolution,
+    mapState, zoomToward, pan, requestVisibleTiles,
+    getBiomeName,
   } from '$lib/stores/seed-map.svelte';
-  import { renderFrame, canvasToWorld } from '$lib/utils/seed-map-renderer';
+  import { renderFrame, canvasToWorld, getBiomeAtWorld } from '$lib/utils/seed-map-renderer';
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -15,6 +15,16 @@
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
+
+  // Debounce tile requests during pan
+  let requestTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  function scheduleRequest() {
+    if (requestTimeout) clearTimeout(requestTimeout);
+    requestTimeout = setTimeout(() => {
+      requestVisibleTiles();
+    }, 50);
+  }
 
   function loop() {
     if (ctx) {
@@ -29,7 +39,7 @@
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     zoomToward(x, y, e.deltaY);
-    requestVisibleChunks();
+    scheduleRequest();
   }
 
   function handlePointerDown(e: PointerEvent) {
@@ -52,24 +62,8 @@
     mapState.hoverChunkZ = Math.floor(world.z / 16);
     mapState.hoverActive = true;
 
-    // Update hover biome/slime from cache
-    const key = `${mapState.hoverChunkX},${mapState.hoverChunkZ}`;
-    const chunk = mapState.chunkCache.get(key);
-    if (chunk) {
-      mapState.hoverIsSlime = chunk.slime;
-      // Find biome at exact block position within chunk, using the chunk's actual resolution
-      const resolution = chunk.resolution;
-      const gridSize = Math.floor(16 / resolution);
-      const localX = ((Math.floor(world.x) % 16) + 16) % 16;
-      const localZ = ((Math.floor(world.z) % 16) + 16) % 16;
-      const gx = Math.min(Math.floor(localX / resolution), gridSize - 1);
-      const gz = Math.min(Math.floor(localZ / resolution), gridSize - 1);
-      const biomeId = chunk.biomes[gz * gridSize + gx];
-      mapState.hoverBiome = getBiomeName(biomeId);
-    } else {
-      mapState.hoverBiome = '';
-      mapState.hoverIsSlime = false;
-    }
+    // Look up biome from cached tiles
+    mapState.hoverBiome = getBiomeAtWorld(mapState, Math.floor(world.x), Math.floor(world.z));
 
     if (dragging) {
       const dx = (e.clientX - lastX) / mapState.zoom;
@@ -77,14 +71,14 @@
       pan(-dx, -dy);
       lastX = e.clientX;
       lastY = e.clientY;
-      requestVisibleChunks();
+      scheduleRequest();
     }
   }
 
   function handlePointerUp(e: PointerEvent) {
     dragging = false;
     canvas.releasePointerCapture(e.pointerId);
-    requestVisibleChunks();
+    requestVisibleTiles();
   }
 
   function handlePointerLeave() {
@@ -99,13 +93,11 @@
         const { width, height } = entry.contentRect;
         canvas.width = width * devicePixelRatio;
         canvas.height = height * devicePixelRatio;
-        mapState.canvasWidth = canvas.width;
-        mapState.canvasHeight = canvas.height;
         ctx!.scale(devicePixelRatio, devicePixelRatio);
         mapState.canvasWidth = width;
         mapState.canvasHeight = height;
       }
-      requestVisibleChunks();
+      requestVisibleTiles();
     });
 
     ro.observe(container);
@@ -114,6 +106,7 @@
     return () => {
       cancelAnimationFrame(animId);
       ro.disconnect();
+      if (requestTimeout) clearTimeout(requestTimeout);
     };
   });
 </script>

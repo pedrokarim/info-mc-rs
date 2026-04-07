@@ -15,7 +15,6 @@ export class WorldGen {
         wasm.__wbg_worldgen_free(ptr, 0);
     }
     /**
-     * Get biome color by ID (0xRRGGBB).
      * @param {number} id
      * @returns {number}
      */
@@ -24,7 +23,6 @@ export class WorldGen {
         return ret >>> 0;
     }
     /**
-     * Get biome name by ID.
      * @param {number} id
      * @returns {string}
      */
@@ -41,14 +39,7 @@ export class WorldGen {
         }
     }
     /**
-     * Compute biomes for a batch of chunks.
-     *
-     * `chunk_coords`: flat array of [cx0, cz0, cx1, cz1, ...] pairs.
-     * `resolution`: block step size (1 = per-block, 4 = per-4-blocks).
-     *
-     * Returns a flat `Uint8Array` with data for each chunk sequentially:
-     * For each chunk: `[biome_id_0, biome_id_1, ..., biome_id_n, slime_flag]`
-     * where n = (16/resolution)^2 and slime_flag is 0 or 1.
+     * Legacy per-chunk API (still used by worker).
      * @param {Int32Array} chunk_coords
      * @param {number} resolution
      * @returns {Uint8Array}
@@ -62,7 +53,45 @@ export class WorldGen {
         return v2;
     }
     /**
-     * Get biome at a specific block position.
+     * Compute biome IDs for an area (without RGBA conversion).
+     * Returns width*height biome IDs.
+     * @param {number} x
+     * @param {number} z
+     * @param {number} width
+     * @param {number} height
+     * @param {number} step
+     * @returns {Uint8Array}
+     */
+    get_biome_area(x, z, width, height, step) {
+        const ret = wasm.worldgen_get_biome_area(this.__wbg_ptr, x, z, width, height, step);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
+     * Compute an area of biomes and return RGBA pixels directly.
+     * This is the main entry point — like chunkbase's get_noise_biome_area.
+     *
+     * Parameters:
+     * - `x`, `z`: top-left corner in **block coordinates**
+     * - `width`, `height`: tile size in samples (e.g. 64)
+     * - `step`: block distance between samples (e.g. 4 = biome resolution, 16 = one per chunk)
+     *
+     * Returns a flat Uint8Array of width*height*4 bytes (RGBA).
+     * @param {number} x
+     * @param {number} z
+     * @param {number} width
+     * @param {number} height
+     * @param {number} step
+     * @returns {Uint8Array}
+     */
+    get_biome_area_rgba(x, z, width, height, step) {
+        const ret = wasm.worldgen_get_biome_area_rgba(this.__wbg_ptr, x, z, width, height, step);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
      * @param {number} block_x
      * @param {number} block_z
      * @returns {number}
@@ -72,7 +101,20 @@ export class WorldGen {
         return ret;
     }
     /**
-     * Check if a chunk is a slime chunk.
+     * Compute slime chunks for an area. Returns 1 byte per chunk (0 or 1).
+     * @param {number} chunk_x
+     * @param {number} chunk_z
+     * @param {number} width
+     * @param {number} height
+     * @returns {Uint8Array}
+     */
+    get_slime_area(chunk_x, chunk_z, width, height) {
+        const ret = wasm.worldgen_get_slime_area(this.__wbg_ptr, chunk_x, chunk_z, width, height);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
      * @param {number} chunk_x
      * @param {number} chunk_z
      * @returns {boolean}
@@ -82,8 +124,6 @@ export class WorldGen {
         return ret !== 0;
     }
     /**
-     * Create a new world generator for the given seed and Minecraft version.
-     * Version format: "1.18", "1.20", "1.7", etc.
      * @param {number} seed_hi
      * @param {number} seed_lo
      * @param {string} version
@@ -97,8 +137,6 @@ export class WorldGen {
         return this;
     }
     /**
-     * Parse a seed string (numeric or text) into high/low i32 parts.
-     * Returns [hi, lo] as a JS array.
      * @param {string} input
      * @returns {Int32Array}
      */

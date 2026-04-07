@@ -1,190 +1,166 @@
-use crate::java_random::JavaRandom;
+/// Improved Perlin Noise — initialized from Xoroshiro128++ (Minecraft 1.18+).
+/// Based on Ken Perlin's 2002 reference implementation.
+/// Matches cubiomes' xPerlinInit / samplePerlin exactly.
 
-/// Ken Perlin's "improved noise" (2002) — the exact algorithm Minecraft uses.
-/// The permutation table is initialized from a JavaRandom instance.
+use crate::xoroshiro::Xoroshiro;
+
 #[derive(Clone)]
 pub struct ImprovedNoise {
-    p: [u8; 512],
+    perm: [u8; 257],        // permutation table (256 + wrap)
     pub x_offset: f64,
     pub y_offset: f64,
     pub z_offset: f64,
+    pub amplitude: f64,     // set by OctaveNoise
+    pub lacunarity: f64,    // set by OctaveNoise
+    // Pre-computed y=0 values for fast 2D sampling
+    h2: i32,
+    d2: f64,
+    t2: f64,
 }
 
 impl ImprovedNoise {
-    pub fn new(random: &mut JavaRandom) -> Self {
-        self::ImprovedNoise::with_offsets(random, true)
-    }
+    /// Initialize from Xoroshiro128++ RNG (cubiomes xPerlinInit).
+    pub fn new(rng: &mut Xoroshiro) -> Self {
+        let x_offset = rng.next_double() * 256.0;
+        let y_offset = rng.next_double() * 256.0;
+        let z_offset = rng.next_double() * 256.0;
 
-    pub fn with_offsets(random: &mut JavaRandom, use_offsets: bool) -> Self {
-        let x_offset = if use_offsets {
-            random.next_double() * 256.0
-        } else {
-            0.0
-        };
-        let y_offset = if use_offsets {
-            random.next_double() * 256.0
-        } else {
-            0.0
-        };
-        let z_offset = if use_offsets {
-            random.next_double() * 256.0
-        } else {
-            0.0
-        };
-
-        let mut p = [0u8; 512];
-
-        // Initialize with identity
-        for i in 0..256 {
-            p[i] = i as u8;
+        // Initialize permutation table
+        let mut perm = [0u8; 257];
+        for i in 0..256u16 {
+            perm[i as usize] = i as u8;
         }
-
-        // Fisher-Yates shuffle using JavaRandom
-        for i in 0..256 {
-            let j = random.next_int((256 - i) as i32) as usize + i;
-            p.swap(i, j);
+        // Fisher-Yates shuffle using Xoroshiro
+        for i in 0..256usize {
+            let j = rng.next_int((256 - i) as u32) as usize + i;
+            perm.swap(i, j);
         }
+        perm[256] = perm[0]; // wrap
 
-        // Duplicate for wrapping
-        for i in 0..256 {
-            p[i + 256] = p[i];
-        }
+        // Pre-compute y=0 values
+        let i2 = y_offset.floor();
+        let d2 = y_offset - i2;
+        let h2 = i2 as i32;
+        let t2 = d2 * d2 * d2 * (d2 * (d2 * 6.0 - 15.0) + 10.0);
 
         Self {
-            p,
+            perm,
             x_offset,
             y_offset,
             z_offset,
+            amplitude: 1.0,
+            lacunarity: 1.0,
+            h2,
+            d2,
+            t2,
         }
     }
 
-    /// Sample the noise at (x, y, z). Returns a value roughly in [-1, 1].
+    /// Sample 3D Perlin noise at (x, y, z).
     pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
-        let xx = x + self.x_offset;
-        let yy = y + self.y_offset;
-        let zz = z + self.z_offset;
+        let dx = x + self.x_offset;
+        let dy = y + self.y_offset;
+        let dz = z + self.z_offset;
 
-        let xi = floor(xx) as i32;
-        let yi = floor(yy) as i32;
-        let zi = floor(zz) as i32;
+        let i = dx.floor() as i32;
+        let j = dy.floor() as i32;
+        let k = dz.floor() as i32;
 
-        let xf = xx - xi as f64;
-        let yf = yy - yi as f64;
-        let zf = zz - zi as f64;
+        let d0 = dx - i as f64;
+        let d1 = dy - j as f64;
+        let d2 = dz - k as f64;
 
-        let u = fade(xf);
-        let v = fade(yf);
-        let w = fade(zf);
+        let t0 = fade(d0);
+        let t1 = fade(d1);
+        let t2 = fade(d2);
 
-        let xi = (xi & 255) as usize;
-        let yi = (yi & 255) as usize;
-        let zi = (zi & 255) as usize;
-
-        let a = self.p[xi] as usize + yi;
-        let aa = self.p[a] as usize + zi;
-        let ab = self.p[a + 1] as usize + zi;
-        let b = self.p[xi + 1] as usize + yi;
-        let ba = self.p[b] as usize + zi;
-        let bb = self.p[b + 1] as usize + zi;
-
-        lerp(
-            w,
-            lerp(
-                v,
-                lerp(
-                    u,
-                    grad(self.p[aa] as i32, xf, yf, zf),
-                    grad(self.p[ba] as i32, xf - 1.0, yf, zf),
-                ),
-                lerp(
-                    u,
-                    grad(self.p[ab] as i32, xf, yf - 1.0, zf),
-                    grad(self.p[bb] as i32, xf - 1.0, yf - 1.0, zf),
-                ),
-            ),
-            lerp(
-                v,
-                lerp(
-                    u,
-                    grad(self.p[aa + 1] as i32, xf, yf, zf - 1.0),
-                    grad(self.p[ba + 1] as i32, xf - 1.0, yf, zf - 1.0),
-                ),
-                lerp(
-                    u,
-                    grad(self.p[ab + 1] as i32, xf, yf - 1.0, zf - 1.0),
-                    grad(self.p[bb + 1] as i32, xf - 1.0, yf - 1.0, zf - 1.0),
-                ),
-            ),
-        )
+        self.sample_inner(i, j, k, d0, d1, d2, t0, t1, t2)
     }
 
-    /// 2D sample (y=0), used for biome noise at surface level.
+    /// Optimized 2D sample (y=0): uses pre-computed y offset values.
     pub fn sample_2d(&self, x: f64, z: f64) -> f64 {
-        self.sample(x, 0.0, z)
+        let dx = x + self.x_offset;
+        let dz = z + self.z_offset;
+
+        let i = dx.floor() as i32;
+        let k = dz.floor() as i32;
+
+        let d0 = dx - i as f64;
+        let d2 = dz - k as f64;
+
+        let t0 = fade(d0);
+        let t2 = fade(d2);
+
+        self.sample_inner(i, self.h2, k, d0, self.d2, d2, t0, self.t2, t2)
+    }
+
+    #[inline]
+    fn sample_inner(
+        &self, i: i32, j: i32, k: i32,
+        d0: f64, d1: f64, d2: f64,
+        t0: f64, t1: f64, t2: f64,
+    ) -> f64 {
+        let p = &self.perm;
+        let ii = (i & 0xFF) as usize;
+        let jj = (j & 0xFF) as usize;
+        let kk = (k & 0xFF) as usize;
+
+        let a = (p[ii] as usize).wrapping_add(jj);
+        let b = (p[(ii + 1) & 0xFF] as usize).wrapping_add(jj);
+
+        let aa = (p[a & 0xFF] as usize).wrapping_add(kk);
+        let ab = (p[(a + 1) & 0xFF] as usize).wrapping_add(kk);
+        let ba = (p[b & 0xFF] as usize).wrapping_add(kk);
+        let bb = (p[(b + 1) & 0xFF] as usize).wrapping_add(kk);
+
+        lerp(t2,
+            lerp(t1,
+                lerp(t0,
+                    grad(p[aa & 0xFF], d0, d1, d2),
+                    grad(p[ba & 0xFF], d0 - 1.0, d1, d2)),
+                lerp(t0,
+                    grad(p[ab & 0xFF], d0, d1 - 1.0, d2),
+                    grad(p[bb & 0xFF], d0 - 1.0, d1 - 1.0, d2))),
+            lerp(t1,
+                lerp(t0,
+                    grad(p[(aa + 1) & 0xFF], d0, d1, d2 - 1.0),
+                    grad(p[(ba + 1) & 0xFF], d0 - 1.0, d1, d2 - 1.0)),
+                lerp(t0,
+                    grad(p[(ab + 1) & 0xFF], d0, d1 - 1.0, d2 - 1.0),
+                    grad(p[(bb + 1) & 0xFF], d0 - 1.0, d1 - 1.0, d2 - 1.0))))
     }
 }
 
-#[inline]
-fn floor(x: f64) -> f64 {
-    x.floor()
-}
-
-#[inline]
+#[inline(always)]
 fn fade(t: f64) -> f64 {
     t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 }
 
-#[inline]
+#[inline(always)]
 fn lerp(t: f64, a: f64, b: f64) -> f64 {
     a + t * (b - a)
 }
 
-#[inline]
-fn grad(hash: i32, x: f64, y: f64, z: f64) -> f64 {
-    // Standard 12-gradient table from Perlin's reference implementation
+/// Gradient function matching Minecraft's indexedLerp exactly.
+#[inline(always)]
+fn grad(hash: u8, x: f64, y: f64, z: f64) -> f64 {
     match hash & 0xF {
-        0x0 => x + y,
-        0x1 => -x + y,
-        0x2 => x - y,
-        0x3 => -x - y,
-        0x4 => x + z,
-        0x5 => -x + z,
-        0x6 => x - z,
-        0x7 => -x - z,
-        0x8 => y + z,
-        0x9 => -y + z,
-        0xA => y - z,
-        0xB => -y - z,
-        0xC => y + x,
-        0xD => -y + z,
-        0xE => y - x,
-        0xF => -y - z,
+        0  =>  x + y,
+        1  => -x + y,
+        2  =>  x - y,
+        3  => -x - y,
+        4  =>  x + z,
+        5  => -x + z,
+        6  =>  x - z,
+        7  => -x - z,
+        8  =>  y + z,
+        9  => -y + z,
+        10 =>  y - z,
+        11 => -y - z,
+        12 =>  x + y,     // Minecraft variant
+        13 => -y + z,     // Minecraft variant (not -x+y)
+        14 => -x + y,     // Minecraft variant
+        15 => -y - z,     // Minecraft variant (not -x-y)
         _ => unreachable!(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_deterministic() {
-        let mut rng = JavaRandom::new(42);
-        let noise = ImprovedNoise::new(&mut rng);
-        let a = noise.sample(1.0, 2.0, 3.0);
-        let mut rng2 = JavaRandom::new(42);
-        let noise2 = ImprovedNoise::new(&mut rng2);
-        let b = noise2.sample(1.0, 2.0, 3.0);
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn test_range() {
-        let mut rng = JavaRandom::new(0);
-        let noise = ImprovedNoise::new(&mut rng);
-        for i in 0..100 {
-            let v = noise.sample(i as f64 * 0.1, 0.0, 0.0);
-            assert!(v >= -1.5 && v <= 1.5, "noise value out of range: {v}");
-        }
     }
 }

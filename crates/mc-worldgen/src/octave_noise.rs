@@ -1,143 +1,127 @@
-use crate::java_random::JavaRandom;
+/// Octave noise and DoublePerlinNoise for Minecraft 1.18+.
+/// Matches cubiomes' xOctaveInit / xDoublePerlinInit / sampleDoublePerlin exactly.
+
 use crate::perlin::ImprovedNoise;
+use crate::xoroshiro::{Xoroshiro, octave_md5};
 
 /// Octaved (fractal) noise — sums multiple Perlin noise layers at increasing frequencies.
-/// This is how Minecraft generates its climate parameters (temperature, humidity, etc.).
 #[derive(Clone)]
 pub struct OctaveNoise {
-    octaves: Vec<Option<ImprovedNoise>>,
-    first_octave: i32,
-    amplitudes: Vec<f64>,
+    pub octaves: Vec<ImprovedNoise>, // only non-zero amplitude octaves
 }
 
 impl OctaveNoise {
-    /// Create octaved noise from a JavaRandom.
+    /// Create octaved noise from Xoroshiro RNG.
     ///
-    /// - `first_octave`: the exponent for the first octave's frequency (e.g., -7 means freq = 2^7 = 128 block period)
-    /// - `amplitudes`: weight for each octave (0 means skip that octave)
-    pub fn new(random: &mut JavaRandom, first_octave: i32, amplitudes: &[f64]) -> Self {
-        let n = amplitudes.len() as i32;
-        let mut octaves = Vec::with_capacity(amplitudes.len());
+    /// - `rng`: the Xoroshiro to read xlo/xhi from (consumes 2 next_long calls)
+    /// - `first_octave`: e.g. -10 for temperature
+    /// - `amplitudes`: weight for each octave (0 means skip)
+    ///
+    /// Matches cubiomes xOctaveInit exactly:
+    /// - Reads xlo, xhi once from rng
+    /// - Each octave's perlin is seeded from (xlo ^ octave_md5_lo, xhi ^ octave_md5_hi)
+    /// - Skipped octaves (amplitude=0) consume NO RNG
+    /// - lacunarity = 2^(-first_octave) * 2^i for octave i
+    /// - persistence = len / (2^len - 1) * 0.5^i for octave i
+    pub fn new(rng: &mut Xoroshiro, first_octave: i32, amplitudes: &[f64]) -> Self {
+        let len = amplitudes.len();
 
-        for i in 0..n {
-            if amplitudes[i as usize] != 0.0 {
-                octaves.push(Some(ImprovedNoise::new(random)));
-            } else {
-                // Still advance RNG state to stay in sync with Minecraft
-                // Minecraft creates the noise object but doesn't use it — we skip
-                // by advancing the RNG the same number of times
-                Self::skip_noise_init(random);
-                octaves.push(None);
-            }
-        }
+        // Read the two keys for this OctaveNoise
+        let xlo = rng.next_long();
+        let xhi = rng.next_long();
 
-        Self {
-            octaves,
-            first_octave,
-            amplitudes: amplitudes.to_vec(),
-        }
-    }
-
-    /// Advance random state by the same amount as creating an ImprovedNoise would.
-    fn skip_noise_init(random: &mut JavaRandom) {
-        // ImprovedNoise::new does: 3 next_double() + 256 next_int() for shuffle
-        random.next_double();
-        random.next_double();
-        random.next_double();
-        for i in 0..256 {
-            random.next_int((256 - i) as i32);
-        }
-    }
-
-    pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
-        let mut total = 0.0;
-        let mut frequency = self.frequency_at(0);
-        let mut amplitude_scale = self.amplitude_scale();
-
-        for (i, octave) in self.octaves.iter().enumerate() {
-            if let Some(noise) = octave {
-                let amp = self.amplitudes[i];
-                if amp != 0.0 {
-                    total += amp * noise.sample(x * frequency, y * frequency, z * frequency) * amplitude_scale;
-                }
-            }
-            frequency *= 2.0;
-            amplitude_scale /= 2.0;
-        }
-
-        total
-    }
-
-    pub fn sample_2d(&self, x: f64, z: f64) -> f64 {
-        self.sample(x, 0.0, z)
-    }
-
-    fn frequency_at(&self, _index: usize) -> f64 {
-        2.0_f64.powi(-self.first_octave)
-    }
-
-    fn amplitude_scale(&self) -> f64 {
-        2.0_f64.powi(self.first_octave)
-    }
-
-    /// Get the total amplitude (sum of absolute amplitudes) for normalization.
-    pub fn max_value(&self) -> f64 {
-        let mut total = 0.0;
-        let mut amp = self.amplitude_scale();
-        for a in &self.amplitudes {
-            total += a.abs() * amp;
-            amp /= 2.0;
-        }
-        total
-    }
-}
-
-/// Pair of octave noises used in Minecraft's DoublePerlinNoiseSampler.
-/// This is what Minecraft actually uses for climate parameters — it XORs two octave noises.
-#[derive(Clone)]
-pub struct DoublePerlinNoise {
-    first: OctaveNoise,
-    second: OctaveNoise,
-    amplitude: f64,
-}
-
-impl DoublePerlinNoise {
-    pub fn new(random: &mut JavaRandom, first_octave: i32, amplitudes: &[f64]) -> Self {
-        let first = OctaveNoise::new(random, first_octave, amplitudes);
-        let second = OctaveNoise::new(random, first_octave, amplitudes);
-
-        // Amplitude normalization factor
-        let max_val = first.max_value();
-        let amplitude = if max_val != 0.0 {
-            // Minecraft uses a specific normalization:
-            // value / (max * (5.0/3.0))
-            1.0 / (max_val * (5.0 / 3.0))
+        // Compute initial lacunarity and persistence
+        // lacunarity = 2^(first_octave), NOT 2^(-first_octave)!
+        // For first_octave=-9: lacunarity = 1/512 (low frequency, large features)
+        let mut lacunarity = 2.0_f64.powi(first_octave);
+        // persist = 2^(len-1) / (2^len - 1) — NOT len/(2^len-1) !
+        // This ensures the max possible octave sum = 1.0
+        let mut persistence = if len > 0 {
+            (1u64 << (len - 1)) as f64 / ((1u64 << len) - 1) as f64
         } else {
             0.0
         };
 
-        Self {
-            first,
-            second,
-            amplitude,
+        let mut octaves = Vec::new();
+
+        for i in 0..len {
+            if amplitudes[i] != 0.0 {
+                // Seed this octave's perlin from XOR with octave MD5
+                let octave_num = first_octave + i as i32;
+                let (md5_lo, md5_hi) = octave_md5(octave_num);
+                let mut perlin_rng = Xoroshiro::from_raw(xlo ^ md5_lo, xhi ^ md5_hi);
+                let mut noise = ImprovedNoise::new(&mut perlin_rng);
+                noise.amplitude = amplitudes[i] * persistence;
+                noise.lacunarity = lacunarity;
+                octaves.push(noise);
+            }
+            // Whether skipped or not, advance lacunarity/persistence
+            lacunarity *= 2.0;
+            persistence *= 0.5;
         }
+
+        Self { octaves }
     }
 
     pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
-        let x2 = x + self.second.octaves.first()
-            .and_then(|o| o.as_ref())
-            .map_or(0.0, |n| n.x_offset);
-        let y2 = y + self.second.octaves.first()
-            .and_then(|o| o.as_ref())
-            .map_or(0.0, |n| n.y_offset);
-        let z2 = z + self.second.octaves.first()
-            .and_then(|o| o.as_ref())
-            .map_or(0.0, |n| n.z_offset);
-
-        (self.first.sample(x, y, z) + self.second.sample(x2, y2, z2)) * self.amplitude
+        let mut total = 0.0;
+        for octave in &self.octaves {
+            let lf = octave.lacunarity;
+            total += octave.amplitude * octave.sample(x * lf, y * lf, z * lf);
+        }
+        total
     }
 
     pub fn sample_2d(&self, x: f64, z: f64) -> f64 {
-        self.sample(x, 0.0, z)
+        let mut total = 0.0;
+        for octave in &self.octaves {
+            let lf = octave.lacunarity;
+            total += octave.amplitude * octave.sample_2d(x * lf, z * lf);
+        }
+        total
+    }
+}
+
+/// DoublePerlinNoise — pair of OctaveNoise used by Minecraft for climate parameters.
+/// The second noise (octB) is sampled at coordinates scaled by 337/331.
+#[derive(Clone)]
+pub struct DoublePerlinNoise {
+    oct_a: OctaveNoise,
+    oct_b: OctaveNoise,
+    amplitude: f64,
+}
+
+impl DoublePerlinNoise {
+    /// Create from Xoroshiro RNG.
+    /// rng is consumed sequentially: first for oct_a, then for oct_b.
+    pub fn new(rng: &mut Xoroshiro, first_octave: i32, amplitudes: &[f64]) -> Self {
+        let oct_a = OctaveNoise::new(rng, first_octave, amplitudes);
+        let oct_b = OctaveNoise::new(rng, first_octave, amplitudes);
+
+        // Compute effective_len: trim leading and trailing zero amplitudes
+        let first_nonzero = amplitudes.iter().position(|&a| a != 0.0).unwrap_or(0);
+        let last_nonzero = amplitudes.iter().rposition(|&a| a != 0.0).unwrap_or(0);
+        let effective_len = if amplitudes.is_empty() { 0 } else { last_nonzero - first_nonzero + 1 };
+
+        // Amplitude = (5/3) * effective_len / (effective_len + 1)
+        let amplitude = if effective_len > 0 {
+            (5.0 / 3.0) * effective_len as f64 / (effective_len + 1) as f64
+        } else {
+            0.0
+        };
+
+        Self { oct_a, oct_b, amplitude }
+    }
+
+    pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
+        const F: f64 = 337.0 / 331.0;
+        let v = self.oct_a.sample(x, y, z) + self.oct_b.sample(x * F, y * F, z * F);
+        v * self.amplitude
+    }
+
+    pub fn sample_2d(&self, x: f64, z: f64) -> f64 {
+        const F: f64 = 337.0 / 331.0;
+        let v = self.oct_a.sample_2d(x, z) + self.oct_b.sample_2d(x * F, z * F);
+        v * self.amplitude
     }
 }
