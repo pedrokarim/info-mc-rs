@@ -1,5 +1,5 @@
 import type { MapState, TileData } from '$lib/stores/seed-map.svelte';
-import { getVisibleTileRange, getBiomeColor, getBiomeName, TILE_SIZE } from '$lib/stores/seed-map.svelte';
+import { getVisibleTileRange, getBiomeColor, getBiomeName, getStructureName, TILE_SIZE } from '$lib/stores/seed-map.svelte';
 
 // ===== Coordinate transforms =====
 
@@ -51,6 +51,10 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: MapState) {
 	}
 
 	renderCrosshair(ctx, state);
+
+	if (state.showStructures) {
+		renderStructures(ctx, state);
+	}
 
 	if (state.showCoordinates) {
 		renderCoordinateOverlay(ctx, state);
@@ -131,21 +135,19 @@ function renderSlimeChunks(ctx: CanvasRenderingContext2D, state: MapState) {
 	const minCZ = Math.floor((state.centerZ - halfH) / 16) - 1;
 	const maxCZ = Math.floor((state.centerZ + halfH) / 16) + 1;
 
-	ctx.fillStyle = 'rgba(80, 255, 80, 0.25)';
-	ctx.strokeStyle = 'rgba(80, 255, 80, 0.6)';
+	ctx.fillStyle = 'rgba(80, 255, 80, 0.3)';
+	ctx.strokeStyle = 'rgba(80, 255, 80, 0.7)';
 	ctx.lineWidth = 1;
 
-	// Check slimeCache — we need to request slime data from worker if not cached
-	// For now use the tile biomeIds (TODO: separate slime worker)
 	for (let cx = minCX; cx <= maxCX; cx++) {
 		for (let cz = minCZ; cz <= maxCZ; cz++) {
 			const key = `${cx},${cz}`;
-			const area = state.slimeCache.get(key);
-			// Simple: check if we have single-chunk slime data
-			if (area && area[0] === 1) {
+			if (state.slimeCache.has(key)) {
 				const screen = worldToCanvas(cx * 16, cz * 16, state);
 				ctx.fillRect(screen.x, screen.y, chunkPx, chunkPx);
-				ctx.strokeRect(screen.x + 0.5, screen.y + 0.5, chunkPx - 1, chunkPx - 1);
+				if (chunkPx >= 8) {
+					ctx.strokeRect(screen.x + 0.5, screen.y + 0.5, chunkPx - 1, chunkPx - 1);
+				}
 			}
 		}
 	}
@@ -243,6 +245,94 @@ function renderCoordinateOverlay(ctx: CanvasRenderingContext2D, state: MapState)
 	ctx.font = '12px monospace';
 	ctx.textAlign = 'left';
 	ctx.fillText(text, 16, state.canvasHeight - 12);
+}
+
+// ===== Structures =====
+
+// Sprite coordinates for each structure type (from chunkbase spritesheet)
+const STRUCT_SPRITES: Record<number, { sx: number; sy: number; sw: number; sh: number }> = {
+	0:  { sx: 190, sy: 77,  sw: 20, sh: 26 }, // village
+	1:  { sx: 112, sy: 81,  sw: 26, sh: 26 }, // desert-temple
+	2:  { sx: 27,  sy: 81,  sw: 26, sh: 26 }, // jungle-temple
+	3:  { sx: 31,  sy: 0,   sw: 26, sh: 26 }, // witch-hut
+	4:  { sx: 54,  sy: 81,  sw: 26, sh: 26 }, // igloo
+	5:  { sx: 0,   sy: 135, sw: 26, sh: 23 }, // ocean-monument
+	6:  { sx: 50,  sy: 159, sw: 24, sh: 24 }, // mansion
+	7:  { sx: 54,  sy: 54,  sw: 26, sh: 26 }, // pillager-outpost
+	9:  { sx: 85,  sy: 0,   sw: 26, sh: 26 }, // ocean-ruin
+	10: { sx: 190, sy: 131, sw: 21, sh: 24 }, // shipwreck
+	12: { sx: 27,  sy: 27,  sw: 26, sh: 26 }, // ruined-portal
+	13: { sx: 139, sy: 81,  sw: 26, sh: 26 }, // ancient-city
+	14: { sx: 0,   sy: 27,  sw: 26, sh: 26 }, // trail-ruin
+	15: { sx: 0,   sy: 159, sw: 24, sh: 24 }, // trial-chamber
+	18: { sx: 166, sy: 0,   sw: 23, sh: 26 }, // mineshaft
+	19: { sx: 75,  sy: 159, sw: 24, sh: 24 }, // dungeon
+	20: { sx: 190, sy: 51,  sw: 22, sh: 25 }, // desert-well
+	21: { sx: 139, sy: 27,  sw: 26, sh: 25 }, // fossil
+};
+
+// Lazy-loaded spritesheet image
+let spriteImg: HTMLImageElement | null = null;
+let spriteLoaded = false;
+
+function getSpriteImg(): HTMLImageElement | null {
+	if (!spriteImg) {
+		spriteImg = new Image();
+		spriteImg.src = '/images/ui/seed-map-pois-sprite.png';
+		spriteImg.onload = () => { spriteLoaded = true; };
+	}
+	return spriteLoaded ? spriteImg : null;
+}
+
+function renderStructures(ctx: CanvasRenderingContext2D, state: MapState) {
+	if (state.structures.length === 0) return;
+
+	const img = getSpriteImg();
+	const iconScale = Math.max(0.7, Math.min(1.5, state.zoom * 0.5));
+
+	for (const s of state.structures) {
+		if (!state.enabledStructures.has(s.type)) continue;
+
+		const screen = worldToCanvas(s.x, s.z, state);
+
+		if (screen.x < -30 || screen.x > state.canvasWidth + 30 ||
+			screen.y < -30 || screen.y > state.canvasHeight + 30) continue;
+
+		const sprite = STRUCT_SPRITES[s.type];
+
+		if (img && sprite) {
+			// Draw sprite icon from spritesheet
+			const dw = sprite.sw * iconScale;
+			const dh = sprite.sh * iconScale;
+			ctx.imageSmoothingEnabled = false;
+			ctx.drawImage(
+				img,
+				sprite.sx, sprite.sy, sprite.sw, sprite.sh,
+				screen.x - dw / 2, screen.y - dh, dw, dh,
+			);
+		} else {
+			// Fallback: colored dot
+			ctx.fillStyle = '#fff';
+			ctx.strokeStyle = '#000';
+			ctx.lineWidth = 1.5;
+			ctx.beginPath();
+			ctx.arc(screen.x, screen.y, 5 * iconScale, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.stroke();
+		}
+
+		// Label when zoomed in
+		if (state.zoom >= 2) {
+			const labelY = screen.y - (sprite ? sprite.sh * iconScale + 2 : 10);
+			ctx.fillStyle = '#fff';
+			ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+			ctx.lineWidth = 2.5;
+			ctx.font = 'bold 10px system-ui';
+			ctx.textAlign = 'center';
+			ctx.strokeText(s.name, screen.x, labelY);
+			ctx.fillText(s.name, screen.x, labelY);
+		}
+	}
 }
 
 // ===== Biome lookup at world position (for tooltip) =====

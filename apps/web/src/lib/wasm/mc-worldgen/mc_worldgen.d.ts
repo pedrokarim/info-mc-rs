@@ -14,6 +14,12 @@ export class WorldGen {
      */
     compute_chunks(chunk_coords: Int32Array, resolution: number): Uint8Array;
     /**
+     * Find structures in a block-coordinate area.
+     * Returns a flat array: [type_id, block_x_hi, block_x_lo, block_z_hi, block_z_lo, ...]
+     * (Using hi/lo i16 pairs because wasm-bindgen doesn't support tuples easily)
+     */
+    find_structures(block_x: number, block_z: number, block_w: number, block_h: number): Int32Array;
+    /**
      * Compute biome IDs for an area (without RGBA conversion).
      * Returns width*height biome IDs.
      */
@@ -38,6 +44,10 @@ export class WorldGen {
     is_slime_chunk(chunk_x: number, chunk_z: number): boolean;
     constructor(seed_hi: number, seed_lo: number, version: string);
     static parse_seed(input: string): Int32Array;
+    /**
+     * Get structure type name by ID.
+     */
+    static structure_name(type_id: number): string;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -48,6 +58,7 @@ export interface InitOutput {
     readonly worldgen_biome_color: (a: number) => number;
     readonly worldgen_biome_name: (a: number) => [number, number];
     readonly worldgen_compute_chunks: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly worldgen_find_structures: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly worldgen_get_biome_area: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly worldgen_get_biome_area_rgba: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly worldgen_get_biome_at: (a: number, b: number, c: number) => number;
@@ -55,6 +66,7 @@ export interface InitOutput {
     readonly worldgen_is_slime_chunk: (a: number, b: number, c: number) => number;
     readonly worldgen_new: (a: number, b: number, c: number, d: number) => number;
     readonly worldgen_parse_seed: (a: number, b: number) => [number, number];
+    readonly worldgen_structure_name: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

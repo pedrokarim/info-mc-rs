@@ -65,6 +65,10 @@
     // Look up biome from cached tiles
     mapState.hoverBiome = getBiomeAtWorld(mapState, Math.floor(world.x), Math.floor(world.z));
 
+    // Check slime chunk
+    const slimeKey = `${mapState.hoverChunkX},${mapState.hoverChunkZ}`;
+    mapState.hoverIsSlime = mapState.slimeCache.has(slimeKey);
+
     if (dragging) {
       const dx = (e.clientX - lastX) / mapState.zoom;
       const dy = (e.clientY - lastY) / mapState.zoom;

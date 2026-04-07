@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Input from '$lib/components/ui/Input.svelte';
   import Select from '$lib/components/ui/Select.svelte';
   import Switch from '$lib/components/ui/Switch.svelte';
   import {
@@ -20,6 +19,48 @@
     }
     return hash.toString();
   });
+
+  // Individual structure icons (cropped from chunkbase spritesheet)
+  const STRUCTURE_TYPES = [
+    { id: 0,  name: 'Village',            icon: 'village' },
+    { id: 1,  name: 'Temple du désert',   icon: 'desert-temple' },
+    { id: 2,  name: 'Temple de jungle',   icon: 'jungle-temple' },
+    { id: 3,  name: 'Cabane de sorcière', icon: 'witch-hut' },
+    { id: 4,  name: 'Igloo',              icon: 'igloo' },
+    { id: 5,  name: 'Monument océanique', icon: 'ocean-monument' },
+    { id: 6,  name: 'Manoir',             icon: 'mansion' },
+    { id: 7,  name: 'Avant-poste',        icon: 'pillager-outpost' },
+    { id: 8,  name: 'Forteresse',         icon: 'stronghold' },
+    { id: 9,  name: 'Ruine océanique',    icon: 'ocean-ruin' },
+    { id: 10, name: 'Épave',              icon: 'shipwreck' },
+    { id: 11, name: 'Trésor enfoui',      icon: 'buried-treasure' },
+    { id: 12, name: 'Portail en ruines',  icon: 'ruined-portal' },
+    { id: 13, name: 'Cité antique',       icon: 'ancient-city' },
+    { id: 14, name: 'Ruines du sentier',  icon: 'trail-ruin' },
+    { id: 15, name: 'Chambre d\'épreuve', icon: 'trial-chamber' },
+    { id: 18, name: 'Mine abandonnée',    icon: 'mineshaft' },
+    { id: 19, name: 'Donjon',             icon: 'dungeon' },
+    { id: 20, name: 'Puits du désert',    icon: 'desert-well' },
+    { id: 21, name: 'Fossile',            icon: 'fossil' },
+  ];
+
+  function toggleStructure(id: number) {
+    if (mapState.enabledStructures.has(id)) {
+      mapState.enabledStructures.delete(id);
+    } else {
+      mapState.enabledStructures.add(id);
+    }
+    // Force reactivity
+    mapState.enabledStructures = new Set(mapState.enabledStructures);
+  }
+
+  function toggleAllStructures() {
+    if (mapState.enabledStructures.size === STRUCTURE_TYPES.length) {
+      mapState.enabledStructures = new Set();
+    } else {
+      mapState.enabledStructures = new Set(STRUCTURE_TYPES.map(s => s.id));
+    }
+  }
 
   const MC_VERSIONS = [
     { value: '1.21', label: '1.21 — Tricky Trials' },
@@ -47,6 +88,23 @@
     setCenter(x, z);
   }
 
+  // Find closest structure to cursor
+  let nearestStructure = $derived.by(() => {
+    if (!mapState.hoverActive || mapState.structures.length === 0) return null;
+    const hx = mapState.hoverWorldX;
+    const hz = mapState.hoverWorldZ;
+    let best: { name: string; x: number; z: number; dist: number } | null = null;
+    for (const s of mapState.structures) {
+      const dx = s.x - hx;
+      const dz = s.z - hz;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < 256 && (!best || dist < best.dist)) {
+        best = { name: s.name, x: s.x, z: s.z, dist: Math.round(dist) };
+      }
+    }
+    return best;
+  });
+
   function handleRandomSeed() {
     const lo = Math.floor(Math.random() * 0xFFFFFFFF) - 0x80000000;
     const hi = Math.floor(Math.random() * 0xFFFFFFFF) - 0x80000000;
@@ -59,29 +117,31 @@
 <aside class="controls">
   <!-- Seed input -->
   <div class="section">
+    <span class="section-label">Seed</span>
     <form class="seed-row" onsubmit={(e) => { e.preventDefault(); handleSeedSubmit(); }}>
-      <div class="seed-input-wrap">
-        <Input
-          label="Seed"
-          placeholder="12345 ou texte..."
-          bind:value={seedInput}
-          hint={isTextSeed ? `Hash Java : ${textSeedHash}` : 'Nombre, mot ou phrase'}
-        />
-      </div>
-      <div class="seed-actions">
-        <button type="submit" class="btn-go" disabled={!seedInput.trim()}>Go</button>
-        <button type="button" class="btn-dice" onclick={handleRandomSeed} title="Seed aléatoire">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="2" width="20" height="20" rx="3" />
-            <circle cx="8" cy="8" r="1.5" fill="currentColor" />
-            <circle cx="16" cy="8" r="1.5" fill="currentColor" />
-            <circle cx="8" cy="16" r="1.5" fill="currentColor" />
-            <circle cx="16" cy="16" r="1.5" fill="currentColor" />
-            <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-          </svg>
-        </button>
-      </div>
+      <input
+        type="text"
+        class="seed-input"
+        placeholder="12345 ou texte..."
+        bind:value={seedInput}
+      />
+      <button type="submit" class="btn-go" disabled={!seedInput.trim()}>Go</button>
+      <button type="button" class="btn-dice" onclick={handleRandomSeed} title="Seed aléatoire">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="3" />
+          <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+          <circle cx="16" cy="8" r="1.5" fill="currentColor" />
+          <circle cx="8" cy="16" r="1.5" fill="currentColor" />
+          <circle cx="16" cy="16" r="1.5" fill="currentColor" />
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+        </svg>
+      </button>
     </form>
+    {#if isTextSeed}
+      <span class="seed-hint">Hash Java : <code>{textSeedHash}</code></span>
+    {:else}
+      <span class="seed-hint-subtle">Nombre, mot ou phrase</span>
+    {/if}
   </div>
 
   <!-- Version -->
@@ -107,6 +167,28 @@
       <Switch label="Slime Chunks" bind:checked={mapState.showSlimeChunks} />
       <Switch label="Grille" bind:checked={mapState.showGrid} />
       <Switch label="Coordonnées" bind:checked={mapState.showCoordinates} />
+    </div>
+  </div>
+
+  <!-- Structures -->
+  <div class="section">
+    <div class="section-label-row">
+      <span class="section-label">Structures</span>
+      <button class="btn-toggle-all" onclick={toggleAllStructures}>
+        {mapState.enabledStructures.size === STRUCTURE_TYPES.length ? 'Aucune' : 'Toutes'}
+      </button>
+    </div>
+    <div class="struct-grid">
+      {#each STRUCTURE_TYPES as st}
+        <button
+          class="struct-btn"
+          class:active={mapState.enabledStructures.has(st.id)}
+          title={st.name}
+          onclick={() => toggleStructure(st.id)}
+        >
+          <img src="/images/ui/structures/{st.icon}.png" alt={st.name} class="struct-icon" />
+        </button>
+      {/each}
     </div>
   </div>
 
@@ -152,7 +234,22 @@
         <span class="info-v" class:slime-yes={mapState.hoverIsSlime}>
           {mapState.hoverIsSlime ? 'Oui' : 'Non'}
         </span>
+        {#if nearestStructure}
+          <span class="info-k">Structure</span>
+          <span class="info-v struct-near">
+            {nearestStructure.name}
+            <span class="struct-dist">({nearestStructure.dist}m)</span>
+          </span>
+        {/if}
       </div>
+    </div>
+  {/if}
+
+  <!-- Structure count -->
+  {#if mapState.structures.length > 0}
+    <div class="section">
+      <span class="section-label">Structures trouvées</span>
+      <span class="struct-count">{mapState.structures.length} structures</span>
     </div>
   {/if}
 
@@ -194,24 +291,49 @@
   /* ── Seed row ── */
   .seed-row {
     display: flex;
-    gap: 6px;
-    align-items: flex-end;
+    gap: 4px;
+    align-items: center;
   }
 
-  .seed-input-wrap {
+  .seed-input {
     flex: 1;
     min-width: 0;
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 1.5px solid var(--line-0, rgba(46, 94, 143, 0.34));
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--ink-0, #0f253a);
+    font-size: 0.8rem;
+    font-family: monospace;
+  }
+  .seed-input:focus {
+    outline: 2px solid rgba(95, 143, 255, 0.5);
+    outline-offset: 1px;
+    border-color: var(--blue-0, #5e90ff);
   }
 
-  .seed-actions {
-    display: flex;
-    gap: 4px;
-    padding-bottom: 1px; /* align with input bottom */
+  .seed-hint {
+    font-size: 0.7rem;
+    color: var(--blue-0, #5e90ff);
+  }
+  .seed-hint code {
+    font-family: monospace;
+    background: rgba(94, 144, 255, 0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .seed-hint-subtle {
+    font-size: 0.67rem;
+    color: var(--ink-2, #5a7894);
+    font-style: italic;
   }
 
   .btn-go {
-    height: 36px;
-    padding: 0 14px;
+    height: 34px;
+    padding: 0 12px;
+    flex-shrink: 0;
     border: none;
     border-radius: 8px;
     background: var(--blue-0, #5e90ff);
@@ -226,8 +348,9 @@
   .btn-go:disabled { opacity: 0.4; cursor: default; }
 
   .btn-dice {
-    height: 36px;
-    width: 36px;
+    height: 34px;
+    width: 34px;
+    flex-shrink: 0;
     border: 1.5px solid var(--line-0, rgba(46, 94, 143, 0.34));
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.9);
@@ -269,6 +392,70 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+
+  /* ── Structures grid ── */
+  .section-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .btn-toggle-all {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border: 1px solid var(--line-0, rgba(46, 94, 143, 0.34));
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink-2, #5a7894);
+    cursor: pointer;
+  }
+  .btn-toggle-all:hover {
+    color: var(--blue-0, #5e90ff);
+    border-color: var(--blue-0, #5e90ff);
+  }
+
+  .struct-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+
+  .struct-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line-0, rgba(46, 94, 143, 0.34));
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.3;
+    filter: grayscale(1);
+    transition: opacity 120ms ease, filter 120ms ease, border-color 120ms ease;
+  }
+
+  .struct-btn.active {
+    opacity: 1;
+    filter: none;
+    border-color: var(--blue-0, #5e90ff);
+    background: rgba(94, 144, 255, 0.08);
+  }
+
+  .struct-btn:hover {
+    opacity: 1;
+    filter: none;
+  }
+
+  .struct-icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    pointer-events: none;
   }
 
   /* ── Zoom ── */
@@ -383,6 +570,22 @@
   .slime-yes {
     color: var(--ok, #169a60);
     font-weight: 700;
+  }
+
+  .struct-near {
+    color: var(--blue-0, #5e90ff) !important;
+    font-weight: 600;
+  }
+
+  .struct-dist {
+    font-weight: 400;
+    font-size: 0.7rem;
+    opacity: 0.7;
+  }
+
+  .struct-count {
+    font-size: 0.8rem;
+    color: var(--ink-1, #2d4a65);
   }
 
   .status {

@@ -53,6 +53,22 @@ export class WorldGen {
         return v2;
     }
     /**
+     * Find structures in a block-coordinate area.
+     * Returns a flat array: [type_id, block_x_hi, block_x_lo, block_z_hi, block_z_lo, ...]
+     * (Using hi/lo i16 pairs because wasm-bindgen doesn't support tuples easily)
+     * @param {number} block_x
+     * @param {number} block_z
+     * @param {number} block_w
+     * @param {number} block_h
+     * @returns {Int32Array}
+     */
+    find_structures(block_x, block_z, block_w, block_h) {
+        const ret = wasm.worldgen_find_structures(this.__wbg_ptr, block_x, block_z, block_w, block_h);
+        var v1 = getArrayI32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    /**
      * Compute biome IDs for an area (without RGBA conversion).
      * Returns width*height biome IDs.
      * @param {number} x
@@ -147,6 +163,23 @@ export class WorldGen {
         var v2 = getArrayI32FromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
         return v2;
+    }
+    /**
+     * Get structure type name by ID.
+     * @param {number} type_id
+     * @returns {string}
+     */
+    static structure_name(type_id) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.worldgen_structure_name(type_id);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
 }
 if (Symbol.dispose) WorldGen.prototype[Symbol.dispose] = WorldGen.prototype.free;

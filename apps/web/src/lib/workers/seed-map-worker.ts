@@ -40,9 +40,21 @@ self.onmessage = async (e: MessageEvent) => {
 			// Also get biome IDs for tooltip lookups
 			const biomeIds = worldgen.get_biome_area(blockX, blockZ, tileSize, tileSize, step);
 
+			// Compute slime chunks for the tile's area
+			const tileBlockW = tileSize * step;
+			const chunkX0 = Math.floor(blockX / 16);
+			const chunkZ0 = Math.floor(blockZ / 16);
+			const chunkW = Math.ceil(tileBlockW / 16) + 1;
+			const chunkH = Math.ceil(tileBlockW / 16) + 1;
+			const slimeData = worldgen.get_slime_area(chunkX0, chunkZ0, chunkW, chunkH);
+
+			// Find structures in this tile's area
+			const structData = worldgen.find_structures(blockX, blockZ, tileBlockW, tileBlockW);
+
 			// Transfer the buffers (zero-copy)
 			const rgbaBuf = rgba.buffer;
 			const idsBuf = biomeIds.buffer;
+			const slimeBuf = slimeData.buffer;
 
 			post({
 				type: 'tile-result',
@@ -51,7 +63,13 @@ self.onmessage = async (e: MessageEvent) => {
 				generation,
 				rgba: new Uint8Array(rgbaBuf),
 				biomeIds: new Uint8Array(idsBuf),
-			}, [rgbaBuf, idsBuf]);
+				slimeChunkX: chunkX0,
+				slimeChunkZ: chunkZ0,
+				slimeW: chunkW,
+				slimeH: chunkH,
+				slime: new Uint8Array(slimeBuf),
+				structures: Array.from(structData), // [typeId, bx, bz, ...]
+			}, [rgbaBuf, idsBuf, slimeBuf]);
 		}
 
 		if (type === 'slime-area') {

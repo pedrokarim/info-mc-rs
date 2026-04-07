@@ -6,6 +6,7 @@ pub mod slime;
 pub mod biomes;
 pub mod biome_tree;
 pub mod multinoise;
+pub mod structures;
 pub mod legacy;
 
 use wasm_bindgen::prelude::*;
@@ -159,6 +160,40 @@ impl WorldGen {
             BiomeSourceInner::Modern(src) => src.get_biome(block_x, block_z).id(),
             BiomeSourceInner::Legacy(src) => src.get_biome(block_x, block_z).id(),
         }
+    }
+
+    /// Find structures in a block-coordinate area.
+    /// Returns a flat array: [type_id, block_x_hi, block_x_lo, block_z_hi, block_z_lo, ...]
+    /// (Using hi/lo i16 pairs because wasm-bindgen doesn't support tuples easily)
+    pub fn find_structures(&self, block_x: i32, block_z: i32, block_w: i32, block_h: i32) -> Vec<i32> {
+        let mut result = Vec::new();
+
+        for &st in structures::StructureType::overworld_types() {
+            let positions = structures::find_structures_in_area(
+                self.seed, st, block_x, block_z, block_w, block_h,
+            );
+            for (bx, bz) in positions {
+                result.push(st as u8 as i32);
+                result.push(bx);
+                result.push(bz);
+            }
+        }
+
+        result
+    }
+
+    /// Get structure type name by ID.
+    pub fn structure_name(type_id: u8) -> String {
+        // Map back from u8 to StructureType
+        let names = [
+            "village", "desert-temple", "jungle-temple", "witch-hut",
+            "igloo", "ocean-monument", "mansion", "pillager-outpost",
+            "stronghold", "ocean-ruin", "shipwreck", "buried-treasure",
+            "ruined-portal", "ancient-city", "trail-ruin", "trial-chamber",
+            "nether-fortress", "bastion-treasure", "mineshaft", "dungeon",
+            "desert-well", "fossil", "spawn",
+        ];
+        names.get(type_id as usize).unwrap_or(&"unknown").to_string()
     }
 
     pub fn biome_name(id: u8) -> String {

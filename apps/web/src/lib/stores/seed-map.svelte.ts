@@ -24,6 +24,8 @@ export interface MapState {
 
 	showBiomes: boolean;
 	showSlimeChunks: boolean;
+	showStructures: boolean;
+	enabledStructures: Set<number>;
 	showGrid: boolean;
 	showCoordinates: boolean;
 
@@ -41,7 +43,8 @@ export interface MapState {
 	canvasHeight: number;
 
 	tileCache: Map<string, TileData>;
-	slimeCache: Map<string, Uint8Array>; // keyed by "regionX,regionZ"
+	slimeCache: Map<string, Uint8Array>;
+	structures: Array<{ type: number; name: string; x: number; z: number }>;
 	renderGeneration: number;
 
 	workersReady: number;
@@ -60,6 +63,8 @@ export const mapState: MapState = $state({
 
 	showBiomes: true,
 	showSlimeChunks: true,
+	showStructures: true,
+	enabledStructures: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21]),
 	showGrid: true,
 	showCoordinates: true,
 
@@ -78,6 +83,7 @@ export const mapState: MapState = $state({
 
 	tileCache: new Map(),
 	slimeCache: new Map(),
+	structures: [],
 	renderGeneration: 0,
 
 	workersReady: 0,
@@ -135,6 +141,39 @@ function handleWorkerMessage(workerIdx: number, e: MessageEvent) {
 				biomeIds: msg.biomeIds,
 				step: msg.step,
 			});
+
+			// Store structures (deduplicate by position)
+			if (msg.structures) {
+				const arr = msg.structures as number[];
+				for (let i = 0; i < arr.length; i += 3) {
+					const typeId = arr[i];
+					const bx = arr[i + 1];
+					const bz = arr[i + 2];
+					const key = `${typeId},${bx},${bz}`;
+					if (!mapState.structures.find(s => s.x === bx && s.z === bz && s.type === typeId)) {
+						mapState.structures.push({
+							type: typeId,
+							name: STRUCTURE_NAMES[typeId] ?? 'unknown',
+							x: bx,
+							z: bz,
+						});
+					}
+				}
+			}
+
+			// Store slime chunk data
+			if (msg.slime) {
+				for (let dz = 0; dz < msg.slimeH; dz++) {
+					for (let dx = 0; dx < msg.slimeW; dx++) {
+						const cx = msg.slimeChunkX + dx;
+						const cz = msg.slimeChunkZ + dz;
+						const isSlime = msg.slime[dz * msg.slimeW + dx] === 1;
+						if (isSlime) {
+							mapState.slimeCache.set(`${cx},${cz}`, new Uint8Array([1]));
+						}
+					}
+				}
+			}
 		}
 
 		// Dispatch next pending tile to this worker
@@ -217,6 +256,7 @@ export function setSeed(input: string) {
 		mapState.seedValid = true;
 		mapState.tileCache = new Map();
 		mapState.slimeCache = new Map();
+		mapState.structures = [];
 		mapState.renderGeneration++;
 		mapState.workersReady = 0;
 		mapState.computing = false;
@@ -243,6 +283,7 @@ export function setVersion(version: string) {
 	if (mapState.seedValid) {
 		mapState.tileCache = new Map();
 		mapState.slimeCache = new Map();
+		mapState.structures = [];
 		mapState.renderGeneration++;
 		mapState.workersReady = 0;
 		mapState.computing = false;
@@ -415,6 +456,32 @@ const BIOME_COLORS: Record<number, number> = {
 	44: 0x0000FF, 45: 0xA0A0FF, 46: 0xFADE55, 47: 0xFAF0C0,
 	48: 0xA2A284, 49: 0xFF00FF,
 };
+
+const STRUCTURE_NAMES: Record<number, string> = {
+	0: 'Village', 1: 'Desert Temple', 2: 'Jungle Temple', 3: 'Witch Hut',
+	4: 'Igloo', 5: 'Ocean Monument', 6: 'Woodland Mansion', 7: 'Pillager Outpost',
+	8: 'Stronghold', 9: 'Ocean Ruin', 10: 'Shipwreck', 11: 'Buried Treasure',
+	12: 'Ruined Portal', 13: 'Ancient City', 14: 'Trail Ruin', 15: 'Trial Chamber',
+	16: 'Nether Fortress', 17: 'Bastion', 18: 'Mineshaft', 19: 'Dungeon',
+	20: 'Desert Well', 21: 'Fossil',
+};
+
+// Icon names matching the chunkbase spritesheet
+const STRUCTURE_ICONS: Record<number, string> = {
+	0: 'village', 1: 'desert-temple', 2: 'jungle-temple', 3: 'witch-hut',
+	4: 'igloo', 5: 'ocean-monument', 6: 'mansion', 7: 'pillager-outpost',
+	8: 'stronghold', 9: 'ocean-ruin', 10: 'shipwreck', 11: 'buried-treasure',
+	12: 'ruined-portal', 13: 'ancient-city', 14: 'trail-ruin', 15: 'trial-chamber',
+	16: 'nether-fortress', 17: 'bastion-treasure',
+};
+
+export function getStructureName(typeId: number): string {
+	return STRUCTURE_NAMES[typeId] ?? 'Unknown';
+}
+
+export function getStructureIconName(typeId: number): string {
+	return STRUCTURE_ICONS[typeId] ?? 'unknown';
+}
 
 export function getBiomeName(id: number): string {
 	return BIOME_NAMES[id] ?? 'Unknown';
