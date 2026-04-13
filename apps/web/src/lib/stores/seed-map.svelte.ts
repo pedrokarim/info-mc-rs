@@ -65,7 +65,7 @@ export const mapState: MapState = $state({
 	showBiomes: true,
 	showSlimeChunks: true,
 	showStructures: true,
-	enabledStructures: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21]),
+	enabledStructures: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24]),
 	showGrid: true,
 	showCoordinates: true,
 
@@ -499,7 +499,7 @@ const STRUCTURE_NAMES: Record<number, string> = {
 	8: 'Stronghold', 9: 'Ocean Ruin', 10: 'Shipwreck', 11: 'Buried Treasure',
 	12: 'Ruined Portal', 13: 'Ancient City', 14: 'Trail Ruin', 15: 'Trial Chamber',
 	16: 'Nether Fortress', 17: 'Bastion', 18: 'Mineshaft', 19: 'Dungeon',
-	20: 'Desert Well', 21: 'Fossil',
+	20: 'Desert Well', 21: 'Fossil', 23: 'End City', 24: 'End Gateway',
 };
 
 // Icon names matching the chunkbase spritesheet

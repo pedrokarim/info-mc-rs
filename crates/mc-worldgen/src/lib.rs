@@ -197,6 +197,13 @@ impl WorldGen {
                 self.seed, st, block_x, block_z, block_w, block_h,
             );
             for (bx, bz) in positions {
+                // End Cities spawn on End Midlands or End Highlands
+                if st == structures::StructureType::EndCity {
+                    let biome = self.biome_at(bx, bz);
+                    if biome != Biome::EndHighlands && biome != Biome::EndMidlands {
+                        continue;
+                    }
+                }
                 result.push(st as u8 as i32);
                 result.push(bx);
                 result.push(bz);
@@ -215,7 +222,7 @@ impl WorldGen {
             "stronghold", "ocean-ruin", "shipwreck", "buried-treasure",
             "ruined-portal", "ancient-city", "trail-ruin", "trial-chamber",
             "nether-fortress", "bastion-treasure", "mineshaft", "dungeon",
-            "desert-well", "fossil", "spawn",
+            "desert-well", "fossil", "spawn", "end-city", "end-gateway",
         ];
         names.get(type_id as usize).unwrap_or(&"unknown").to_string()
     }

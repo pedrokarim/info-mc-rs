@@ -20,29 +20,41 @@
     return hash.toString();
   });
 
-  // Individual structure icons (cropped from chunkbase spritesheet)
-  const STRUCTURE_TYPES = [
-    { id: 0,  name: 'Village',            icon: 'village' },
-    { id: 1,  name: 'Temple du désert',   icon: 'desert-temple' },
-    { id: 2,  name: 'Temple de jungle',   icon: 'jungle-temple' },
-    { id: 3,  name: 'Cabane de sorcière', icon: 'witch-hut' },
-    { id: 4,  name: 'Igloo',              icon: 'igloo' },
-    { id: 5,  name: 'Monument océanique', icon: 'ocean-monument' },
-    { id: 6,  name: 'Manoir',             icon: 'mansion' },
-    { id: 7,  name: 'Avant-poste',        icon: 'pillager-outpost' },
-    { id: 8,  name: 'Forteresse',         icon: 'stronghold' },
-    { id: 9,  name: 'Ruine océanique',    icon: 'ocean-ruin' },
-    { id: 10, name: 'Épave',              icon: 'shipwreck' },
-    { id: 11, name: 'Trésor enfoui',      icon: 'buried-treasure' },
-    { id: 12, name: 'Portail en ruines',  icon: 'ruined-portal' },
-    { id: 13, name: 'Cité antique',       icon: 'ancient-city' },
-    { id: 14, name: 'Ruines du sentier',  icon: 'trail-ruin' },
-    { id: 15, name: 'Chambre d\'épreuve', icon: 'trial-chamber' },
-    { id: 18, name: 'Mine abandonnée',    icon: 'mineshaft' },
-    { id: 19, name: 'Donjon',             icon: 'dungeon' },
-    { id: 20, name: 'Puits du désert',    icon: 'desert-well' },
-    { id: 21, name: 'Fossile',            icon: 'fossil' },
+  // Structure types grouped by dimension (matching chunkbase)
+  const ALL_STRUCTURES = [
+    // Overworld
+    { id: 0,  name: 'Village',            icon: 'village',           dim: 'overworld' },
+    { id: 1,  name: 'Temple du désert',   icon: 'desert-temple',     dim: 'overworld' },
+    { id: 2,  name: 'Temple de jungle',   icon: 'jungle-temple',     dim: 'overworld' },
+    { id: 3,  name: 'Cabane de sorcière', icon: 'witch-hut',         dim: 'overworld' },
+    { id: 4,  name: 'Igloo',              icon: 'igloo',             dim: 'overworld' },
+    { id: 5,  name: 'Monument océanique', icon: 'ocean-monument',    dim: 'overworld' },
+    { id: 6,  name: 'Manoir',             icon: 'mansion',           dim: 'overworld' },
+    { id: 7,  name: 'Avant-poste',        icon: 'pillager-outpost',  dim: 'overworld' },
+    { id: 8,  name: 'Forteresse',         icon: 'stronghold',        dim: 'overworld' },
+    { id: 9,  name: 'Ruine océanique',    icon: 'ocean-ruin',        dim: 'overworld' },
+    { id: 10, name: 'Épave',              icon: 'shipwreck',         dim: 'overworld' },
+    { id: 11, name: 'Trésor enfoui',      icon: 'buried-treasure',   dim: 'overworld' },
+    { id: 12, name: 'Portail en ruines',  icon: 'ruined-portal',     dim: 'overworld' },
+    { id: 13, name: 'Cité antique',       icon: 'ancient-city',      dim: 'overworld' },
+    { id: 14, name: 'Ruines du sentier',  icon: 'trail-ruin',        dim: 'overworld' },
+    { id: 15, name: 'Chambre d\'épreuve', icon: 'trial-chamber',     dim: 'overworld' },
+    { id: 18, name: 'Mine abandonnée',    icon: 'mineshaft',         dim: 'overworld' },
+    { id: 19, name: 'Donjon',             icon: 'dungeon',           dim: 'overworld' },
+    { id: 20, name: 'Puits du désert',    icon: 'desert-well',       dim: 'overworld' },
+    { id: 21, name: 'Fossile',            icon: 'fossil',            dim: 'overworld' },
+    // Nether
+    { id: 16, name: 'Forteresse du Nether', icon: 'nether-fortress', dim: 'nether' },
+    { id: 17, name: 'Bastion',            icon: 'pillager-outpost',  dim: 'nether' },
+    { id: 12, name: 'Portail en ruines',  icon: 'ruined-portal',     dim: 'nether' },
+    // End
+    { id: 23, name: 'Cité de l\'End',     icon: 'end-city',          dim: 'end' },
   ];
+
+  // Filter structures by current dimension
+  let STRUCTURE_TYPES = $derived(
+    ALL_STRUCTURES.filter(s => s.dim === mapState.dimension)
+  );
 
   function toggleStructure(id: number) {
     if (mapState.enabledStructures.has(id)) {

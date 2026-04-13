@@ -39,6 +39,8 @@ pub enum StructureType {
     DesertWell = 20,
     Fossil = 21,
     Spawn = 22,
+    EndCity = 23,
+    EndGateway = 24,
 }
 
 impl StructureType {
@@ -68,6 +70,8 @@ impl StructureType {
             Self::DesertWell =>      StructureConfig { spacing: 44, separation: 14, salt: 17525864 },
             Self::Fossil =>          StructureConfig { spacing: 64, separation: 8,  salt: 14357921 },
             Self::Spawn =>           StructureConfig { spacing: 1,  separation: 0,  salt: 0 }, // special
+            Self::EndCity =>         StructureConfig { spacing: 20, separation: 9,  salt: 10387313 },
+            Self::EndGateway =>      StructureConfig { spacing: 1,  separation: 0,  salt: 0 }, // special
         }
     }
 
@@ -96,6 +100,8 @@ impl StructureType {
             Self::DesertWell => "desert-well",
             Self::Fossil => "fossil",
             Self::Spawn => "spawn",
+            Self::EndCity => "end-city",
+            Self::EndGateway => "end-gateway",
         }
     }
 
@@ -130,7 +136,9 @@ impl StructureType {
     }
 
     pub fn end_types() -> &'static [StructureType] {
-        &[] // End Cities use a different algorithm (not region-based)
+        &[
+            Self::EndCity,
+        ]
     }
 }
 

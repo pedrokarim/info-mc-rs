@@ -274,6 +274,8 @@ const STRUCT_SPRITES: Record<number, { sx: number; sy: number; sw: number; sh: n
 	19: { sx: 75,  sy: 159, sw: 24, sh: 24 }, // dungeon
 	20: { sx: 190, sy: 51,  sw: 22, sh: 25 }, // desert-well
 	21: { sx: 139, sy: 27,  sw: 26, sh: 25 }, // fossil
+	23: { sx: 112, sy: 27,  sw: 26, sh: 26 }, // end-city
+	24: { sx: 112, sy: 0,   sw: 26, sh: 26 }, // end-gateway
 };
 
 // Lazy-loaded spritesheet image

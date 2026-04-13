@@ -56,6 +56,26 @@ impl ImprovedNoise {
         }
     }
 
+    /// Create from pre-built permutation table and offsets (for JavaRandom init).
+    pub fn from_raw(perm: [u8; 257], x_offset: f64, y_offset: f64, z_offset: f64) -> Self {
+        let i2 = y_offset.floor();
+        let d2 = y_offset - i2;
+        let h2 = i2 as i32;
+        let t2 = d2 * d2 * d2 * (d2 * (d2 * 6.0 - 15.0) + 10.0);
+
+        Self {
+            perm,
+            x_offset,
+            y_offset,
+            z_offset,
+            amplitude: 1.0,
+            lacunarity: 1.0,
+            h2,
+            d2,
+            t2,
+        }
+    }
+
     /// Sample 3D Perlin noise at (x, y, z).
     pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
         let dx = x + self.x_offset;
