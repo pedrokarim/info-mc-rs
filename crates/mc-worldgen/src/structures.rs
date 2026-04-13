@@ -120,6 +120,18 @@ impl StructureType {
             Self::Fossil,
         ]
     }
+
+    pub fn nether_types() -> &'static [StructureType] {
+        &[
+            Self::NetherFortress,
+            Self::Bastion,
+            Self::RuinedPortal,
+        ]
+    }
+
+    pub fn end_types() -> &'static [StructureType] {
+        &[] // End Cities use a different algorithm (not region-based)
+    }
 }
 
 /// Find the potential structure position in a given region.

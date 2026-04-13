@@ -6,12 +6,16 @@ pub mod slime;
 pub mod biomes;
 pub mod biome_tree;
 pub mod multinoise;
+pub mod nether;
+pub mod end;
 pub mod structures;
 pub mod legacy;
 
 use wasm_bindgen::prelude::*;
 use biomes::Biome;
 use multinoise::MultiNoiseBiomeSource;
+use nether::NetherBiomeSource;
+use end::EndBiomeSource;
 use legacy::LegacyBiomeSource;
 
 /// Version threshold: versions >= 1.18 use multi-noise, older use legacy layers.
@@ -27,6 +31,8 @@ fn is_modern(version: &str) -> bool {
 
 enum BiomeSourceInner {
     Modern(MultiNoiseBiomeSource),
+    Nether(NetherBiomeSource),
+    End(EndBiomeSource),
     Legacy(LegacyBiomeSource),
 }
 
@@ -35,21 +41,41 @@ enum BiomeSourceInner {
 pub struct WorldGen {
     inner: BiomeSourceInner,
     seed: i64,
+    dimension: String,
 }
 
 #[wasm_bindgen]
 impl WorldGen {
+    /// Create a new world generator.
+    /// - `dimension`: "overworld", "nether", or "end"
     #[wasm_bindgen(constructor)]
-    pub fn new(seed_hi: i32, seed_lo: i32, version: &str) -> WorldGen {
+    pub fn new(seed_hi: i32, seed_lo: i32, version: &str, dimension: &str) -> WorldGen {
         let seed = ((seed_hi as i64) << 32) | (seed_lo as u32 as i64);
 
-        let inner = if is_modern(version) {
-            BiomeSourceInner::Modern(MultiNoiseBiomeSource::new(seed))
-        } else {
-            BiomeSourceInner::Legacy(LegacyBiomeSource::new(seed))
+        let inner = match dimension {
+            "nether" => BiomeSourceInner::Nether(NetherBiomeSource::new(seed)),
+            "end" => BiomeSourceInner::End(EndBiomeSource::new(seed)),
+            _ => {
+                // Overworld
+                if is_modern(version) {
+                    BiomeSourceInner::Modern(MultiNoiseBiomeSource::new(seed))
+                } else {
+                    BiomeSourceInner::Legacy(LegacyBiomeSource::new(seed))
+                }
+            }
         };
 
-        WorldGen { inner, seed }
+        WorldGen { inner, seed, dimension: dimension.to_string() }
+    }
+
+    /// Helper: get biome at block coords for any dimension.
+    fn biome_at(&self, bx: i32, bz: i32) -> Biome {
+        match &self.inner {
+            BiomeSourceInner::Modern(src) => src.get_biome(bx, bz),
+            BiomeSourceInner::Nether(src) => src.get_biome(bx, bz),
+            BiomeSourceInner::End(src) => src.get_biome(bx, bz),
+            BiomeSourceInner::Legacy(src) => src.get_biome(bx, bz),
+        }
     }
 
     /// Compute an area of biomes and return RGBA pixels directly.
@@ -72,10 +98,7 @@ impl WorldGen {
             for dx in 0..width as i32 {
                 let bx = x + dx * step;
                 let bz = z + dz * step;
-                let biome = match &self.inner {
-                    BiomeSourceInner::Modern(src) => src.get_biome(bx, bz),
-                    BiomeSourceInner::Legacy(src) => src.get_biome(bx, bz),
-                };
+                let biome = self.biome_at(bx, bz);
                 let color = biome.color();
                 rgba.push(((color >> 16) & 0xFF) as u8); // R
                 rgba.push(((color >> 8) & 0xFF) as u8);  // G
@@ -100,10 +123,7 @@ impl WorldGen {
             for dx in 0..width as i32 {
                 let bx = x + dx * step;
                 let bz = z + dz * step;
-                let biome = match &self.inner {
-                    BiomeSourceInner::Modern(src) => src.get_biome(bx, bz),
-                    BiomeSourceInner::Legacy(src) => src.get_biome(bx, bz),
-                };
+                let biome = self.biome_at(bx, bz);
                 ids.push(biome.id());
             }
         }
@@ -144,8 +164,10 @@ impl WorldGen {
         for i in 0..num_chunks {
             let cx = chunk_coords[i * 2];
             let cz = chunk_coords[i * 2 + 1];
-            let biomes = match &self.inner {
+            let biomes: Vec<u8> = match &self.inner {
                 BiomeSourceInner::Modern(src) => src.get_chunk_biomes(cx, cz, step),
+                BiomeSourceInner::Nether(src) => src.get_chunk_biomes(cx, cz, step),
+                BiomeSourceInner::End(src) => src.get_chunk_biomes(cx, cz, step),
                 BiomeSourceInner::Legacy(src) => src.get_chunk_biomes(cx, cz, step),
             };
             result.extend_from_slice(&biomes);
@@ -156,10 +178,7 @@ impl WorldGen {
     }
 
     pub fn get_biome_at(&self, block_x: i32, block_z: i32) -> u8 {
-        match &self.inner {
-            BiomeSourceInner::Modern(src) => src.get_biome(block_x, block_z).id(),
-            BiomeSourceInner::Legacy(src) => src.get_biome(block_x, block_z).id(),
-        }
+        self.biome_at(block_x, block_z).id()
     }
 
     /// Find structures in a block-coordinate area.
@@ -168,7 +187,12 @@ impl WorldGen {
     pub fn find_structures(&self, block_x: i32, block_z: i32, block_w: i32, block_h: i32) -> Vec<i32> {
         let mut result = Vec::new();
 
-        for &st in structures::StructureType::overworld_types() {
+        let types = match self.dimension.as_str() {
+            "nether" => structures::StructureType::nether_types(),
+            "end" => structures::StructureType::end_types(),
+            _ => structures::StructureType::overworld_types(),
+        };
+        for &st in types {
             let positions = structures::find_structures_in_area(
                 self.seed, st, block_x, block_z, block_w, block_h,
             );

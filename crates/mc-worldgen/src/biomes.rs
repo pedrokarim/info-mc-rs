@@ -61,20 +61,30 @@ pub enum Biome {
     LegacyMountains = 52,
     LegacyGiantTreeTaiga = 53,
 
+    // Nether biomes
+    NetherWastes = 60,
+    SoulSandValley = 61,
+    CrimsonForest = 62,
+    WarpedForest = 63,
+    BasaltDeltas = 64,
+
+    // End biomes
+    TheEnd = 70,
+    EndHighlands = 71,
+    EndMidlands = 72,
+    EndBarrens = 73,
+    SmallEndIslands = 74,
+
     Unknown = 255,
 }
 
 impl Biome {
-    pub fn count() -> usize {
-        54
-    }
-
     pub fn from_id(id: u8) -> Self {
-        if id < 54 {
-            // Safety: all values 0..53 are valid enum variants
-            unsafe { std::mem::transmute(id) }
-        } else {
-            Biome::Unknown
+        match id {
+            0..=53 => unsafe { std::mem::transmute(id) },
+            60..=64 => unsafe { std::mem::transmute(id) },
+            70..=74 => unsafe { std::mem::transmute(id) },
+            _ => Biome::Unknown,
         }
     }
 
@@ -138,6 +148,19 @@ impl Biome {
             Self::LegacyDeepWarmOcean => "Deep Warm Ocean",
             Self::LegacyMountains => "Mountains",
             Self::LegacyGiantTreeTaiga => "Giant Tree Taiga",
+            // Nether
+            Self::NetherWastes => "Nether Wastes",
+            Self::SoulSandValley => "Soul Sand Valley",
+            Self::CrimsonForest => "Crimson Forest",
+            Self::WarpedForest => "Warped Forest",
+            Self::BasaltDeltas => "Basalt Deltas",
+            // End
+            Self::TheEnd => "The End",
+            Self::EndHighlands => "End Highlands",
+            Self::EndMidlands => "End Midlands",
+            Self::EndBarrens => "End Barrens",
+            Self::SmallEndIslands => "Small End Islands",
+
             Self::Unknown => "Unknown",
         }
     }
@@ -199,6 +222,19 @@ impl Biome {
             Self::LegacyDeepWarmOcean => 0x0000AC,
             Self::LegacyMountains => 0x606060,
             Self::LegacyGiantTreeTaiga => 0x596651,
+            // Nether
+            Self::NetherWastes => 0xBF3B3B,
+            Self::SoulSandValley => 0x5E3830,
+            Self::CrimsonForest => 0xDD0808,
+            Self::WarpedForest => 0x49907B,
+            Self::BasaltDeltas => 0x403636,
+            // End — colors matching chunkbase
+            Self::TheEnd => 0x8080FF,          // central island = purple/lavender
+            Self::EndHighlands => 0xD5CE8E,    // outer islands = light yellow
+            Self::EndMidlands => 0xB5AE6E,     // outer islands edge = darker yellow
+            Self::EndBarrens => 0x706848,       // sparse island fringe = dark olive
+            Self::SmallEndIslands => 0x000000,  // void = pure black
+
             Self::Unknown => 0xFF00FF,
         }
     }

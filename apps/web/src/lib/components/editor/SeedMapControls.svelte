@@ -2,7 +2,7 @@
   import Select from '$lib/components/ui/Select.svelte';
   import Switch from '$lib/components/ui/Switch.svelte';
   import {
-    mapState, setSeed, setVersion, setCenter, zoomIn, zoomOut,
+    mapState, setSeed, setVersion, setDimension, setCenter, zoomIn, zoomOut,
   } from '$lib/stores/seed-map.svelte';
 
   let seedInput = $state('');
@@ -157,6 +157,25 @@
     {:else}
       <span class="badge badge--legacy">Legacy Layers</span>
     {/if}
+  </div>
+
+  <!-- Dimension -->
+  <div class="section">
+    <span class="section-label">Dimension</span>
+    <div class="dim-row">
+      <button
+        class="dim-btn" class:active={mapState.dimension === 'overworld'}
+        onclick={() => setDimension('overworld')}
+      >🌍 Overworld</button>
+      <button
+        class="dim-btn" class:active={mapState.dimension === 'nether'}
+        onclick={() => setDimension('nether')}
+      >🔥 Nether</button>
+      <button
+        class="dim-btn" class:active={mapState.dimension === 'end'}
+        onclick={() => setDimension('end')}
+      >🌌 End</button>
+    </div>
   </div>
 
   <!-- Layers -->
@@ -392,6 +411,38 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+
+  /* ── Dimension buttons ── */
+  .dim-row {
+    display: flex;
+    gap: 4px;
+  }
+
+  .dim-btn {
+    flex: 1;
+    padding: 5px 4px;
+    border: 1.5px solid var(--line-0, rgba(46, 94, 143, 0.34));
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink-2, #5a7894);
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 120ms ease;
+    text-align: center;
+  }
+
+  .dim-btn:hover {
+    border-color: var(--blue-0, #5e90ff);
+    color: var(--blue-0, #5e90ff);
+  }
+
+  .dim-btn.active {
+    background: var(--blue-0, #5e90ff);
+    border-color: var(--blue-0, #5e90ff);
+    color: #fff;
   }
 
   /* ── Structures grid ── */

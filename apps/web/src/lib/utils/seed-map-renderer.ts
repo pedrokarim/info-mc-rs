@@ -29,8 +29,13 @@ const tileCanvasCache = new Map<string, ImageData>();
 export function renderFrame(ctx: CanvasRenderingContext2D, state: MapState) {
 	ctx.clearRect(0, 0, state.canvasWidth, state.canvasHeight);
 
-	// Background
-	ctx.fillStyle = '#1a1a2e';
+	// Background — changes per dimension
+	const bgColors: Record<string, string> = {
+		overworld: '#1a1a2e',
+		nether: '#1a0a0a',
+		end: '#0a0a14',
+	};
+	ctx.fillStyle = bgColors[state.dimension] ?? '#1a1a2e';
 	ctx.fillRect(0, 0, state.canvasWidth, state.canvasHeight);
 
 	if (!state.seedValid) {

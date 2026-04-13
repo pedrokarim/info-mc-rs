@@ -6,6 +6,7 @@ import initWasm, { WorldGen } from '../wasm/mc-worldgen/mc_worldgen';
 let wasmReady = false;
 let worldgen: WorldGen | null = null;
 let currentGeneration = 0;
+let currentDimension = 'overworld';
 
 function post(msg: unknown, transfer?: Transferable[]) {
 	(self as unknown as Worker).postMessage(msg, transfer ?? []);
@@ -22,7 +23,8 @@ self.onmessage = async (e: MessageEvent) => {
 			}
 			if (worldgen) worldgen.free();
 
-			worldgen = new WorldGen(e.data.seedHi, e.data.seedLo, e.data.version);
+			currentDimension = e.data.dimension || 'overworld';
+			worldgen = new WorldGen(e.data.seedHi, e.data.seedLo, e.data.version, currentDimension);
 			currentGeneration = e.data.generation;
 			post({ type: 'ready', generation: e.data.generation });
 		}
@@ -40,36 +42,48 @@ self.onmessage = async (e: MessageEvent) => {
 			// Also get biome IDs for tooltip lookups
 			const biomeIds = worldgen.get_biome_area(blockX, blockZ, tileSize, tileSize, step);
 
-			// Compute slime chunks for the tile's area
 			const tileBlockW = tileSize * step;
-			const chunkX0 = Math.floor(blockX / 16);
-			const chunkZ0 = Math.floor(blockZ / 16);
-			const chunkW = Math.ceil(tileBlockW / 16) + 1;
-			const chunkH = Math.ceil(tileBlockW / 16) + 1;
-			const slimeData = worldgen.get_slime_area(chunkX0, chunkZ0, chunkW, chunkH);
 
-			// Find structures in this tile's area
+			// Slime chunks: overworld only
+			let slimeData: Uint8Array | null = null;
+			let chunkX0 = 0, chunkZ0 = 0, chunkW = 0, chunkH = 0;
+			if (currentDimension === 'overworld') {
+				chunkX0 = Math.floor(blockX / 16);
+				chunkZ0 = Math.floor(blockZ / 16);
+				chunkW = Math.ceil(tileBlockW / 16) + 1;
+				chunkH = Math.ceil(tileBlockW / 16) + 1;
+				slimeData = worldgen.get_slime_area(chunkX0, chunkZ0, chunkW, chunkH);
+			}
+
+			// Structures
 			const structData = worldgen.find_structures(blockX, blockZ, tileBlockW, tileBlockW);
 
 			// Transfer the buffers (zero-copy)
 			const rgbaBuf = rgba.buffer;
 			const idsBuf = biomeIds.buffer;
-			const slimeBuf = slimeData.buffer;
+			const transfers: ArrayBuffer[] = [rgbaBuf, idsBuf];
 
-			post({
+			const msg: any = {
 				type: 'tile-result',
 				tileId,
 				tileX, tileZ, tileSize, step,
 				generation,
 				rgba: new Uint8Array(rgbaBuf),
 				biomeIds: new Uint8Array(idsBuf),
-				slimeChunkX: chunkX0,
-				slimeChunkZ: chunkZ0,
-				slimeW: chunkW,
-				slimeH: chunkH,
-				slime: new Uint8Array(slimeBuf),
-				structures: Array.from(structData), // [typeId, bx, bz, ...]
-			}, [rgbaBuf, idsBuf, slimeBuf]);
+				structures: Array.from(structData),
+			};
+
+			if (slimeData) {
+				const slimeBuf = slimeData.buffer;
+				msg.slimeChunkX = chunkX0;
+				msg.slimeChunkZ = chunkZ0;
+				msg.slimeW = chunkW;
+				msg.slimeH = chunkH;
+				msg.slime = new Uint8Array(slimeBuf);
+				transfers.push(slimeBuf);
+			}
+
+			post(msg, transfers);
 		}
 
 		if (type === 'slime-area') {

@@ -30,6 +30,7 @@ export interface MapState {
 	showCoordinates: boolean;
 
 	mcVersion: string;
+	dimension: 'overworld' | 'nether' | 'end';
 
 	hoverWorldX: number;
 	hoverWorldZ: number;
@@ -69,6 +70,7 @@ export const mapState: MapState = $state({
 	showCoordinates: true,
 
 	mcVersion: '1.21',
+	dimension: 'overworld' as 'overworld' | 'nether' | 'end',
 
 	hoverWorldX: 0,
 	hoverWorldZ: 0,
@@ -269,6 +271,7 @@ export function setSeed(input: string) {
 				seedHi: hi,
 				seedLo: lo,
 				version: mapState.mcVersion,
+				dimension: mapState.dimension,
 				generation: mapState.renderGeneration,
 			});
 		}
@@ -295,6 +298,31 @@ export function setVersion(version: string) {
 				seedHi: mapState.seedHi,
 				seedLo: mapState.seedLo,
 				version,
+				dimension: mapState.dimension,
+				generation: mapState.renderGeneration,
+			});
+		}
+	}
+}
+
+export function setDimension(dim: 'overworld' | 'nether' | 'end') {
+	mapState.dimension = dim;
+	if (mapState.seedValid) {
+		mapState.tileCache = new Map();
+		mapState.slimeCache = new Map();
+		mapState.structures = [];
+		mapState.renderGeneration++;
+		mapState.workersReady = 0;
+		mapState.computing = false;
+		pendingTiles = [];
+
+		for (const w of workers) {
+			w.postMessage({
+				type: 'init',
+				seedHi: mapState.seedHi,
+				seedLo: mapState.seedLo,
+				version: mapState.mcVersion,
+				dimension: dim,
 				generation: mapState.renderGeneration,
 			});
 		}
@@ -439,6 +467,10 @@ const BIOME_NAMES: Record<number, string> = {
 	40: 'Stony Peaks', 41: 'Windswept Hills', 42: 'Windswept Gravelly Hills',
 	43: 'Windswept Forest', 44: 'River', 45: 'Frozen River', 46: 'Beach',
 	47: 'Snowy Beach', 48: 'Stony Shore', 49: 'Mushroom Fields',
+	60: 'Nether Wastes', 61: 'Soul Sand Valley', 62: 'Crimson Forest',
+	63: 'Warped Forest', 64: 'Basalt Deltas',
+	70: 'The End', 71: 'End Highlands', 72: 'End Midlands',
+	73: 'End Barrens', 74: 'Small End Islands',
 };
 
 const BIOME_COLORS: Record<number, number> = {
@@ -455,6 +487,10 @@ const BIOME_COLORS: Record<number, number> = {
 	40: 0x7E7E7E, 41: 0x606060, 42: 0x787878, 43: 0x507050,
 	44: 0x0000FF, 45: 0xA0A0FF, 46: 0xFADE55, 47: 0xFAF0C0,
 	48: 0xA2A284, 49: 0xFF00FF,
+	// Nether
+	60: 0xBF3B3B, 61: 0x5E3830, 62: 0xDD0808, 63: 0x49907B, 64: 0x403636,
+	// End
+	70: 0x8080FF, 71: 0xD5CE8E, 72: 0xB5AE6E, 73: 0x706848, 74: 0x000000,
 };
 
 const STRUCTURE_NAMES: Record<number, string> = {

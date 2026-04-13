@@ -11,7 +11,7 @@ export const worldgen_get_biome_area_rgba: (a: number, b: number, c: number, d: 
 export const worldgen_get_biome_at: (a: number, b: number, c: number) => number;
 export const worldgen_get_slime_area: (a: number, b: number, c: number, d: number, e: number) => [number, number];
 export const worldgen_is_slime_chunk: (a: number, b: number, c: number) => number;
-export const worldgen_new: (a: number, b: number, c: number, d: number) => number;
+export const worldgen_new: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
 export const worldgen_parse_seed: (a: number, b: number) => [number, number];
 export const worldgen_structure_name: (a: number) => [number, number];
 export const __wbindgen_externrefs: WebAssembly.Table;
