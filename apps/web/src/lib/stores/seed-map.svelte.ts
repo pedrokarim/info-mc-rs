@@ -1,8 +1,12 @@
 /// Seed map store — tile-based architecture matching chunkbase's approach.
 /// Multiple workers compute 64x64 RGBA tiles in parallel.
+/// State persisted in URL search params + localStorage.
 
-const TILE_SIZE = 64; // samples per tile axis (64x64 = 4096 samples)
-const WORKER_COUNT = Math.min(8, Math.max(2, (navigator?.hardwareConcurrency ?? 4) - 1));
+import { browser } from '$app/environment';
+
+const TILE_SIZE = 64;
+const WORKER_COUNT = Math.min(8, Math.max(2, (typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 4) - 1));
+const LS_KEY = 'seed-map-state';
 
 // ===== Tile cache =====
 
@@ -65,7 +69,7 @@ export const mapState: MapState = $state({
 	showBiomes: true,
 	showSlimeChunks: true,
 	showStructures: true,
-	enabledStructures: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24]),
+	enabledStructures: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25]),
 	showGrid: true,
 	showCoordinates: true,
 
@@ -453,6 +457,116 @@ export function requestVisibleTiles() {
 
 // ===== Biome info =====
 
+// ===== URL + localStorage persistence =====
+
+/** Save current state to URL hash and localStorage. */
+export function persistState() {
+	if (!browser) return;
+
+	const params = new URLSearchParams();
+	if (mapState.seedInput) params.set('seed', mapState.seedInput);
+	params.set('v', mapState.mcVersion);
+	params.set('dim', mapState.dimension);
+	params.set('x', Math.round(mapState.centerX).toString());
+	params.set('z', Math.round(mapState.centerZ).toString());
+	params.set('zoom', mapState.zoom.toString());
+
+	// Layer toggles
+	if (!mapState.showBiomes) params.set('biomes', '0');
+	if (!mapState.showSlimeChunks) params.set('slime', '0');
+	if (!mapState.showStructures) params.set('structs', '0');
+	if (!mapState.showGrid) params.set('grid', '0');
+	if (!mapState.showCoordinates) params.set('coords', '0');
+
+	// Enabled structures (only save if not all enabled)
+	const allIds = [...mapState.enabledStructures].sort().join(',');
+	params.set('st', allIds);
+
+	// Update URL without reload
+	const hash = '#' + params.toString();
+	if (window.location.hash !== hash) {
+		history.replaceState(null, '', hash);
+	}
+
+	// Also save to localStorage
+	try {
+		localStorage.setItem(LS_KEY, JSON.stringify({
+			seed: mapState.seedInput,
+			version: mapState.mcVersion,
+			dimension: mapState.dimension,
+			x: Math.round(mapState.centerX),
+			z: Math.round(mapState.centerZ),
+			zoom: mapState.zoom,
+			showBiomes: mapState.showBiomes,
+			showSlimeChunks: mapState.showSlimeChunks,
+			showStructures: mapState.showStructures,
+			showGrid: mapState.showGrid,
+			showCoordinates: mapState.showCoordinates,
+			enabledStructures: [...mapState.enabledStructures],
+		}));
+	} catch { /* quota exceeded, ignore */ }
+}
+
+/** Restore state from URL hash (priority) or localStorage. */
+export function restoreState(): boolean {
+	if (!browser) return false;
+
+	// Try URL hash first
+	const hash = window.location.hash.slice(1);
+	if (hash) {
+		const params = new URLSearchParams(hash);
+		const seed = params.get('seed');
+		if (seed) {
+			mapState.seedInput = seed;
+			mapState.mcVersion = params.get('v') || mapState.mcVersion;
+			mapState.dimension = (params.get('dim') as typeof mapState.dimension) || mapState.dimension;
+			mapState.centerX = parseFloat(params.get('x') || '0');
+			mapState.centerZ = parseFloat(params.get('z') || '0');
+			mapState.zoom = parseFloat(params.get('zoom') || '1');
+
+			if (params.get('biomes') === '0') mapState.showBiomes = false;
+			if (params.get('slime') === '0') mapState.showSlimeChunks = false;
+			if (params.get('structs') === '0') mapState.showStructures = false;
+			if (params.get('grid') === '0') mapState.showGrid = false;
+			if (params.get('coords') === '0') mapState.showCoordinates = false;
+
+			const st = params.get('st');
+			if (st) {
+				mapState.enabledStructures = new Set(st.split(',').map(Number).filter(n => !isNaN(n)));
+			}
+
+			return true;
+		}
+	}
+
+	// Fallback to localStorage
+	try {
+		const raw = localStorage.getItem(LS_KEY);
+		if (raw) {
+			const saved = JSON.parse(raw);
+			if (saved.seed) {
+				mapState.seedInput = saved.seed;
+				mapState.mcVersion = saved.version || mapState.mcVersion;
+				mapState.dimension = saved.dimension || mapState.dimension;
+				mapState.centerX = saved.x ?? 0;
+				mapState.centerZ = saved.z ?? 0;
+				mapState.zoom = saved.zoom ?? 1;
+				mapState.showBiomes = saved.showBiomes ?? true;
+				mapState.showSlimeChunks = saved.showSlimeChunks ?? true;
+				mapState.showStructures = saved.showStructures ?? true;
+				mapState.showGrid = saved.showGrid ?? true;
+				mapState.showCoordinates = saved.showCoordinates ?? true;
+				if (saved.enabledStructures) {
+					mapState.enabledStructures = new Set(saved.enabledStructures);
+				}
+				return true;
+			}
+		}
+	} catch { /* corrupt data, ignore */ }
+
+	return false;
+}
+
 const BIOME_NAMES: Record<number, string> = {
 	0: 'Ocean', 1: 'Deep Ocean', 2: 'Frozen Ocean', 3: 'Deep Frozen Ocean',
 	4: 'Cold Ocean', 5: 'Deep Cold Ocean', 6: 'Lukewarm Ocean', 7: 'Deep Lukewarm Ocean',
@@ -500,6 +614,7 @@ const STRUCTURE_NAMES: Record<number, string> = {
 	12: 'Ruined Portal', 13: 'Ancient City', 14: 'Trail Ruin', 15: 'Trial Chamber',
 	16: 'Nether Fortress', 17: 'Bastion', 18: 'Mineshaft', 19: 'Dungeon',
 	20: 'Desert Well', 21: 'Fossil', 23: 'End City', 24: 'End Gateway',
+	25: 'End City Ship',
 };
 
 // Icon names matching the chunkbase spritesheet

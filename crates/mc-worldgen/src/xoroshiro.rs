@@ -63,6 +63,38 @@ impl Xoroshiro {
         }
         (r >> 32) as u32
     }
+
+    /// Next float in [0, 1) — matches cubiomes xNextFloat.
+    pub fn next_float(&mut self) -> f32 {
+        (self.next_long() >> (64 - 24)) as f32 * 5.9604645e-8
+    }
+
+    /// Java-style nextLong: combines two next() calls — matches cubiomes xNextLongJ.
+    pub fn next_long_j(&mut self) -> u64 {
+        let a = (self.next_long() >> 32) as i32 as i64;
+        let b = (self.next_long() >> 32) as i32 as i64;
+        ((a << 32) as u64).wrapping_add(b as u64)
+    }
+
+    /// Java-style nextInt for use in MC population — matches cubiomes xNextIntJ.
+    pub fn next_int_j(&mut self, n: u32) -> i32 {
+        let m = n.wrapping_sub(1);
+
+        if (m & n) == 0 {
+            // Power of 2
+            let x = (n as u64).wrapping_mul((self.next_long() >> 33) as u64);
+            return ((x as i64) >> 31) as i32;
+        }
+
+        loop {
+            let bits = (self.next_long() >> 33) as u32;
+            let val = bits % n;
+            // Reject if bits - val + m overflows (Java's nextInt rejection sampling)
+            if (bits.wrapping_sub(val).wrapping_add(m) as i32) >= 0 {
+                return val as i32;
+            }
+        }
+    }
 }
 
 /// Compute MD5 hash and return as (lo, hi) u64 pair.

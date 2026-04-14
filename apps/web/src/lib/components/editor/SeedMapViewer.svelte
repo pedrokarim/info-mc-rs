@@ -5,7 +5,7 @@
   import SeedMapTooltip from './SeedMapTooltip.svelte';
   import {
     mapState, initWorkers, terminateWorkers, pan, zoomIn, zoomOut,
-    requestVisibleTiles,
+    requestVisibleTiles, setSeed, persistState, restoreState,
   } from '$lib/stores/seed-map.svelte';
 
   function handleKeydown(e: KeyboardEvent) {
@@ -59,11 +59,44 @@
     }
   }
 
+  // Persist state on every meaningful change (debounced)
+  let persistTimeout: ReturnType<typeof setTimeout> | null = null;
+  function schedulePersist() {
+    if (persistTimeout) clearTimeout(persistTimeout);
+    persistTimeout = setTimeout(persistState, 300);
+  }
+
+  // Watch all persisted fields
+  $effect(() => {
+    // Touch all reactive fields we want to persist
+    void mapState.seedInput;
+    void mapState.mcVersion;
+    void mapState.dimension;
+    void mapState.centerX;
+    void mapState.centerZ;
+    void mapState.zoom;
+    void mapState.showBiomes;
+    void mapState.showSlimeChunks;
+    void mapState.showStructures;
+    void mapState.showGrid;
+    void mapState.showCoordinates;
+    void mapState.enabledStructures;
+    schedulePersist();
+  });
+
   onMount(() => {
     initWorkers();
+
+    // Restore from URL or localStorage
+    const restored = restoreState();
+    if (restored && mapState.seedInput) {
+      setSeed(mapState.seedInput);
+    }
+
     window.addEventListener('keydown', handleKeydown);
     return () => {
       window.removeEventListener('keydown', handleKeydown);
+      if (persistTimeout) clearTimeout(persistTimeout);
       terminateWorkers();
     };
   });

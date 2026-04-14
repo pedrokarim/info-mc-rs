@@ -5,9 +5,16 @@
     mapState, setSeed, setVersion, setDimension, setCenter, zoomIn, zoomOut,
   } from '$lib/stores/seed-map.svelte';
 
-  let seedInput = $state('');
+  let seedInput = $state(mapState.seedInput || '');
   let goToX = $state('0');
   let goToZ = $state('0');
+
+  // Sync seedInput when mapState changes (e.g. after restore from URL/localStorage)
+  $effect(() => {
+    if (mapState.seedInput && mapState.seedInput !== seedInput) {
+      seedInput = mapState.seedInput;
+    }
+  });
 
   // Detect if the input is text (not a number) to show the hash
   let isTextSeed = $derived(seedInput.trim() !== '' && isNaN(Number(seedInput.trim())));
@@ -20,35 +27,38 @@
     return hash.toString();
   });
 
-  // Structure types grouped by dimension (matching chunkbase)
+  // Structure types grouped by dimension.
+  // spriteY = y-offset in chunk-finders-tn-17.png (22x22 icons, step 22px)
   const ALL_STRUCTURES = [
     // Overworld
-    { id: 0,  name: 'Village',            icon: 'village',           dim: 'overworld' },
-    { id: 1,  name: 'Temple du désert',   icon: 'desert-temple',     dim: 'overworld' },
-    { id: 2,  name: 'Temple de jungle',   icon: 'jungle-temple',     dim: 'overworld' },
-    { id: 3,  name: 'Cabane de sorcière', icon: 'witch-hut',         dim: 'overworld' },
-    { id: 4,  name: 'Igloo',              icon: 'igloo',             dim: 'overworld' },
-    { id: 5,  name: 'Monument océanique', icon: 'ocean-monument',    dim: 'overworld' },
-    { id: 6,  name: 'Manoir',             icon: 'mansion',           dim: 'overworld' },
-    { id: 7,  name: 'Avant-poste',        icon: 'pillager-outpost',  dim: 'overworld' },
-    { id: 8,  name: 'Forteresse',         icon: 'stronghold',        dim: 'overworld' },
-    { id: 9,  name: 'Ruine océanique',    icon: 'ocean-ruin',        dim: 'overworld' },
-    { id: 10, name: 'Épave',              icon: 'shipwreck',         dim: 'overworld' },
-    { id: 11, name: 'Trésor enfoui',      icon: 'buried-treasure',   dim: 'overworld' },
-    { id: 12, name: 'Portail en ruines',  icon: 'ruined-portal',     dim: 'overworld' },
-    { id: 13, name: 'Cité antique',       icon: 'ancient-city',      dim: 'overworld' },
-    { id: 14, name: 'Ruines du sentier',  icon: 'trail-ruin',        dim: 'overworld' },
-    { id: 15, name: 'Chambre d\'épreuve', icon: 'trial-chamber',     dim: 'overworld' },
-    { id: 18, name: 'Mine abandonnée',    icon: 'mineshaft',         dim: 'overworld' },
-    { id: 19, name: 'Donjon',             icon: 'dungeon',           dim: 'overworld' },
-    { id: 20, name: 'Puits du désert',    icon: 'desert-well',       dim: 'overworld' },
-    { id: 21, name: 'Fossile',            icon: 'fossil',            dim: 'overworld' },
+    { id: 0,  name: 'Village',              spriteY: 22,  dim: 'overworld' },
+    { id: 1,  name: 'Temple du désert',     spriteY: 616, dim: 'overworld' },
+    { id: 2,  name: 'Temple de jungle',     spriteY: 418, dim: 'overworld' },
+    { id: 3,  name: 'Cabane de sorcière',   spriteY: 0,   dim: 'overworld' },
+    { id: 4,  name: 'Igloo',                spriteY: 440, dim: 'overworld' },
+    { id: 5,  name: 'Monument océanique',   spriteY: 308, dim: 'overworld' },
+    { id: 6,  name: 'Manoir',               spriteY: 374, dim: 'overworld' },
+    { id: 7,  name: 'Avant-poste',          spriteY: 220, dim: 'overworld' },
+    { id: 8,  name: 'Forteresse',           spriteY: 88,  dim: 'overworld' },
+    { id: 9,  name: 'Ruine océanique',      spriteY: 286, dim: 'overworld' },
+    { id: 10, name: 'Épave',                spriteY: 154, dim: 'overworld' },
+    { id: 11, name: 'Trésor enfoui',        spriteY: 660, dim: 'overworld' },
+    { id: 12, name: 'Portail en ruines',    spriteY: 176, dim: 'overworld' },
+    { id: 13, name: 'Cité antique',         spriteY: 704, dim: 'overworld' },
+    { id: 14, name: 'Ruines du sentier',    spriteY: 66,  dim: 'overworld' },
+    { id: 15, name: 'Chambre d\'épreuve',   spriteY: 44,  dim: 'overworld' },
+    { id: 18, name: 'Mine abandonnée',      spriteY: 352, dim: 'overworld' },
+    { id: 19, name: 'Donjon',               spriteY: 572, dim: 'overworld' },
+    { id: 20, name: 'Puits du désert',      spriteY: 594, dim: 'overworld' },
+    { id: 21, name: 'Fossile',              spriteY: 484, dim: 'overworld' },
     // Nether
-    { id: 16, name: 'Forteresse du Nether', icon: 'nether-fortress', dim: 'nether' },
-    { id: 17, name: 'Bastion',            icon: 'pillager-outpost',  dim: 'nether' },
-    { id: 12, name: 'Portail en ruines',  icon: 'ruined-portal',     dim: 'nether' },
+    { id: 16, name: 'Forteresse du Nether', spriteY: 330, dim: 'nether' },
+    { id: 17, name: 'Bastion',              spriteY: 242, dim: 'nether' },
+    { id: 12, name: 'Portail en ruines',    spriteY: 176, dim: 'nether' },
     // End
-    { id: 23, name: 'Cité de l\'End',     icon: 'end-city',          dim: 'end' },
+    { id: 23, name: 'Cité de l\'End',       spriteY: 528, dim: 'end' },
+    { id: 25, name: 'Vaisseau de l\'End',   spriteY: 550, dim: 'end' },
+    { id: 24, name: 'Portail de l\'End',    spriteY: 506, dim: 'end' },
   ];
 
   // Filter structures by current dimension
@@ -216,9 +226,8 @@
           class:active={mapState.enabledStructures.has(st.id)}
           title={st.name}
           onclick={() => toggleStructure(st.id)}
-        >
-          <img src="/images/ui/structures/{st.icon}.png" alt={st.name} class="struct-icon" />
-        </button>
+          style="background-position: 1px -{st.spriteY - 1}px;"
+        ></button>
       {/each}
     </div>
   </div>
@@ -486,39 +495,32 @@
   }
 
   .struct-btn {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     border: 1px solid var(--line-0, rgba(46, 94, 143, 0.34));
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.6);
+    /* chunk-finders-tn-17.png — 22x22 icons, y-step 22px */
+    background-image: url('/images/ui/chunk-finders-sprite.png');
+    background-repeat: no-repeat;
+    background-color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
     padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.3;
-    filter: grayscale(1);
+    opacity: 0.35;
+    filter: grayscale(0.8) brightness(0.9);
     transition: opacity 120ms ease, filter 120ms ease, border-color 120ms ease;
+    image-rendering: pixelated;
   }
 
   .struct-btn.active {
     opacity: 1;
     filter: none;
     border-color: var(--blue-0, #5e90ff);
-    background: rgba(94, 144, 255, 0.08);
+    background-color: rgba(94, 144, 255, 0.08);
   }
 
   .struct-btn:hover {
     opacity: 1;
     filter: none;
-  }
-
-  .struct-icon {
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    image-rendering: pixelated;
-    pointer-events: none;
   }
 
   /* ── Zoom ── */

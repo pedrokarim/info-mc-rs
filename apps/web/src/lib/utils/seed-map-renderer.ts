@@ -276,6 +276,7 @@ const STRUCT_SPRITES: Record<number, { sx: number; sy: number; sw: number; sh: n
 	21: { sx: 139, sy: 27,  sw: 26, sh: 25 }, // fossil
 	23: { sx: 112, sy: 27,  sw: 26, sh: 26 }, // end-city
 	24: { sx: 112, sy: 0,   sw: 26, sh: 26 }, // end-gateway
+	25: { sx: 112, sy: 54,  sw: 26, sh: 26 }, // end-city-ship
 };
 
 // Lazy-loaded spritesheet image
@@ -295,7 +296,8 @@ function renderStructures(ctx: CanvasRenderingContext2D, state: MapState) {
 	if (state.structures.length === 0) return;
 
 	const img = getSpriteImg();
-	const iconScale = Math.max(0.7, Math.min(1.5, state.zoom * 0.5));
+	// Fixed icon scale — chunkbase uses constant-size icons regardless of zoom
+	const iconScale = 1.0;
 
 	for (const s of state.structures) {
 		if (!state.enabledStructures.has(s.type)) continue;

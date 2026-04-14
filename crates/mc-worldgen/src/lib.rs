@@ -9,6 +9,7 @@ pub mod multinoise;
 pub mod nether;
 pub mod end;
 pub mod structures;
+pub mod end_city;
 pub mod legacy;
 
 use wasm_bindgen::prelude::*;
@@ -197,10 +198,30 @@ impl WorldGen {
                 self.seed, st, block_x, block_z, block_w, block_h,
             );
             for (bx, bz) in positions {
-                // End Cities spawn on End Midlands or End Highlands
+                // End Cities spawn on End Midlands or End Highlands.
+                // An End City is EITHER with ship OR without — never both.
                 if st == structures::StructureType::EndCity {
                     let biome = self.biome_at(bx, bz);
                     if biome != Biome::EndHighlands && biome != Biome::EndMidlands {
+                        continue;
+                    }
+                    // Determine if this End City has a ship
+                    let cx = bx >> 4;
+                    let cz = bz >> 4;
+                    let type_id = if end_city::has_end_ship(self.seed, cx, cz) {
+                        structures::StructureType::EndCityShip as u8 as i32
+                    } else {
+                        structures::StructureType::EndCity as u8 as i32
+                    };
+                    result.push(type_id);
+                    result.push(bx);
+                    result.push(bz);
+                    continue;
+                }
+                // End Gateway only spawns on End Highlands
+                if st == structures::StructureType::EndGateway {
+                    let biome = self.biome_at(bx, bz);
+                    if biome != Biome::EndHighlands {
                         continue;
                     }
                 }
@@ -222,7 +243,7 @@ impl WorldGen {
             "stronghold", "ocean-ruin", "shipwreck", "buried-treasure",
             "ruined-portal", "ancient-city", "trail-ruin", "trial-chamber",
             "nether-fortress", "bastion-treasure", "mineshaft", "dungeon",
-            "desert-well", "fossil", "spawn", "end-city", "end-gateway",
+            "desert-well", "fossil", "spawn", "end-city", "end-gateway", "end-city-ship",
         ];
         names.get(type_id as usize).unwrap_or(&"unknown").to_string()
     }
