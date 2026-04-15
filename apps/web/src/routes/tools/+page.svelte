@@ -62,6 +62,12 @@
       description: 'Créez vos feux d\'artifice avec preview animée. Formes, couleurs, effets et commande /give.',
       image: '/images/ui/tool-firework-designer-v01.png',
     },
+    {
+      href: '/tools/enchantment-calculator',
+      title: 'Calculateur d\'Enchantements',
+      description: 'Calculez le coût XP optimal pour vos enchantements. Ordre d\'enclume et détection "Too Expensive!".',
+      image: '/images/ui/tool-enchantment-calculator-v01.png',
+    },
   ];
 </script>
 

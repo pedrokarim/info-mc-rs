@@ -96,6 +96,7 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | tool-tellraw-generator-v01.png | Icône Générateur Tellraw | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-banner-designer-v01.png | Icône Designer Bannière | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-firework-designer-v01.png | Icône Designer Feu d'Artifice | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-enchantment-calculator-v01.png | Icône Calculateur Enchantements | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
 ## SEO / Open Graph (`/images/`)
 
@@ -478,4 +479,18 @@ PROMPT:
 
 NEGATIVE:
 photorealistic, real fireworks photo, dark photograph, full environment scene, realistic smoke particles, blurry, low quality, text, logo, watermark.
+```
+
+### tool-enchantment-calculator-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône du Calculateur d'Enchantements sur la page `/tools`
+- Style: **3D isométrique Minecraft** — enclume avec livres enchantés
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style enchantment calculator scene, a blocky iron anvil in the center with purple enchantment glyphs floating above it, an enchanted diamond sword with purple shimmer on the left side, three enchanted books with glowing covers stacked on the right, green XP orbs floating around, a tiny experience bar indicator below the anvil, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real anvil, real books, dark moody, full environment scene, realistic metal textures, blurry, low quality, text, logo, watermark.
 ```
