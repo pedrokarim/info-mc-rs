@@ -97,6 +97,7 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | tool-banner-designer-v01.png | Icône Designer Bannière | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-firework-designer-v01.png | Icône Designer Feu d'Artifice | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-enchantment-calculator-v01.png | Icône Calculateur Enchantements | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-command-generator-v01.png | Icône Générateur Commandes | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
 ## SEO / Open Graph (`/images/`)
 
@@ -493,4 +494,18 @@ PROMPT:
 
 NEGATIVE:
 photorealistic, real anvil, real books, dark moody, full environment scene, realistic metal textures, blurry, low quality, text, logo, watermark.
+```
+
+### tool-command-generator-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône du Générateur de Commandes sur la page `/tools`
+- Style: **3D isométrique Minecraft** — command block avec terminal
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style command generator scene, a glowing orange command block in the center with chain command blocks linked behind it, a floating dark terminal screen showing colorful command text lines (green and white), small redstone dust particles connecting the blocks, a tiny arrow cursor blinking on the screen, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real computer terminal, modern code editor, dark moody, full environment scene, realistic screen glow, blurry, low quality, text, logo, watermark.
 ```

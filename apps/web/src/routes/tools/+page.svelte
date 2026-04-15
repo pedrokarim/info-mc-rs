@@ -68,6 +68,12 @@
       description: 'Calculez le coût XP optimal pour vos enchantements. Ordre d\'enclume et détection "Too Expensive!".',
       image: '/images/ui/tool-enchantment-calculator-v01.png',
     },
+    {
+      href: '/tools/command-generator',
+      title: 'Générateur de Commandes',
+      description: 'Construisez vos commandes /give, /summon, /fill, /effect et plus avec autocomplete.',
+      image: '/images/ui/tool-command-generator-v01.png',
+    },
   ];
 </script>
 
