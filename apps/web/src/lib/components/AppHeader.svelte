@@ -15,6 +15,43 @@
 
   let menuOpen = $state(false);
 
+  // API health state
+  let apiStatus: 'checking' | 'online' | 'offline' = $state('checking');
+  let apiPing = $state(0);
+  let apiVersion = $state('');
+  let tooltipVisible = $state(false);
+  let mouseX = $state(0);
+  let mouseY = $state(0);
+
+  function onMouseMove(e: MouseEvent) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  }
+
+  async function checkHealth() {
+    const t0 = performance.now();
+    try {
+      const res = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(5000) });
+      apiPing = Math.round(performance.now() - t0);
+      if (res.ok) {
+        const data = await res.json();
+        apiVersion = data.version || '';
+        apiStatus = 'online';
+      } else {
+        apiStatus = 'offline';
+      }
+    } catch {
+      apiPing = Math.round(performance.now() - t0);
+      apiStatus = 'offline';
+    }
+  }
+
+  $effect(() => {
+    checkHealth();
+    const iv = setInterval(checkHealth, 30_000);
+    return () => clearInterval(iv);
+  });
+
   function isActive(pathname: string, href: string): boolean {
     if (href === '/') return pathname === '/';
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -54,9 +91,29 @@
           {link.label}
         </a>
       {/each}
-      <a class="nav-link cta" href={`${apiBase}/health`} target="_blank" rel="noreferrer">
-        API Live
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <a
+        class="nav-link cta"
+        class:cta-online={apiStatus === 'online'}
+        class:cta-offline={apiStatus === 'offline'}
+        href={`${apiBase}/health`}
+        target="_blank"
+        rel="noreferrer"
+        onmouseenter={() => (tooltipVisible = true)}
+        onmouseleave={() => (tooltipVisible = false)}
+        onmousemove={onMouseMove}
+      >
+        API {apiStatus === 'online' ? 'Live' : apiStatus === 'offline' ? 'Down' : '...'}
       </a>
+
+      {#if tooltipVisible}
+        <div class="api-tooltip" role="tooltip" style="left:{mouseX - 12}px;top:{mouseY + 16}px;transform:translateX(-100%);">
+          <span class="tt-row"><span class="tt-label">status</span><span class="tt-val" class:tt-green={apiStatus === 'online'} class:tt-red={apiStatus === 'offline'}>{apiStatus}</span></span>
+          <span class="tt-row"><span class="tt-label">ping</span><span class="tt-val">{apiPing}ms</span></span>
+          {#if apiVersion}<span class="tt-row"><span class="tt-label">ver</span><span class="tt-val">{apiVersion}</span></span>{/if}
+          <span class="tt-row"><span class="tt-label">host</span><span class="tt-val tt-mono">{apiBase || 'local'}</span></span>
+        </div>
+      {/if}
     </nav>
   </header>
 </div>

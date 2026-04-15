@@ -8,7 +8,7 @@
     tags: ['autodocs'],
     parameters: { layout: 'centered' },
     args: {
-      html: '<span style="color:#55ff55">Welcome</span> <span style="color:#ffffff">to</span> <span style="color:#ffaa00">MCInfo-RS</span><br><span style="color:#9ab6d6">Survival · Quests · Economy</span>',
+      html: '<span style="color:#55ff55">Welcome</span> <span style="color:#ffffff">to</span> <span style="color:#ffaa00">MCInfo</span><br><span style="color:#9ab6d6">Survival · Quests · Economy</span>',
       fallback: 'No MOTD'
     }
   });

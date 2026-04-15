@@ -172,6 +172,24 @@
       {/each}
     </div>
   </section>
+
+  <!-- Tools CTA -->
+  <section class="tools-cta">
+    <div class="tools-cta-icons" aria-hidden="true">
+      <img src="/images/ui/tool-skin-editor-v01.png" alt="" width="72" height="72" loading="lazy" />
+      <img src="/images/ui/tool-motd-editor-v01.png" alt="" width="72" height="72" loading="lazy" />
+      <img src="/images/ui/tool-banner-designer-v01.png" alt="" width="72" height="72" loading="lazy" />
+      <img src="/images/ui/tool-seed-map-v01.png" alt="" width="72" height="72" loading="lazy" />
+      <img src="/images/ui/tool-enchantment-calculator-v01.png" alt="" width="72" height="72" loading="lazy" />
+      <img src="/images/ui/tool-command-generator-v01.png" alt="" width="72" height="72" loading="lazy" />
+    </div>
+    <h3 class="tools-cta-title">12 outils gratuits pour Minecraft</h3>
+    <p class="tools-cta-desc">Éditeurs de skin, MOTD, bannières, calculateurs d'enchantements, seed map et plus encore.</p>
+    <a class="tools-cta-btn" href="/tools">
+      Explorer les outils
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+    </a>
+  </section>
 </main>
 
 <style>
@@ -294,6 +312,108 @@
   @media (max-width: 600px) {
     .home-server-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── Tools CTA ── */
+  .tools-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    margin-top: 1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(84, 126, 181, 0.18);
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 120%, rgba(88, 166, 255, 0.10) 0%, transparent 70%),
+      rgba(237, 245, 250, 0.6);
+  }
+
+  .tools-cta-icons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1.2rem;
+  }
+
+  .tools-cta-icons img {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    border: 2px solid rgba(84, 126, 181, 0.2);
+    background: rgba(255, 255, 255, 0.5);
+    object-fit: contain;
+    transition: transform 200ms ease;
+  }
+
+  .tools-cta:hover .tools-cta-icons img:nth-child(odd) {
+    transform: translateY(-3px);
+  }
+
+  .tools-cta:hover .tools-cta-icons img:nth-child(even) {
+    transform: translateY(3px);
+  }
+
+  .tools-cta-title {
+    margin: 0;
+    font-family: 'Teko', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 600;
+    color: var(--ink-0, #0f253a);
+    line-height: 1.15;
+  }
+
+  .tools-cta-desc {
+    margin: 0.35rem 0 0;
+    font-size: 0.88rem;
+    color: var(--ink-2, #5a7894);
+    max-width: 440px;
+    line-height: 1.45;
+  }
+
+  .tools-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 1.2rem;
+    padding: 0.6rem 1.4rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, #4a90d9 0%, #3570b8 100%);
+    border: 1px solid rgba(30, 75, 130, 0.4);
+    border-radius: 10px;
+    text-decoration: none;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 2px 6px rgba(16, 45, 72, 0.2);
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  }
+
+  .tools-cta-btn:hover {
+    background: linear-gradient(180deg, #5a9de3 0%, #407cc4 100%);
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 6px 16px rgba(16, 45, 72, 0.22);
+  }
+
+  .tools-cta-btn:active {
+    transform: translateY(0);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 1px 3px rgba(16, 45, 72, 0.15);
+  }
+
+  @media (max-width: 600px) {
+    .tools-cta-icons img {
+      width: 44px;
+      height: 44px;
+    }
+
+    .tools-cta-icons {
+      gap: 6px;
     }
   }
 </style>

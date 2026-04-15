@@ -249,16 +249,84 @@ a {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
     0 2px 0 var(--btn-depth-primary);
+  transition: background 300ms, border-color 300ms, box-shadow 300ms, transform 100ms;
 }
 
 .nav-link.cta:hover {
-  background: var(--btn-face-primary-hover);
   transform: translateY(-1px);
 }
 
 .nav-link.cta:active {
   transform: translateY(1px);
 }
+
+/* Online → green */
+.nav-link.cta.cta-online {
+  color: #0a3000;
+  background: #46d160;
+  border-color: #2ea043;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 0 #29903b;
+}
+
+.nav-link.cta.cta-online:hover {
+  background: #56db70;
+}
+
+/* Offline → red */
+.nav-link.cta.cta-offline {
+  color: #3c0a0a;
+  background: #ef4444;
+  border-color: #c53030;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 2px 0 #b42a2a;
+}
+
+.nav-link.cta.cta-offline:hover {
+  background: #f25e5e;
+}
+
+/* ── Tooltip (follows cursor) ── */
+.api-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  min-width: 160px;
+  padding: 0.5rem 0.6rem;
+  background: #1a2332;
+  border: 1px solid rgba(82, 136, 194, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #94a3b8;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tt-label {
+  opacity: 0.55;
+}
+
+.tt-val {
+  color: #e2e8f0;
+}
+
+.tt-green { color: #4ade80; }
+.tt-red { color: #f87171; }
+.tt-mono { font-size: 0.66rem; opacity: 0.7; }
 
 .page {
   width: var(--layout-width);
@@ -1136,39 +1204,116 @@ a {
   font-size: 0.79rem;
 }
 
+/* ── Footer ── */
 .site-footer {
   margin-top: auto;
-  padding: 0 0 1.1rem;
+  background: linear-gradient(180deg, #07405f, #042d44);
+  border-top: 1px solid rgba(89, 154, 205, 0.35);
+  color: #c8e4f5;
 }
 
-.site-footer-inner {
+.site-footer-top {
   width: var(--layout-width);
   margin: 0 auto;
-  border-radius: 0;
-  border-top: 1px solid rgba(89, 154, 205, 0.5);
-  border-left: 0;
-  border-right: 0;
-  border-bottom: 0;
-  background: linear-gradient(180deg, #07405f, #063754);
-  box-shadow: none;
-  padding: 0.72rem 0.88rem;
-  color: #e9f7ff;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 2rem;
+  padding: 2rem 0.88rem 1.6rem;
 }
 
-.site-footer-main {
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.footer-heading {
   margin: 0;
   font-family: 'Teko', 'Chakra Petch', sans-serif;
-  font-size: 1.28rem;
+  font-size: 1.2rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  line-height: 0.95;
+  color: #e9f7ff;
+  line-height: 1;
 }
 
-.site-footer-sub {
-  margin: 0.2rem 0 0;
-  color: #b8ddf2;
-  font-size: 0.79rem;
+.footer-tagline {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: #90bdda;
+  line-height: 1.45;
+  max-width: 280px;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.footer-links a {
+  text-decoration: none;
+  color: #90bdda;
+  font-size: 0.82rem;
+  transition: color 150ms ease;
+}
+
+.footer-links a:hover {
+  color: #fff;
+}
+
+.site-footer-bottom {
+  width: var(--layout-width);
+  margin: 0 auto;
+  padding: 0.9rem 0.88rem;
+  border-top: 1px solid rgba(89, 154, 205, 0.18);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.site-footer-bottom p {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #6a9bba;
+}
+
+.site-footer-bottom a {
+  color: #90bdda;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.site-footer-bottom a:hover {
+  color: #fff;
+}
+
+.footer-bottom-links {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.4rem;
+}
+
+.footer-bottom-links a {
+  font-size: 0.72rem;
+  color: #6a9bba;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.footer-bottom-links a:hover {
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .site-footer-top {
+    grid-template-columns: 1fr;
+    gap: 1.4rem;
+    padding: 1.5rem 0.88rem 1.2rem;
+  }
 }
 
 @media (max-width: 980px) {
