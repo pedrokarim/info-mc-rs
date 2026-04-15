@@ -50,6 +50,12 @@
       description: 'Créez des commandes /tellraw, /title et /actionbar avec couleurs, formats et gradients.',
       image: '/images/ui/tool-tellraw-generator-v01.png',
     },
+    {
+      href: '/tools/banner-designer',
+      title: 'Designer de Bannière',
+      description: 'Composez vos bannières Minecraft couche par couche avec 39 patterns et 16 couleurs.',
+      image: '/images/ui/tool-banner-designer-v01.png',
+    },
   ];
 </script>
 

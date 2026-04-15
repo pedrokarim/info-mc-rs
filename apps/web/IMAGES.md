@@ -94,6 +94,7 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 
 | tool-coordinate-calculator-v01.png | Icône Calculateur Coordonnées | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-tellraw-generator-v01.png | Icône Générateur Tellraw | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-banner-designer-v01.png | Icône Designer Bannière | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
 ## SEO / Open Graph (`/images/`)
 
@@ -434,4 +435,32 @@ PROMPT:
 
 NEGATIVE:
 photorealistic, real compass, modern GPS, calculator device, dark moody, full environment scene, realistic metal textures, blurry, low quality, text, logo, watermark.
+```
+
+### tool-tellraw-generator-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône du Générateur Tellraw sur la page `/tools`
+- Style: **3D isométrique Minecraft** — panneau de chat avec texte coloré
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style chat message generator scene, a floating command block with a glowing orange core, next to it a translucent chat bubble showing colorful formatted text (rainbow gradient letters, bold gold title), small JSON curly braces floating around, a tiny book and quill beside the command block, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real chat app, modern messaging UI, dark moody, full environment scene, realistic screen, blurry, low quality, text, logo, watermark.
+```
+
+### tool-banner-designer-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône du Designer de Bannière sur la page `/tools`
+- Style: **3D isométrique Minecraft** — bannières colorées sur supports
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style banner crafting scene, three blocky banner flags on wooden poles displaying different colorful patterns (red cross on white, blue chevron on yellow, green stripes on black), the banners are slightly waving, a crafting table nearby with dye bottles (red, blue, yellow, green) scattered on top, a loom block next to it, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real fabric flags, medieval tapestry, dark moody, full environment scene, realistic cloth physics, blurry, low quality, text, logo, watermark.
 ```
