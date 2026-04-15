@@ -44,6 +44,12 @@
       description: 'Convertissez Overworld ↔ Nether, trouvez votre chunk et région, calculez les distances.',
       image: '/images/ui/tool-coordinate-calculator-v01.png',
     },
+    {
+      href: '/tools/tellraw-generator',
+      title: 'Générateur Tellraw',
+      description: 'Créez des commandes /tellraw, /title et /actionbar avec couleurs, formats et gradients.',
+      image: '/images/ui/tool-tellraw-generator-v01.png',
+    },
   ];
 </script>
 

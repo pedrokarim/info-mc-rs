@@ -93,6 +93,7 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | tool-seed-map-v01.png | Icône Carte de Seed | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
 | tool-coordinate-calculator-v01.png | Icône Calculateur Coordonnées | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-tellraw-generator-v01.png | Icône Générateur Tellraw | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
 ## SEO / Open Graph (`/images/`)
 

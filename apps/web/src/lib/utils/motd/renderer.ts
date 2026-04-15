@@ -185,6 +185,19 @@ function findNameByHex(hex: string): string | null {
   return null;
 }
 
+// ── Tellraw / Title / Actionbar commands ─────────────────────────────
+
+export type CommandType = 'tellraw' | 'title' | 'subtitle' | 'actionbar';
+
+export function toCommand(chars: StyledChar[], command: CommandType, target: string = '@a'): string {
+  const json = JSON.stringify(toJsonComponent(chars));
+  if (command === 'tellraw') {
+    return `/tellraw ${target} ${json}`;
+  }
+  // title, subtitle, actionbar all use /title
+  return `/title ${target} ${command} ${json}`;
+}
+
 // ── MiniMessage (Kyori Adventure) ───────────────────────────────────
 
 export function toMiniMessage(chars: StyledChar[]): string {
