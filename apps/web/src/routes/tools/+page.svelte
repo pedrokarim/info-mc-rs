@@ -56,6 +56,12 @@
       description: 'Composez vos bannières Minecraft couche par couche avec 39 patterns et 16 couleurs.',
       image: '/images/ui/tool-banner-designer-v01.png',
     },
+    {
+      href: '/tools/firework-designer',
+      title: 'Designer de Feu d\'Artifice',
+      description: 'Créez vos feux d\'artifice avec preview animée. Formes, couleurs, effets et commande /give.',
+      image: '/images/ui/tool-firework-designer-v01.png',
+    },
   ];
 </script>
 

@@ -95,6 +95,7 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | tool-coordinate-calculator-v01.png | Icône Calculateur Coordonnées | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-tellraw-generator-v01.png | Icône Générateur Tellraw | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-banner-designer-v01.png | Icône Designer Bannière | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+| tool-firework-designer-v01.png | Icône Designer Feu d'Artifice | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
 ## SEO / Open Graph (`/images/`)
 
@@ -463,4 +464,18 @@ PROMPT:
 
 NEGATIVE:
 photorealistic, real fabric flags, medieval tapestry, dark moody, full environment scene, realistic cloth physics, blurry, low quality, text, logo, watermark.
+```
+
+### tool-firework-designer-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône du Designer de Feu d'Artifice sur la page `/tools`
+- Style: **3D isométrique Minecraft** — feux d'artifice explosant dans un ciel nocturne
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style firework crafting scene, a dark night sky background with three colorful firework explosions (red star burst, green large ball, blue and yellow mixed burst with sparkle trails), a blocky dispenser block below aiming upward, small firework rocket items and gunpowder scattered on a crafting table, glowing particle trails ascending, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real fireworks photo, dark photograph, full environment scene, realistic smoke particles, blurry, low quality, text, logo, watermark.
 ```
