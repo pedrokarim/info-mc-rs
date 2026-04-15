@@ -3,9 +3,10 @@
   import SeedMapCanvas from './SeedMapCanvas.svelte';
   import SeedMapControls from './SeedMapControls.svelte';
   import SeedMapTooltip from './SeedMapTooltip.svelte';
+  import SeedMapMarkerInfo from './SeedMapMarkerInfo.svelte';
   import {
     mapState, initWorkers, terminateWorkers, pan, zoomIn, zoomOut,
-    requestVisibleTiles, setSeed, persistState, restoreState,
+    requestVisibleTiles, setSeed, persistState, restoreState, randomSeed,
   } from '$lib/stores/seed-map.svelte';
 
   function handleKeydown(e: KeyboardEvent) {
@@ -91,6 +92,11 @@
     const restored = restoreState();
     if (restored && mapState.seedInput) {
       setSeed(mapState.seedInput);
+    } else if (!mapState.seedInput) {
+      // No seed persisted — start with a random one
+      const seed = randomSeed();
+      mapState.seedInput = seed;
+      setSeed(seed);
     }
 
     window.addEventListener('keydown', handleKeydown);
@@ -107,6 +113,7 @@
   <div class="map-main">
     <SeedMapCanvas />
     <SeedMapTooltip />
+    <SeedMapMarkerInfo />
   </div>
 </div>
 

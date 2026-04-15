@@ -38,6 +38,12 @@
       description: 'Visualisez les biomes et slime chunks de votre monde Minecraft à partir de sa seed.',
       image: '/images/ui/tool-seed-map-v01.png',
     },
+    {
+      href: '/tools/coordinate-calculator',
+      title: 'Calculateur de Coordonnées',
+      description: 'Convertissez Overworld ↔ Nether, trouvez votre chunk et région, calculez les distances.',
+      image: '/images/ui/tool-coordinate-calculator-v01.png',
+    },
   ];
 </script>
 

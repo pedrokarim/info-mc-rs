@@ -1,6 +1,6 @@
 /// Seed map store — tile-based architecture matching chunkbase's approach.
 /// Multiple workers compute 64x64 RGBA tiles in parallel.
-/// State persisted in URL search params + localStorage.
+/// Supports multiple independent instances via createSeedMapStore().
 
 import { browser } from '$app/environment';
 
@@ -8,12 +8,18 @@ const TILE_SIZE = 64;
 const WORKER_COUNT = Math.min(8, Math.max(2, (typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 4) - 1));
 const LS_KEY = 'seed-map-state';
 
-// ===== Tile cache =====
+/** Default enabled structure IDs — used to auto-enable new types added after the user's saved state. */
+const DEFAULT_ENABLED_STRUCTURES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25];
+
+/** Schema version — bump when adding new default structure IDs to auto-enable them on load. */
+const SCHEMA_VERSION = 2;
+
+// ===== Types =====
 
 export interface TileData {
-	rgba: Uint8Array;      // TILE_SIZE * TILE_SIZE * 4 bytes
-	biomeIds: Uint8Array;  // TILE_SIZE * TILE_SIZE biome IDs
-	step: number;          // block step used
+	rgba: Uint8Array;
+	biomeIds: Uint8Array;
+	step: number;
 }
 
 export interface MapState {
@@ -50,522 +56,14 @@ export interface MapState {
 	tileCache: Map<string, TileData>;
 	slimeCache: Map<string, Uint8Array>;
 	structures: Array<{ type: number; name: string; x: number; z: number }>;
+	selectedMarker: { type: number; name: string; x: number; z: number; biome: string } | null;
 	renderGeneration: number;
 
 	workersReady: number;
 	computing: boolean;
 }
 
-export const mapState: MapState = $state({
-	seedInput: '',
-	seedHi: 0,
-	seedLo: 0,
-	seedValid: false,
-
-	centerX: 0,
-	centerZ: 0,
-	zoom: 1,
-
-	showBiomes: true,
-	showSlimeChunks: true,
-	showStructures: true,
-	enabledStructures: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25]),
-	showGrid: true,
-	showCoordinates: true,
-
-	mcVersion: '1.21',
-	dimension: 'overworld' as 'overworld' | 'nether' | 'end',
-
-	hoverWorldX: 0,
-	hoverWorldZ: 0,
-	hoverChunkX: 0,
-	hoverChunkZ: 0,
-	hoverBiome: '',
-	hoverIsSlime: false,
-	hoverActive: false,
-
-	canvasWidth: 0,
-	canvasHeight: 0,
-
-	tileCache: new Map(),
-	slimeCache: new Map(),
-	structures: [],
-	renderGeneration: 0,
-
-	workersReady: 0,
-	computing: false,
-});
-
-// ===== Worker pool =====
-
-let workers: Worker[] = [];
-let workerBusy: boolean[] = [];
-let pendingTiles: Array<{ tileX: number; tileZ: number; step: number; dist: number }> = [];
-let tileIdCounter = 0;
-
-export function initWorkers() {
-	terminateWorkers();
-
-	for (let i = 0; i < WORKER_COUNT; i++) {
-		const w = new Worker(
-			new URL('../workers/seed-map-worker.ts', import.meta.url),
-			{ type: 'module' }
-		);
-		w.onmessage = (e) => handleWorkerMessage(i, e);
-		w.onerror = (e) => console.error(`[seed-map-worker-${i}]`, e);
-		workers.push(w);
-		workerBusy.push(false);
-	}
-}
-
-export function terminateWorkers() {
-	for (const w of workers) w.terminate();
-	workers = [];
-	workerBusy = [];
-	pendingTiles = [];
-}
-
-function handleWorkerMessage(workerIdx: number, e: MessageEvent) {
-	const msg = e.data;
-
-	if (msg.type === 'ready') {
-		if (msg.generation === mapState.renderGeneration) {
-			mapState.workersReady++;
-			if (mapState.workersReady >= WORKER_COUNT) {
-				requestVisibleTiles();
-			}
-		}
-	}
-
-	if (msg.type === 'tile-result') {
-		workerBusy[workerIdx] = false;
-
-		if (msg.generation === mapState.renderGeneration) {
-			const key = `${msg.tileX},${msg.tileZ},${msg.step}`;
-			mapState.tileCache.set(key, {
-				rgba: msg.rgba,
-				biomeIds: msg.biomeIds,
-				step: msg.step,
-			});
-
-			// Store structures (deduplicate by position)
-			if (msg.structures) {
-				const arr = msg.structures as number[];
-				for (let i = 0; i < arr.length; i += 3) {
-					const typeId = arr[i];
-					const bx = arr[i + 1];
-					const bz = arr[i + 2];
-					const key = `${typeId},${bx},${bz}`;
-					if (!mapState.structures.find(s => s.x === bx && s.z === bz && s.type === typeId)) {
-						mapState.structures.push({
-							type: typeId,
-							name: STRUCTURE_NAMES[typeId] ?? 'unknown',
-							x: bx,
-							z: bz,
-						});
-					}
-				}
-			}
-
-			// Store slime chunk data
-			if (msg.slime) {
-				for (let dz = 0; dz < msg.slimeH; dz++) {
-					for (let dx = 0; dx < msg.slimeW; dx++) {
-						const cx = msg.slimeChunkX + dx;
-						const cz = msg.slimeChunkZ + dz;
-						const isSlime = msg.slime[dz * msg.slimeW + dx] === 1;
-						if (isSlime) {
-							mapState.slimeCache.set(`${cx},${cz}`, new Uint8Array([1]));
-						}
-					}
-				}
-			}
-		}
-
-		// Dispatch next pending tile to this worker
-		dispatchNext(workerIdx);
-	}
-
-	if (msg.type === 'slime-result') {
-		workerBusy[workerIdx] = false;
-		if (msg.generation === mapState.renderGeneration) {
-			const key = `${msg.chunkX},${msg.chunkZ}`;
-			mapState.slimeCache.set(key, msg.slime);
-		}
-		dispatchNext(workerIdx);
-	}
-
-	if (msg.type === 'error') {
-		workerBusy[workerIdx] = false;
-		console.error(`[worker-${workerIdx}]`, msg.message);
-		dispatchNext(workerIdx);
-	}
-}
-
-function dispatchNext(workerIdx: number) {
-	if (pendingTiles.length === 0) {
-		// Check if all workers idle
-		if (workerBusy.every(b => !b)) {
-			mapState.computing = false;
-		}
-		return;
-	}
-
-	const tile = pendingTiles.shift()!;
-	workerBusy[workerIdx] = true;
-
-	workers[workerIdx].postMessage({
-		type: 'tile',
-		tileX: tile.tileX,
-		tileZ: tile.tileZ,
-		tileSize: TILE_SIZE,
-		step: tile.step,
-		generation: mapState.renderGeneration,
-		tileId: tileIdCounter++,
-	});
-}
-
-// ===== Seed / version =====
-
-function javaStringHashCode(s: string): number {
-	let hash = 0;
-	for (const ch of s) {
-		hash = (Math.imul(hash, 31) + ch.charCodeAt(0)) | 0;
-	}
-	return hash;
-}
-
-export function parseSeed(input: string): { hi: number; lo: number } {
-	let seed: bigint;
-	try {
-		seed = BigInt(input);
-	} catch {
-		seed = BigInt(javaStringHashCode(input));
-	}
-	const lo = Number(BigInt.asIntN(32, seed));
-	const hi = Number(BigInt.asIntN(32, seed >> 32n));
-	return { hi, lo };
-}
-
-export function setSeed(input: string) {
-	mapState.seedInput = input;
-
-	if (!input.trim()) {
-		mapState.seedValid = false;
-		return;
-	}
-
-	try {
-		const { hi, lo } = parseSeed(input);
-		mapState.seedHi = hi;
-		mapState.seedLo = lo;
-		mapState.seedValid = true;
-		mapState.tileCache = new Map();
-		mapState.slimeCache = new Map();
-		mapState.structures = [];
-		mapState.renderGeneration++;
-		mapState.workersReady = 0;
-		mapState.computing = false;
-		pendingTiles = [];
-
-		// Init all workers with new seed
-		for (const w of workers) {
-			w.postMessage({
-				type: 'init',
-				seedHi: hi,
-				seedLo: lo,
-				version: mapState.mcVersion,
-				dimension: mapState.dimension,
-				generation: mapState.renderGeneration,
-			});
-		}
-	} catch (err) {
-		console.error('[seed-map] setSeed error:', err);
-		mapState.seedValid = false;
-	}
-}
-
-export function setVersion(version: string) {
-	mapState.mcVersion = version;
-	if (mapState.seedValid) {
-		mapState.tileCache = new Map();
-		mapState.slimeCache = new Map();
-		mapState.structures = [];
-		mapState.renderGeneration++;
-		mapState.workersReady = 0;
-		mapState.computing = false;
-		pendingTiles = [];
-
-		for (const w of workers) {
-			w.postMessage({
-				type: 'init',
-				seedHi: mapState.seedHi,
-				seedLo: mapState.seedLo,
-				version,
-				dimension: mapState.dimension,
-				generation: mapState.renderGeneration,
-			});
-		}
-	}
-}
-
-export function setDimension(dim: 'overworld' | 'nether' | 'end') {
-	mapState.dimension = dim;
-	if (mapState.seedValid) {
-		mapState.tileCache = new Map();
-		mapState.slimeCache = new Map();
-		mapState.structures = [];
-		mapState.renderGeneration++;
-		mapState.workersReady = 0;
-		mapState.computing = false;
-		pendingTiles = [];
-
-		for (const w of workers) {
-			w.postMessage({
-				type: 'init',
-				seedHi: mapState.seedHi,
-				seedLo: mapState.seedLo,
-				version: mapState.mcVersion,
-				dimension: dim,
-				generation: mapState.renderGeneration,
-			});
-		}
-	}
-}
-
-// ===== Viewport =====
-
-const ZOOM_LEVELS = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16];
-
-export function zoomIn() {
-	const idx = ZOOM_LEVELS.indexOf(mapState.zoom);
-	if (idx < ZOOM_LEVELS.length - 1) {
-		mapState.zoom = ZOOM_LEVELS[idx + 1];
-	}
-}
-
-export function zoomOut() {
-	const idx = ZOOM_LEVELS.indexOf(mapState.zoom);
-	if (idx > 0) {
-		mapState.zoom = ZOOM_LEVELS[idx - 1];
-	}
-}
-
-export function zoomToward(canvasX: number, canvasY: number, delta: number) {
-	const oldZoom = mapState.zoom;
-	const idx = ZOOM_LEVELS.indexOf(oldZoom);
-	const newIdx = delta < 0
-		? Math.min(idx + 1, ZOOM_LEVELS.length - 1)
-		: Math.max(idx - 1, 0);
-	const newZoom = ZOOM_LEVELS[newIdx];
-
-	if (newZoom === oldZoom) return;
-
-	const cx = mapState.canvasWidth / 2;
-	const cy = mapState.canvasHeight / 2;
-	const worldX = mapState.centerX + (canvasX - cx) / oldZoom;
-	const worldZ = mapState.centerZ + (canvasY - cy) / oldZoom;
-
-	mapState.centerX = worldX - (canvasX - cx) / newZoom;
-	mapState.centerZ = worldZ - (canvasY - cy) / newZoom;
-	mapState.zoom = newZoom;
-}
-
-export function pan(dx: number, dz: number) {
-	mapState.centerX += dx;
-	mapState.centerZ += dz;
-}
-
-export function setCenter(x: number, z: number) {
-	mapState.centerX = x;
-	mapState.centerZ = z;
-}
-
-// ===== Tile system =====
-
-/** Get the block-step for the current zoom level.
- * Like chunkbase: higher zoom = finer resolution. */
-export function getStep(): number {
-	// At zoom 16 (most zoomed in): step=4 (native biome res)
-	// At zoom 1: step=4
-	// At zoom 0.25: step=16
-	// At zoom 0.0625: step=64
-	if (mapState.zoom >= 1) return 4;
-	if (mapState.zoom >= 0.25) return 16;
-	if (mapState.zoom >= 0.0625) return 64;
-	return 128;
-}
-
-/** Get visible tile range for the current viewport. */
-export function getVisibleTileRange() {
-	const step = getStep();
-	const tileWorldSize = TILE_SIZE * step; // size of one tile in blocks
-
-	const halfW = mapState.canvasWidth / 2 / mapState.zoom;
-	const halfH = mapState.canvasHeight / 2 / mapState.zoom;
-
-	const minBlockX = mapState.centerX - halfW;
-	const maxBlockX = mapState.centerX + halfW;
-	const minBlockZ = mapState.centerZ - halfH;
-	const maxBlockZ = mapState.centerZ + halfH;
-
-	return {
-		minTX: Math.floor(minBlockX / tileWorldSize) - 1,
-		maxTX: Math.floor(maxBlockX / tileWorldSize) + 1,
-		minTZ: Math.floor(minBlockZ / tileWorldSize) - 1,
-		maxTZ: Math.floor(maxBlockZ / tileWorldSize) + 1,
-		step,
-		tileWorldSize,
-	};
-}
-
-export function requestVisibleTiles() {
-	if (workers.length === 0 || mapState.workersReady < WORKER_COUNT || !mapState.seedValid) return;
-
-	const range = getVisibleTileRange();
-	const centerTX = Math.floor(mapState.centerX / range.tileWorldSize);
-	const centerTZ = Math.floor(mapState.centerZ / range.tileWorldSize);
-
-	// Clear old pending tiles
-	pendingTiles = [];
-
-	for (let tx = range.minTX; tx <= range.maxTX; tx++) {
-		for (let tz = range.minTZ; tz <= range.maxTZ; tz++) {
-			const key = `${tx},${tz},${range.step}`;
-			if (!mapState.tileCache.has(key)) {
-				const dx = tx - centerTX;
-				const dz = tz - centerTZ;
-				pendingTiles.push({ tileX: tx, tileZ: tz, step: range.step, dist: dx * dx + dz * dz });
-			}
-		}
-	}
-
-	if (pendingTiles.length === 0) return;
-
-	// Sort by distance to center (closest first)
-	pendingTiles.sort((a, b) => a.dist - b.dist);
-
-	mapState.computing = true;
-
-	// Dispatch to all idle workers
-	for (let i = 0; i < workers.length; i++) {
-		if (!workerBusy[i] && pendingTiles.length > 0) {
-			dispatchNext(i);
-		}
-	}
-}
-
-// ===== Biome info =====
-
-// ===== URL + localStorage persistence =====
-
-/** Save current state to URL hash and localStorage. */
-export function persistState() {
-	if (!browser) return;
-
-	const params = new URLSearchParams();
-	if (mapState.seedInput) params.set('seed', mapState.seedInput);
-	params.set('v', mapState.mcVersion);
-	params.set('dim', mapState.dimension);
-	params.set('x', Math.round(mapState.centerX).toString());
-	params.set('z', Math.round(mapState.centerZ).toString());
-	params.set('zoom', mapState.zoom.toString());
-
-	// Layer toggles
-	if (!mapState.showBiomes) params.set('biomes', '0');
-	if (!mapState.showSlimeChunks) params.set('slime', '0');
-	if (!mapState.showStructures) params.set('structs', '0');
-	if (!mapState.showGrid) params.set('grid', '0');
-	if (!mapState.showCoordinates) params.set('coords', '0');
-
-	// Enabled structures (only save if not all enabled)
-	const allIds = [...mapState.enabledStructures].sort().join(',');
-	params.set('st', allIds);
-
-	// Update URL without reload
-	const hash = '#' + params.toString();
-	if (window.location.hash !== hash) {
-		history.replaceState(null, '', hash);
-	}
-
-	// Also save to localStorage
-	try {
-		localStorage.setItem(LS_KEY, JSON.stringify({
-			seed: mapState.seedInput,
-			version: mapState.mcVersion,
-			dimension: mapState.dimension,
-			x: Math.round(mapState.centerX),
-			z: Math.round(mapState.centerZ),
-			zoom: mapState.zoom,
-			showBiomes: mapState.showBiomes,
-			showSlimeChunks: mapState.showSlimeChunks,
-			showStructures: mapState.showStructures,
-			showGrid: mapState.showGrid,
-			showCoordinates: mapState.showCoordinates,
-			enabledStructures: [...mapState.enabledStructures],
-		}));
-	} catch { /* quota exceeded, ignore */ }
-}
-
-/** Restore state from URL hash (priority) or localStorage. */
-export function restoreState(): boolean {
-	if (!browser) return false;
-
-	// Try URL hash first
-	const hash = window.location.hash.slice(1);
-	if (hash) {
-		const params = new URLSearchParams(hash);
-		const seed = params.get('seed');
-		if (seed) {
-			mapState.seedInput = seed;
-			mapState.mcVersion = params.get('v') || mapState.mcVersion;
-			mapState.dimension = (params.get('dim') as typeof mapState.dimension) || mapState.dimension;
-			mapState.centerX = parseFloat(params.get('x') || '0');
-			mapState.centerZ = parseFloat(params.get('z') || '0');
-			mapState.zoom = parseFloat(params.get('zoom') || '1');
-
-			if (params.get('biomes') === '0') mapState.showBiomes = false;
-			if (params.get('slime') === '0') mapState.showSlimeChunks = false;
-			if (params.get('structs') === '0') mapState.showStructures = false;
-			if (params.get('grid') === '0') mapState.showGrid = false;
-			if (params.get('coords') === '0') mapState.showCoordinates = false;
-
-			const st = params.get('st');
-			if (st) {
-				mapState.enabledStructures = new Set(st.split(',').map(Number).filter(n => !isNaN(n)));
-			}
-
-			return true;
-		}
-	}
-
-	// Fallback to localStorage
-	try {
-		const raw = localStorage.getItem(LS_KEY);
-		if (raw) {
-			const saved = JSON.parse(raw);
-			if (saved.seed) {
-				mapState.seedInput = saved.seed;
-				mapState.mcVersion = saved.version || mapState.mcVersion;
-				mapState.dimension = saved.dimension || mapState.dimension;
-				mapState.centerX = saved.x ?? 0;
-				mapState.centerZ = saved.z ?? 0;
-				mapState.zoom = saved.zoom ?? 1;
-				mapState.showBiomes = saved.showBiomes ?? true;
-				mapState.showSlimeChunks = saved.showSlimeChunks ?? true;
-				mapState.showStructures = saved.showStructures ?? true;
-				mapState.showGrid = saved.showGrid ?? true;
-				mapState.showCoordinates = saved.showCoordinates ?? true;
-				if (saved.enabledStructures) {
-					mapState.enabledStructures = new Set(saved.enabledStructures);
-				}
-				return true;
-			}
-		}
-	} catch { /* corrupt data, ignore */ }
-
-	return false;
-}
+// ===== Shared lookup tables (stateless, shared across all instances) =====
 
 const BIOME_NAMES: Record<number, string> = {
 	0: 'Ocean', 1: 'Deep Ocean', 2: 'Frozen Ocean', 3: 'Deep Frozen Ocean',
@@ -601,9 +99,7 @@ const BIOME_COLORS: Record<number, number> = {
 	40: 0x7E7E7E, 41: 0x606060, 42: 0x787878, 43: 0x507050,
 	44: 0x0000FF, 45: 0xA0A0FF, 46: 0xFADE55, 47: 0xFAF0C0,
 	48: 0xA2A284, 49: 0xFF00FF,
-	// Nether
 	60: 0xBF3B3B, 61: 0x5E3830, 62: 0xDD0808, 63: 0x49907B, 64: 0x403636,
-	// End
 	70: 0x8080FF, 71: 0xD5CE8E, 72: 0xB5AE6E, 73: 0x706848, 74: 0x000000,
 };
 
@@ -617,7 +113,6 @@ const STRUCTURE_NAMES: Record<number, string> = {
 	25: 'End City Ship',
 };
 
-// Icon names matching the chunkbase spritesheet
 const STRUCTURE_ICONS: Record<number, string> = {
 	0: 'village', 1: 'desert-temple', 2: 'jungle-temple', 3: 'witch-hut',
 	4: 'igloo', 5: 'ocean-monument', 6: 'mansion', 7: 'pillager-outpost',
@@ -626,20 +121,448 @@ const STRUCTURE_ICONS: Record<number, string> = {
 	16: 'nether-fortress', 17: 'bastion-treasure',
 };
 
-export function getStructureName(typeId: number): string {
-	return STRUCTURE_NAMES[typeId] ?? 'Unknown';
+// ===== Stateless utility functions (shared) =====
+
+function javaStringHashCode(s: string): number {
+	let hash = 0;
+	for (const ch of s) {
+		hash = (Math.imul(hash, 31) + ch.charCodeAt(0)) | 0;
+	}
+	return hash;
 }
 
-export function getStructureIconName(typeId: number): string {
-	return STRUCTURE_ICONS[typeId] ?? 'unknown';
+export function parseSeed(input: string): { hi: number; lo: number } {
+	let seed: bigint;
+	try {
+		seed = BigInt(input);
+	} catch {
+		seed = BigInt(javaStringHashCode(input));
+	}
+	const lo = Number(BigInt.asIntN(32, seed));
+	const hi = Number(BigInt.asIntN(32, seed >> 32n));
+	return { hi, lo };
 }
 
-export function getBiomeName(id: number): string {
-	return BIOME_NAMES[id] ?? 'Unknown';
+export function randomSeed(): string {
+	const hi = (Math.random() * 0x100000000) >>> 0;
+	const lo = (Math.random() * 0x100000000) >>> 0;
+	const big = (BigInt(hi) << 32n) | BigInt(lo);
+	return BigInt.asIntN(64, big).toString();
 }
 
-export function getBiomeColor(id: number): number {
-	return BIOME_COLORS[id] ?? 0xFF00FF;
+export function getStructureName(typeId: number): string { return STRUCTURE_NAMES[typeId] ?? 'Unknown'; }
+export function getStructureIconName(typeId: number): string { return STRUCTURE_ICONS[typeId] ?? 'unknown'; }
+export function getBiomeName(id: number): string { return BIOME_NAMES[id] ?? 'Unknown'; }
+export function getBiomeColor(id: number): number { return BIOME_COLORS[id] ?? 0xFF00FF; }
+
+const ZOOM_LEVELS = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16];
+
+// ===== Store instance type =====
+
+export interface SeedMapStore {
+	state: MapState;
+	initWorkers(): void;
+	terminateWorkers(): void;
+	setSeed(input: string): void;
+	setVersion(version: string): void;
+	setDimension(dim: 'overworld' | 'nether' | 'end'): void;
+	zoomIn(): void;
+	zoomOut(): void;
+	zoomToward(canvasX: number, canvasY: number, delta: number): void;
+	pan(dx: number, dz: number): void;
+	setCenter(x: number, z: number): void;
+	getStep(): number;
+	getVisibleTileRange(): { minTX: number; maxTX: number; minTZ: number; maxTZ: number; step: number; tileWorldSize: number };
+	requestVisibleTiles(): void;
+	persistState(): void;
+	restoreState(): boolean;
 }
+
+// ===== Factory =====
+
+export function createSeedMapStore(): SeedMapStore {
+	const state: MapState = $state({
+		seedInput: '',
+		seedHi: 0,
+		seedLo: 0,
+		seedValid: false,
+
+		centerX: 0,
+		centerZ: 0,
+		zoom: 1,
+
+		showBiomes: true,
+		showSlimeChunks: true,
+		showStructures: true,
+		enabledStructures: new Set(DEFAULT_ENABLED_STRUCTURES),
+		showGrid: true,
+		showCoordinates: true,
+
+		mcVersion: '1.21',
+		dimension: 'overworld' as 'overworld' | 'nether' | 'end',
+
+		hoverWorldX: 0,
+		hoverWorldZ: 0,
+		hoverChunkX: 0,
+		hoverChunkZ: 0,
+		hoverBiome: '',
+		hoverIsSlime: false,
+		hoverActive: false,
+
+		canvasWidth: 0,
+		canvasHeight: 0,
+
+		tileCache: new Map(),
+		slimeCache: new Map(),
+		structures: [],
+		selectedMarker: null as { type: number; name: string; x: number; z: number; biome: string } | null,
+		renderGeneration: 0,
+
+		workersReady: 0,
+		computing: false,
+	});
+
+	// ── Worker pool (private to this instance) ──
+
+	let workers: Worker[] = [];
+	let workerBusy: boolean[] = [];
+	let pendingTiles: Array<{ tileX: number; tileZ: number; step: number; dist: number }> = [];
+	let tileIdCounter = 0;
+
+	function initWorkers() {
+		terminateWorkers();
+		for (let i = 0; i < WORKER_COUNT; i++) {
+			const w = new Worker(
+				new URL('../workers/seed-map-worker.ts', import.meta.url),
+				{ type: 'module' }
+			);
+			w.onmessage = (e) => handleWorkerMessage(i, e);
+			w.onerror = (e) => console.error(`[seed-map-worker-${i}]`, e);
+			workers.push(w);
+			workerBusy.push(false);
+		}
+	}
+
+	function terminateWorkers() {
+		for (const w of workers) w.terminate();
+		workers = [];
+		workerBusy = [];
+		pendingTiles = [];
+	}
+
+	function handleWorkerMessage(workerIdx: number, e: MessageEvent) {
+		const msg = e.data;
+
+		if (msg.type === 'ready') {
+			if (msg.generation === state.renderGeneration) {
+				state.workersReady++;
+				if (state.workersReady >= WORKER_COUNT) {
+					requestVisibleTiles();
+				}
+			}
+		}
+
+		if (msg.type === 'tile-result') {
+			workerBusy[workerIdx] = false;
+			if (msg.generation === state.renderGeneration) {
+				const key = `${msg.tileX},${msg.tileZ},${msg.step}`;
+				state.tileCache.set(key, { rgba: msg.rgba, biomeIds: msg.biomeIds, step: msg.step });
+
+				if (msg.structures) {
+					const arr = msg.structures as number[];
+					for (let i = 0; i < arr.length; i += 3) {
+						const typeId = arr[i], bx = arr[i + 1], bz = arr[i + 2];
+						if (!state.structures.find(s => s.x === bx && s.z === bz && s.type === typeId)) {
+							state.structures.push({ type: typeId, name: STRUCTURE_NAMES[typeId] ?? 'unknown', x: bx, z: bz });
+						}
+					}
+				}
+
+				if (msg.slime) {
+					for (let dz = 0; dz < msg.slimeH; dz++) {
+						for (let dx = 0; dx < msg.slimeW; dx++) {
+							const cx = msg.slimeChunkX + dx, cz = msg.slimeChunkZ + dz;
+							if (msg.slime[dz * msg.slimeW + dx] === 1) {
+								state.slimeCache.set(`${cx},${cz}`, new Uint8Array([1]));
+							}
+						}
+					}
+				}
+			}
+			dispatchNext(workerIdx);
+		}
+
+		if (msg.type === 'slime-result') {
+			workerBusy[workerIdx] = false;
+			if (msg.generation === state.renderGeneration) {
+				state.slimeCache.set(`${msg.chunkX},${msg.chunkZ}`, msg.slime);
+			}
+			dispatchNext(workerIdx);
+		}
+
+		if (msg.type === 'error') {
+			workerBusy[workerIdx] = false;
+			console.error(`[worker-${workerIdx}]`, msg.message);
+			dispatchNext(workerIdx);
+		}
+	}
+
+	function dispatchNext(workerIdx: number) {
+		if (pendingTiles.length === 0) {
+			if (workerBusy.every(b => !b)) state.computing = false;
+			return;
+		}
+		const tile = pendingTiles.shift()!;
+		workerBusy[workerIdx] = true;
+		workers[workerIdx].postMessage({
+			type: 'tile', tileX: tile.tileX, tileZ: tile.tileZ,
+			tileSize: TILE_SIZE, step: tile.step,
+			generation: state.renderGeneration, tileId: tileIdCounter++,
+		});
+	}
+
+	// ── Helpers to reinit workers on seed/version/dimension change ──
+
+	function reinitWorkerState() {
+		state.tileCache = new Map();
+		state.slimeCache = new Map();
+		state.structures = [];
+		state.renderGeneration++;
+		state.workersReady = 0;
+		state.computing = false;
+		pendingTiles = [];
+	}
+
+	function postInitToWorkers() {
+		for (const w of workers) {
+			w.postMessage({
+				type: 'init',
+				seedHi: state.seedHi, seedLo: state.seedLo,
+				version: state.mcVersion, dimension: state.dimension,
+				generation: state.renderGeneration,
+			});
+		}
+	}
+
+	// ── Seed / version / dimension ──
+
+	function setSeed(input: string) {
+		state.seedInput = input;
+		if (!input.trim()) { state.seedValid = false; return; }
+		try {
+			const { hi, lo } = parseSeed(input);
+			state.seedHi = hi;
+			state.seedLo = lo;
+			state.seedValid = true;
+			reinitWorkerState();
+			postInitToWorkers();
+		} catch (err) {
+			console.error('[seed-map] setSeed error:', err);
+			state.seedValid = false;
+		}
+	}
+
+	function setVersion(version: string) {
+		state.mcVersion = version;
+		if (state.seedValid) { reinitWorkerState(); postInitToWorkers(); }
+	}
+
+	function setDimension(dim: 'overworld' | 'nether' | 'end') {
+		state.dimension = dim;
+		if (state.seedValid) { reinitWorkerState(); postInitToWorkers(); }
+	}
+
+	// ── Viewport ──
+
+	function zoomIn() {
+		const idx = ZOOM_LEVELS.indexOf(state.zoom);
+		if (idx < ZOOM_LEVELS.length - 1) state.zoom = ZOOM_LEVELS[idx + 1];
+	}
+
+	function zoomOut() {
+		const idx = ZOOM_LEVELS.indexOf(state.zoom);
+		if (idx > 0) state.zoom = ZOOM_LEVELS[idx - 1];
+	}
+
+	function zoomToward(canvasX: number, canvasY: number, delta: number) {
+		const oldZoom = state.zoom;
+		const idx = ZOOM_LEVELS.indexOf(oldZoom);
+		const newIdx = delta < 0 ? Math.min(idx + 1, ZOOM_LEVELS.length - 1) : Math.max(idx - 1, 0);
+		const newZoom = ZOOM_LEVELS[newIdx];
+		if (newZoom === oldZoom) return;
+		const cx = state.canvasWidth / 2, cy = state.canvasHeight / 2;
+		const worldX = state.centerX + (canvasX - cx) / oldZoom;
+		const worldZ = state.centerZ + (canvasY - cy) / oldZoom;
+		state.centerX = worldX - (canvasX - cx) / newZoom;
+		state.centerZ = worldZ - (canvasY - cy) / newZoom;
+		state.zoom = newZoom;
+	}
+
+	function pan(dx: number, dz: number) { state.centerX += dx; state.centerZ += dz; }
+	function setCenter(x: number, z: number) { state.centerX = x; state.centerZ = z; }
+
+	// ── Tile system ──
+
+	function getStep(): number {
+		if (state.zoom >= 1) return 4;
+		if (state.zoom >= 0.25) return 16;
+		if (state.zoom >= 0.0625) return 64;
+		return 128;
+	}
+
+	function getVisibleTileRange() {
+		const step = getStep();
+		const tileWorldSize = TILE_SIZE * step;
+		const halfW = state.canvasWidth / 2 / state.zoom;
+		const halfH = state.canvasHeight / 2 / state.zoom;
+		return {
+			minTX: Math.floor((state.centerX - halfW) / tileWorldSize) - 1,
+			maxTX: Math.floor((state.centerX + halfW) / tileWorldSize) + 1,
+			minTZ: Math.floor((state.centerZ - halfH) / tileWorldSize) - 1,
+			maxTZ: Math.floor((state.centerZ + halfH) / tileWorldSize) + 1,
+			step, tileWorldSize,
+		};
+	}
+
+	function requestVisibleTiles() {
+		if (workers.length === 0 || state.workersReady < WORKER_COUNT || !state.seedValid) return;
+		const range = getVisibleTileRange();
+		const centerTX = Math.floor(state.centerX / range.tileWorldSize);
+		const centerTZ = Math.floor(state.centerZ / range.tileWorldSize);
+		pendingTiles = [];
+		for (let tx = range.minTX; tx <= range.maxTX; tx++) {
+			for (let tz = range.minTZ; tz <= range.maxTZ; tz++) {
+				const key = `${tx},${tz},${range.step}`;
+				if (!state.tileCache.has(key)) {
+					const dx = tx - centerTX, dz = tz - centerTZ;
+					pendingTiles.push({ tileX: tx, tileZ: tz, step: range.step, dist: dx * dx + dz * dz });
+				}
+			}
+		}
+		if (pendingTiles.length === 0) return;
+		pendingTiles.sort((a, b) => a.dist - b.dist);
+		state.computing = true;
+		for (let i = 0; i < workers.length; i++) {
+			if (!workerBusy[i] && pendingTiles.length > 0) dispatchNext(i);
+		}
+	}
+
+	// ── Persistence ──
+
+	function persistState() {
+		if (!browser) return;
+		const params = new URLSearchParams();
+		if (state.seedInput) params.set('seed', state.seedInput);
+		params.set('v', state.mcVersion);
+		params.set('dim', state.dimension);
+		params.set('x', Math.round(state.centerX).toString());
+		params.set('z', Math.round(state.centerZ).toString());
+		params.set('zoom', state.zoom.toString());
+		if (!state.showBiomes) params.set('biomes', '0');
+		if (!state.showSlimeChunks) params.set('slime', '0');
+		if (!state.showStructures) params.set('structs', '0');
+		if (!state.showGrid) params.set('grid', '0');
+		if (!state.showCoordinates) params.set('coords', '0');
+		params.set('st', [...state.enabledStructures].sort().join(','));
+		params.set('sv', SCHEMA_VERSION.toString());
+		const hash = '#' + params.toString();
+		if (window.location.hash !== hash) history.replaceState(null, '', hash);
+		try {
+			localStorage.setItem(LS_KEY, JSON.stringify({
+				schemaVersion: SCHEMA_VERSION, seed: state.seedInput,
+				version: state.mcVersion, dimension: state.dimension,
+				x: Math.round(state.centerX), z: Math.round(state.centerZ), zoom: state.zoom,
+				showBiomes: state.showBiomes, showSlimeChunks: state.showSlimeChunks,
+				showStructures: state.showStructures, showGrid: state.showGrid,
+				showCoordinates: state.showCoordinates,
+				enabledStructures: [...state.enabledStructures],
+			}));
+		} catch { /* quota exceeded */ }
+	}
+
+	function restoreState(): boolean {
+		if (!browser) return false;
+		const hash = window.location.hash.slice(1);
+		if (hash) {
+			const params = new URLSearchParams(hash);
+			const seed = params.get('seed');
+			if (seed) {
+				state.seedInput = seed;
+				state.mcVersion = params.get('v') || state.mcVersion;
+				state.dimension = (params.get('dim') as typeof state.dimension) || state.dimension;
+				state.centerX = parseFloat(params.get('x') || '0');
+				state.centerZ = parseFloat(params.get('z') || '0');
+				state.zoom = parseFloat(params.get('zoom') || '1');
+				if (params.get('biomes') === '0') state.showBiomes = false;
+				if (params.get('slime') === '0') state.showSlimeChunks = false;
+				if (params.get('structs') === '0') state.showStructures = false;
+				if (params.get('grid') === '0') state.showGrid = false;
+				if (params.get('coords') === '0') state.showCoordinates = false;
+				const st = params.get('st');
+				const savedVersion = parseInt(params.get('sv') || '0');
+				if (st) {
+					const saved = new Set(st.split(',').map(Number).filter(n => !isNaN(n)));
+					if (savedVersion < SCHEMA_VERSION) { for (const id of DEFAULT_ENABLED_STRUCTURES) saved.add(id); }
+					state.enabledStructures = saved;
+				}
+				return true;
+			}
+		}
+		try {
+			const raw = localStorage.getItem(LS_KEY);
+			if (raw) {
+				const saved = JSON.parse(raw);
+				if (saved.seed) {
+					state.seedInput = saved.seed;
+					state.mcVersion = saved.version || state.mcVersion;
+					state.dimension = saved.dimension || state.dimension;
+					state.centerX = saved.x ?? 0; state.centerZ = saved.z ?? 0; state.zoom = saved.zoom ?? 1;
+					state.showBiomes = saved.showBiomes ?? true;
+					state.showSlimeChunks = saved.showSlimeChunks ?? true;
+					state.showStructures = saved.showStructures ?? true;
+					state.showGrid = saved.showGrid ?? true;
+					state.showCoordinates = saved.showCoordinates ?? true;
+					if (saved.enabledStructures) {
+						const restoredSet = new Set<number>(saved.enabledStructures);
+						if ((saved.schemaVersion ?? 0) < SCHEMA_VERSION) {
+							for (const id of DEFAULT_ENABLED_STRUCTURES) restoredSet.add(id);
+						}
+						state.enabledStructures = restoredSet;
+					}
+					return true;
+				}
+			}
+		} catch { /* corrupt data */ }
+		return false;
+	}
+
+	return {
+		state, initWorkers, terminateWorkers, setSeed, setVersion, setDimension,
+		zoomIn, zoomOut, zoomToward, pan, setCenter,
+		getStep, getVisibleTileRange, requestVisibleTiles,
+		persistState, restoreState,
+	};
+}
+
+// ===== Default singleton (backward-compatible) =====
+
+const defaultStore = createSeedMapStore();
+
+export const mapState = defaultStore.state;
+export const initWorkers = defaultStore.initWorkers;
+export const terminateWorkers = defaultStore.terminateWorkers;
+export const setSeed = defaultStore.setSeed;
+export const setVersion = defaultStore.setVersion;
+export const setDimension = defaultStore.setDimension;
+export const zoomIn = defaultStore.zoomIn;
+export const zoomOut = defaultStore.zoomOut;
+export const zoomToward = defaultStore.zoomToward;
+export const pan = defaultStore.pan;
+export const setCenter = defaultStore.setCenter;
+export const getStep = defaultStore.getStep;
+export const getVisibleTileRange = defaultStore.getVisibleTileRange;
+export const requestVisibleTiles = defaultStore.requestVisibleTiles;
+export const persistState = defaultStore.persistState;
+export const restoreState = defaultStore.restoreState;
 
 export { TILE_SIZE };

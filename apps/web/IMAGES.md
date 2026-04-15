@@ -92,6 +92,8 @@ Objectif: éviter les visuels génériques fantasy/sci-fi qui n'ont aucun rappor
 | tool-nbt-viewer-v01.png | Icône Visualiseur NBT | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 | tool-seed-map-v01.png | Icône Carte de Seed | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
 
+| tool-coordinate-calculator-v01.png | Icône Calculateur Coordonnées | 512x512 | png | todo | `/tools` | fond transparent, style isométrique Minecraft |
+
 ## SEO / Open Graph (`/images/`)
 
 | Fichier | Usage | Dimension cible | Format | Statut | Page(s) | Notes |
@@ -417,4 +419,18 @@ PROMPT:
 
 NEGATIVE:
 photorealistic, real paper map, satellite photo, Google Maps style, modern GPS, dark moody, full environment scene, realistic paper texture, blurry, low quality, text, logo, watermark.
+```
+
+### tool-coordinate-calculator-v01.png
+
+- Taille: `512x512` (1:1, fond transparent)
+- Usage: icône du Calculateur de Coordonnées sur la page `/tools`
+- Style: **3D isométrique Minecraft** — compas et portail nether avec coordonnées
+
+```txt
+PROMPT:
+3D isometric render of a Minecraft-style coordinate calculator scene, a floating compass rose made of gold and redstone blocks, next to it a small nether portal frame (obsidian blocks with purple glow), red and green coordinate axis arrows (X and Z) extending from the center, small numbered markers along the axes, a tiny ender pearl trajectory arc between two blocky pin markers, clean composition centered, transparent background, sticker-like sharp edges, bright vibrant Minecraft voxel aesthetic, game icon style, no text readable, no logo, no watermark.
+
+NEGATIVE:
+photorealistic, real compass, modern GPS, calculator device, dark moody, full environment scene, realistic metal textures, blurry, low quality, text, logo, watermark.
 ```

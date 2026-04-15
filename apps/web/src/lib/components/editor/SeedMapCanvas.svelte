@@ -15,6 +15,9 @@
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
+  let dragMoved = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
 
   // Debounce tile requests during pan
   let requestTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -44,9 +47,36 @@
 
   function handlePointerDown(e: PointerEvent) {
     dragging = true;
+    dragMoved = false;
     lastX = e.clientX;
     lastY = e.clientY;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
     canvas.setPointerCapture(e.pointerId);
+  }
+
+  /** Find the nearest visible marker within click radius (px). */
+  function findMarkerAt(canvasX: number, canvasY: number) {
+    if (mapState.structures.length === 0) return null;
+    const clickRadius = 16;
+    const halfW = mapState.canvasWidth / 2;
+    const halfH = mapState.canvasHeight / 2;
+    let best = null;
+    let bestDist = clickRadius * clickRadius;
+
+    for (const s of mapState.structures) {
+      if (!mapState.enabledStructures.has(s.type)) continue;
+      const sx = halfW + (s.x - mapState.centerX) * mapState.zoom;
+      const sy = halfH + (s.z - mapState.centerZ) * mapState.zoom;
+      const dx = sx - canvasX;
+      const dy = sy - canvasY;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) {
+        bestDist = d;
+        best = s;
+      }
+    }
+    return best;
   }
 
   function handlePointerMove(e: PointerEvent) {
@@ -69,9 +99,21 @@
     const slimeKey = `${mapState.hoverChunkX},${mapState.hoverChunkZ}`;
     mapState.hoverIsSlime = mapState.slimeCache.has(slimeKey);
 
+    // Cursor: pointer if hovering a marker, grab/grabbing otherwise
+    if (!dragging) {
+      const marker = findMarkerAt(cx, cy);
+      canvas.style.cursor = marker ? 'pointer' : 'grab';
+    }
+
     if (dragging) {
       const dx = (e.clientX - lastX) / mapState.zoom;
       const dy = (e.clientY - lastY) / mapState.zoom;
+      // Only count as drag if mouse moved > 4px from start
+      const totalDx = e.clientX - dragStartX;
+      const totalDy = e.clientY - dragStartY;
+      if (totalDx * totalDx + totalDy * totalDy > 16) {
+        dragMoved = true;
+      }
       pan(-dx, -dy);
       lastX = e.clientX;
       lastY = e.clientY;
@@ -82,6 +124,27 @@
   function handlePointerUp(e: PointerEvent) {
     dragging = false;
     canvas.releasePointerCapture(e.pointerId);
+
+    // Click detection: if mouse didn't move, treat as click
+    if (!dragMoved) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const marker = findMarkerAt(cx, cy);
+      if (marker) {
+        const biome = getBiomeAtWorld(mapState, marker.x, marker.z);
+        mapState.selectedMarker = {
+          type: marker.type,
+          name: marker.name,
+          x: marker.x,
+          z: marker.z,
+          biome,
+        };
+      } else {
+        mapState.selectedMarker = null;
+      }
+    }
+
     requestVisibleTiles();
   }
 
