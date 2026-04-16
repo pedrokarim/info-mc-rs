@@ -141,18 +141,23 @@ export class WorldGen {
     }
     /**
      * Create a new world generator.
+     * - `version`: "1.21", "1.20", etc.
      * - `dimension`: "overworld", "nether", or "end"
+     * - `edition`: "java" or "bedrock"
      * @param {number} seed_hi
      * @param {number} seed_lo
      * @param {string} version
      * @param {string} dimension
+     * @param {string} edition
      */
-    constructor(seed_hi, seed_lo, version, dimension) {
+    constructor(seed_hi, seed_lo, version, dimension, edition) {
         const ptr0 = passStringToWasm0(version, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passStringToWasm0(dimension, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.worldgen_new(seed_hi, seed_lo, ptr0, len0, ptr1, len1);
+        const ptr2 = passStringToWasm0(edition, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.worldgen_new(seed_hi, seed_lo, ptr0, len0, ptr1, len1, ptr2, len2);
         this.__wbg_ptr = ret >>> 0;
         WorldGenFinalization.register(this, this.__wbg_ptr, this);
         return this;

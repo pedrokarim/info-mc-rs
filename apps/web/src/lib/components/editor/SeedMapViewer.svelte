@@ -73,6 +73,7 @@
     void mapState.seedInput;
     void mapState.mcVersion;
     void mapState.dimension;
+    void mapState.edition;
     void mapState.centerX;
     void mapState.centerZ;
     void mapState.zoom;

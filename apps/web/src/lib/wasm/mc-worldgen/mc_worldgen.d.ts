@@ -44,9 +44,11 @@ export class WorldGen {
     is_slime_chunk(chunk_x: number, chunk_z: number): boolean;
     /**
      * Create a new world generator.
+     * - `version`: "1.21", "1.20", etc.
      * - `dimension`: "overworld", "nether", or "end"
+     * - `edition`: "java" or "bedrock"
      */
-    constructor(seed_hi: number, seed_lo: number, version: string, dimension: string);
+    constructor(seed_hi: number, seed_lo: number, version: string, dimension: string, edition: string);
     static parse_seed(input: string): Int32Array;
     /**
      * Get structure type name by ID.
@@ -68,7 +70,7 @@ export interface InitOutput {
     readonly worldgen_get_biome_at: (a: number, b: number, c: number) => number;
     readonly worldgen_get_slime_area: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly worldgen_is_slime_chunk: (a: number, b: number, c: number) => number;
-    readonly worldgen_new: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+    readonly worldgen_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly worldgen_parse_seed: (a: number, b: number) => [number, number];
     readonly worldgen_structure_name: (a: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;

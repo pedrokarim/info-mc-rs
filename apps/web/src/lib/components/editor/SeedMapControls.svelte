@@ -2,7 +2,7 @@
   import Select from '$lib/components/ui/Select.svelte';
   import Switch from '$lib/components/ui/Switch.svelte';
   import {
-    mapState, setSeed, setVersion, setDimension, setCenter, zoomIn, zoomOut,
+    mapState, setSeed, setVersion, setDimension, setEdition, setCenter, zoomIn, zoomOut,
   } from '$lib/stores/seed-map.svelte';
 
   let seedInput = $state(mapState.seedInput || '');
@@ -179,6 +179,21 @@
     {:else}
       <span class="badge badge--legacy">Legacy Layers</span>
     {/if}
+  </div>
+
+  <!-- Edition -->
+  <div class="section">
+    <span class="section-label">Édition</span>
+    <div class="dim-row">
+      <button
+        class="dim-btn" class:active={mapState.edition === 'java'}
+        onclick={() => setEdition('java')}
+      >☕ Java</button>
+      <button
+        class="dim-btn" class:active={mapState.edition === 'bedrock'}
+        onclick={() => setEdition('bedrock')}
+      >🪨 Bedrock</button>
+    </div>
   </div>
 
   <!-- Dimension -->

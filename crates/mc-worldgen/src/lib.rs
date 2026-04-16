@@ -1,4 +1,5 @@
 pub mod java_random;
+pub mod bedrock_random;
 pub mod xoroshiro;
 pub mod perlin;
 pub mod octave_noise;
@@ -43,14 +44,17 @@ pub struct WorldGen {
     inner: BiomeSourceInner,
     seed: i64,
     dimension: String,
+    edition: structures::Edition,
 }
 
 #[wasm_bindgen]
 impl WorldGen {
     /// Create a new world generator.
+    /// - `version`: "1.21", "1.20", etc.
     /// - `dimension`: "overworld", "nether", or "end"
+    /// - `edition`: "java" or "bedrock"
     #[wasm_bindgen(constructor)]
-    pub fn new(seed_hi: i32, seed_lo: i32, version: &str, dimension: &str) -> WorldGen {
+    pub fn new(seed_hi: i32, seed_lo: i32, version: &str, dimension: &str, edition: &str) -> WorldGen {
         let seed = ((seed_hi as i64) << 32) | (seed_lo as u32 as i64);
 
         let inner = match dimension {
@@ -66,7 +70,12 @@ impl WorldGen {
             }
         };
 
-        WorldGen { inner, seed, dimension: dimension.to_string() }
+        let ed = match edition {
+            "bedrock" => structures::Edition::Bedrock,
+            _ => structures::Edition::Java,
+        };
+
+        WorldGen { inner, seed, dimension: dimension.to_string(), edition: ed }
     }
 
     /// Helper: get biome at block coords for any dimension.
@@ -195,7 +204,7 @@ impl WorldGen {
         };
         for &st in types {
             let positions = structures::find_structures_in_area(
-                self.seed, st, block_x, block_z, block_w, block_h,
+                self.seed, st, block_x, block_z, block_w, block_h, self.edition,
             );
             for (bx, bz) in positions {
                 // End Cities spawn on End Midlands or End Highlands.

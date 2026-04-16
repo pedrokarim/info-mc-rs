@@ -8,11 +8,25 @@ const TILE_SIZE = 64;
 const WORKER_COUNT = Math.min(8, Math.max(2, (typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 4) - 1));
 const LS_KEY = 'seed-map-state';
 
-/** Default enabled structure IDs — used to auto-enable new types added after the user's saved state. */
-const DEFAULT_ENABLED_STRUCTURES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25];
+/** Default enabled structure IDs — only the most useful ones by default.
+ * Users can toggle others on manually. */
+const DEFAULT_ENABLED_STRUCTURES = [
+	0,  // Village
+	1,  // Desert Temple
+	5,  // Ocean Monument
+	6,  // Woodland Mansion
+	7,  // Pillager Outpost
+	12, // Ruined Portal
+	13, // Ancient City
+	15, // Trial Chamber
+	16, // Nether Fortress
+	17, // Bastion
+	23, // End City
+	25, // End City Ship
+];
 
 /** Schema version — bump when adding new default structure IDs to auto-enable them on load. */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 // ===== Types =====
 
@@ -41,6 +55,7 @@ export interface MapState {
 
 	mcVersion: string;
 	dimension: 'overworld' | 'nether' | 'end';
+	edition: 'java' | 'bedrock';
 
 	hoverWorldX: number;
 	hoverWorldZ: number;
@@ -166,6 +181,7 @@ export interface SeedMapStore {
 	setSeed(input: string): void;
 	setVersion(version: string): void;
 	setDimension(dim: 'overworld' | 'nether' | 'end'): void;
+	setEdition(ed: 'java' | 'bedrock'): void;
 	zoomIn(): void;
 	zoomOut(): void;
 	zoomToward(canvasX: number, canvasY: number, delta: number): void;
@@ -200,6 +216,7 @@ export function createSeedMapStore(): SeedMapStore {
 
 		mcVersion: '1.21',
 		dimension: 'overworld' as 'overworld' | 'nether' | 'end',
+		edition: 'java' as 'java' | 'bedrock',
 
 		hoverWorldX: 0,
 		hoverWorldZ: 0,
@@ -339,6 +356,7 @@ export function createSeedMapStore(): SeedMapStore {
 				type: 'init',
 				seedHi: state.seedHi, seedLo: state.seedLo,
 				version: state.mcVersion, dimension: state.dimension,
+				edition: state.edition,
 				generation: state.renderGeneration,
 			});
 		}
@@ -369,6 +387,11 @@ export function createSeedMapStore(): SeedMapStore {
 
 	function setDimension(dim: 'overworld' | 'nether' | 'end') {
 		state.dimension = dim;
+		if (state.seedValid) { reinitWorkerState(); postInitToWorkers(); }
+	}
+
+	function setEdition(ed: 'java' | 'bedrock') {
+		state.edition = ed;
 		if (state.seedValid) { reinitWorkerState(); postInitToWorkers(); }
 	}
 
@@ -455,6 +478,7 @@ export function createSeedMapStore(): SeedMapStore {
 		if (state.seedInput) params.set('seed', state.seedInput);
 		params.set('v', state.mcVersion);
 		params.set('dim', state.dimension);
+		params.set('ed', state.edition);
 		params.set('x', Math.round(state.centerX).toString());
 		params.set('z', Math.round(state.centerZ).toString());
 		params.set('zoom', state.zoom.toString());
@@ -470,7 +494,7 @@ export function createSeedMapStore(): SeedMapStore {
 		try {
 			localStorage.setItem(LS_KEY, JSON.stringify({
 				schemaVersion: SCHEMA_VERSION, seed: state.seedInput,
-				version: state.mcVersion, dimension: state.dimension,
+				version: state.mcVersion, dimension: state.dimension, edition: state.edition,
 				x: Math.round(state.centerX), z: Math.round(state.centerZ), zoom: state.zoom,
 				showBiomes: state.showBiomes, showSlimeChunks: state.showSlimeChunks,
 				showStructures: state.showStructures, showGrid: state.showGrid,
@@ -490,6 +514,7 @@ export function createSeedMapStore(): SeedMapStore {
 				state.seedInput = seed;
 				state.mcVersion = params.get('v') || state.mcVersion;
 				state.dimension = (params.get('dim') as typeof state.dimension) || state.dimension;
+				state.edition = (params.get('ed') as typeof state.edition) || state.edition;
 				state.centerX = parseFloat(params.get('x') || '0');
 				state.centerZ = parseFloat(params.get('z') || '0');
 				state.zoom = parseFloat(params.get('zoom') || '1');
@@ -516,6 +541,7 @@ export function createSeedMapStore(): SeedMapStore {
 					state.seedInput = saved.seed;
 					state.mcVersion = saved.version || state.mcVersion;
 					state.dimension = saved.dimension || state.dimension;
+					state.edition = saved.edition || state.edition;
 					state.centerX = saved.x ?? 0; state.centerZ = saved.z ?? 0; state.zoom = saved.zoom ?? 1;
 					state.showBiomes = saved.showBiomes ?? true;
 					state.showSlimeChunks = saved.showSlimeChunks ?? true;
@@ -537,7 +563,7 @@ export function createSeedMapStore(): SeedMapStore {
 	}
 
 	return {
-		state, initWorkers, terminateWorkers, setSeed, setVersion, setDimension,
+		state, initWorkers, terminateWorkers, setSeed, setVersion, setDimension, setEdition,
 		zoomIn, zoomOut, zoomToward, pan, setCenter,
 		getStep, getVisibleTileRange, requestVisibleTiles,
 		persistState, restoreState,
@@ -554,6 +580,7 @@ export const terminateWorkers = defaultStore.terminateWorkers;
 export const setSeed = defaultStore.setSeed;
 export const setVersion = defaultStore.setVersion;
 export const setDimension = defaultStore.setDimension;
+export const setEdition = defaultStore.setEdition;
 export const zoomIn = defaultStore.zoomIn;
 export const zoomOut = defaultStore.zoomOut;
 export const zoomToward = defaultStore.zoomToward;

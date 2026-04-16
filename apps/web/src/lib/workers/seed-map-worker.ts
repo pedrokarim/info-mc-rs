@@ -24,7 +24,8 @@ self.onmessage = async (e: MessageEvent) => {
 			if (worldgen) worldgen.free();
 
 			currentDimension = e.data.dimension || 'overworld';
-			worldgen = new WorldGen(e.data.seedHi, e.data.seedLo, e.data.version, currentDimension);
+			const edition = e.data.edition || 'java';
+			worldgen = new WorldGen(e.data.seedHi, e.data.seedLo, e.data.version, currentDimension, edition);
 			currentGeneration = e.data.generation;
 			post({ type: 'ready', generation: e.data.generation });
 		}
