@@ -50,6 +50,13 @@
     display: flex;
     gap: 0;
     border-bottom: 2px solid var(--line-0, rgba(46, 94, 143, 0.34));
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .tab {

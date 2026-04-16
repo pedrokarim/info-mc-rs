@@ -182,7 +182,7 @@ a {
   padding: 0.24rem;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 820px) {
   .topnav {
     display: none;
     border: none;
@@ -190,28 +190,42 @@ a {
     background: none;
     padding: 0;
   }
+  .topbar-wrap {
+    position: relative;
+  }
   .topnav.topnav--open {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    background: linear-gradient(180deg, rgba(245, 251, 255, 0.99), rgba(236, 246, 252, 0.98));
+    background: #f1f7fc;
     border-bottom: 1px solid rgba(82, 136, 194, 0.32);
-    padding: 0.5rem 1rem 0.8rem;
-    box-shadow: 0 8px 24px rgba(16, 45, 72, 0.12);
+    padding: 0;
+    box-shadow: 0 8px 24px rgba(16, 45, 72, 0.18);
     z-index: 50;
+    gap: 0;
   }
   .topnav.topnav--open .nav-link {
-    padding: 0.6rem 0;
+    display: block;
+    padding: 0.72rem 1.2rem;
     border-bottom: 1px solid rgba(82, 136, 194, 0.12);
     border-radius: 0;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
   .topnav.topnav--open .nav-link.cta {
-    margin-top: 0.4rem;
-    text-align: center;
+    display: inline-flex;
+    margin: 0.5rem 1.2rem 0.7rem;
+    width: fit-content;
+  }
+  .menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -327,6 +341,44 @@ a {
 .tt-green { color: #4ade80; }
 .tt-red { color: #f87171; }
 .tt-mono { font-size: 0.66rem; opacity: 0.7; }
+
+.api-status-wrap {
+  position: relative;
+}
+
+button.nav-link.cta {
+  cursor: pointer;
+  font: inherit;
+}
+
+.api-details {
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: #1a2332;
+  border: 1px solid rgba(82, 136, 194, 0.3);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: #94a3b8;
+  text-align: left;
+  white-space: nowrap;
+}
+
+@media (min-width: 821px) {
+  .api-details {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 60;
+    margin-top: 0;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+}
 
 .page {
   width: var(--layout-width);
@@ -1308,7 +1360,7 @@ a {
   color: #fff;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .site-footer-top {
     grid-template-columns: 1fr;
     gap: 1.4rem;
@@ -1332,6 +1384,7 @@ a {
   }
 }
 
+
 @media (max-width: 760px) {
   body {
     background:
@@ -1345,19 +1398,6 @@ a {
         var(--bg-page-0) 300px,
         var(--bg-page-1) 100%
       );
-  }
-
-  .topbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .brand {
-    justify-content: center;
-  }
-
-  .topnav {
-    justify-content: center;
   }
 
   .input-row {

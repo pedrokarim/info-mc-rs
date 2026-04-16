@@ -20,13 +20,27 @@
   let apiPing = $state(0);
   let apiVersion = $state('');
   let tooltipVisible = $state(false);
+  let detailsOpen = $state(false);
   let mouseX = $state(0);
   let mouseY = $state(0);
+  let isMobile = $state(false);
 
   function onMouseMove(e: MouseEvent) {
     mouseX = e.clientX;
     mouseY = e.clientY;
   }
+
+  function checkMobile() {
+    isMobile = window.matchMedia('(max-width: 820px)').matches;
+  }
+
+  $effect(() => {
+    checkMobile();
+    const mq = window.matchMedia('(max-width: 820px)');
+    const handler = () => checkMobile();
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  });
 
   async function checkHealth() {
     const t0 = performance.now();
@@ -66,8 +80,14 @@
   $effect(() => {
     page.url.pathname;
     menuOpen = false;
+    detailsOpen = false;
   });
 </script>
+
+{#if menuOpen}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="menu-backdrop" onclick={() => (menuOpen = false)}></div>
+{/if}
 
 <div class="topbar-wrap">
   <header class="topbar">
@@ -91,29 +111,39 @@
           {link.label}
         </a>
       {/each}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <a
-        class="nav-link cta"
-        class:cta-online={apiStatus === 'online'}
-        class:cta-offline={apiStatus === 'offline'}
-        href={`${apiBase}/health`}
-        target="_blank"
-        rel="noreferrer"
-        onmouseenter={() => (tooltipVisible = true)}
-        onmouseleave={() => (tooltipVisible = false)}
-        onmousemove={onMouseMove}
-      >
-        API {apiStatus === 'online' ? 'Live' : apiStatus === 'offline' ? 'Down' : '...'}
-      </a>
+      <div class="api-status-wrap">
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <button
+          class="nav-link cta"
+          class:cta-online={apiStatus === 'online'}
+          class:cta-offline={apiStatus === 'offline'}
+          type="button"
+          onclick={() => (detailsOpen = !detailsOpen)}
+          onmouseenter={() => { if (!isMobile) tooltipVisible = true; }}
+          onmouseleave={() => { tooltipVisible = false; }}
+          onmousemove={onMouseMove}
+        >
+          API {apiStatus === 'online' ? 'Live' : apiStatus === 'offline' ? 'Down' : '...'}
+        </button>
 
-      {#if tooltipVisible}
-        <div class="api-tooltip" role="tooltip" style="left:{mouseX - 12}px;top:{mouseY + 16}px;transform:translateX(-100%);">
-          <span class="tt-row"><span class="tt-label">status</span><span class="tt-val" class:tt-green={apiStatus === 'online'} class:tt-red={apiStatus === 'offline'}>{apiStatus}</span></span>
-          <span class="tt-row"><span class="tt-label">ping</span><span class="tt-val">{apiPing}ms</span></span>
-          {#if apiVersion}<span class="tt-row"><span class="tt-label">ver</span><span class="tt-val">{apiVersion}</span></span>{/if}
-          <span class="tt-row"><span class="tt-label">host</span><span class="tt-val tt-mono">{apiBase || 'local'}</span></span>
-        </div>
-      {/if}
+        {#if tooltipVisible && !isMobile && !detailsOpen}
+          <div class="api-tooltip" role="tooltip" style="left:{mouseX - 12}px;top:{mouseY + 16}px;transform:translateX(-100%);">
+            <span class="tt-row"><span class="tt-label">status</span><span class="tt-val" class:tt-green={apiStatus === 'online'} class:tt-red={apiStatus === 'offline'}>{apiStatus}</span></span>
+            <span class="tt-row"><span class="tt-label">ping</span><span class="tt-val">{apiPing}ms</span></span>
+            {#if apiVersion}<span class="tt-row"><span class="tt-label">ver</span><span class="tt-val">{apiVersion}</span></span>{/if}
+            <span class="tt-row"><span class="tt-label">host</span><span class="tt-val tt-mono">{apiBase || 'local'}</span></span>
+          </div>
+        {/if}
+
+        {#if detailsOpen}
+          <div class="api-details">
+            <span class="tt-row"><span class="tt-label">Status</span><span class="tt-val" class:tt-green={apiStatus === 'online'} class:tt-red={apiStatus === 'offline'}>{apiStatus}</span></span>
+            <span class="tt-row"><span class="tt-label">Ping</span><span class="tt-val">{apiPing}ms</span></span>
+            {#if apiVersion}<span class="tt-row"><span class="tt-label">Version</span><span class="tt-val">{apiVersion}</span></span>{/if}
+            <span class="tt-row"><span class="tt-label">Host</span><span class="tt-val tt-mono">{apiBase || 'local'}</span></span>
+          </div>
+        {/if}
+      </div>
     </nav>
   </header>
 </div>
@@ -154,7 +184,7 @@
     transform: translateY(-6px) rotate(-45deg);
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 820px) {
     .burger {
       display: flex;
     }
