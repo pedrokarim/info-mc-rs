@@ -1,17 +1,16 @@
 /// Improved Perlin Noise — initialized from Xoroshiro128++ (Minecraft 1.18+).
 /// Based on Ken Perlin's 2002 reference implementation.
 /// Matches cubiomes' xPerlinInit / samplePerlin exactly.
-
 use crate::xoroshiro::Xoroshiro;
 
 #[derive(Clone)]
 pub struct ImprovedNoise {
-    perm: [u8; 257],        // permutation table (256 + wrap)
+    perm: [u8; 257], // permutation table (256 + wrap)
     pub x_offset: f64,
     pub y_offset: f64,
     pub z_offset: f64,
-    pub amplitude: f64,     // set by OctaveNoise
-    pub lacunarity: f64,    // set by OctaveNoise
+    pub amplitude: f64,  // set by OctaveNoise
+    pub lacunarity: f64, // set by OctaveNoise
     // Pre-computed y=0 values for fast 2D sampling
     h2: i32,
     d2: f64,
@@ -116,9 +115,16 @@ impl ImprovedNoise {
 
     #[inline]
     fn sample_inner(
-        &self, i: i32, j: i32, k: i32,
-        d0: f64, d1: f64, d2: f64,
-        t0: f64, t1: f64, t2: f64,
+        &self,
+        i: i32,
+        j: i32,
+        k: i32,
+        d0: f64,
+        d1: f64,
+        d2: f64,
+        t0: f64,
+        t1: f64,
+        t2: f64,
     ) -> f64 {
         let p = &self.perm;
         let ii = (i & 0xFF) as usize;
@@ -133,21 +139,35 @@ impl ImprovedNoise {
         let ba = (p[b & 0xFF] as usize).wrapping_add(kk);
         let bb = (p[(b + 1) & 0xFF] as usize).wrapping_add(kk);
 
-        lerp(t2,
-            lerp(t1,
-                lerp(t0,
+        lerp(
+            t2,
+            lerp(
+                t1,
+                lerp(
+                    t0,
                     grad(p[aa & 0xFF], d0, d1, d2),
-                    grad(p[ba & 0xFF], d0 - 1.0, d1, d2)),
-                lerp(t0,
+                    grad(p[ba & 0xFF], d0 - 1.0, d1, d2),
+                ),
+                lerp(
+                    t0,
                     grad(p[ab & 0xFF], d0, d1 - 1.0, d2),
-                    grad(p[bb & 0xFF], d0 - 1.0, d1 - 1.0, d2))),
-            lerp(t1,
-                lerp(t0,
+                    grad(p[bb & 0xFF], d0 - 1.0, d1 - 1.0, d2),
+                ),
+            ),
+            lerp(
+                t1,
+                lerp(
+                    t0,
                     grad(p[(aa + 1) & 0xFF], d0, d1, d2 - 1.0),
-                    grad(p[(ba + 1) & 0xFF], d0 - 1.0, d1, d2 - 1.0)),
-                lerp(t0,
+                    grad(p[(ba + 1) & 0xFF], d0 - 1.0, d1, d2 - 1.0),
+                ),
+                lerp(
+                    t0,
                     grad(p[(ab + 1) & 0xFF], d0, d1 - 1.0, d2 - 1.0),
-                    grad(p[(bb + 1) & 0xFF], d0 - 1.0, d1 - 1.0, d2 - 1.0))))
+                    grad(p[(bb + 1) & 0xFF], d0 - 1.0, d1 - 1.0, d2 - 1.0),
+                ),
+            ),
+        )
     }
 }
 
@@ -165,22 +185,22 @@ fn lerp(t: f64, a: f64, b: f64) -> f64 {
 #[inline(always)]
 fn grad(hash: u8, x: f64, y: f64, z: f64) -> f64 {
     match hash & 0xF {
-        0  =>  x + y,
-        1  => -x + y,
-        2  =>  x - y,
-        3  => -x - y,
-        4  =>  x + z,
-        5  => -x + z,
-        6  =>  x - z,
-        7  => -x - z,
-        8  =>  y + z,
-        9  => -y + z,
-        10 =>  y - z,
+        0 => x + y,
+        1 => -x + y,
+        2 => x - y,
+        3 => -x - y,
+        4 => x + z,
+        5 => -x + z,
+        6 => x - z,
+        7 => -x - z,
+        8 => y + z,
+        9 => -y + z,
+        10 => y - z,
         11 => -y - z,
-        12 =>  x + y,     // Minecraft variant
-        13 => -y + z,     // Minecraft variant (not -x+y)
-        14 => -x + y,     // Minecraft variant
-        15 => -y - z,     // Minecraft variant (not -x-y)
+        12 => x + y,  // Minecraft variant
+        13 => -y + z, // Minecraft variant (not -x+y)
+        14 => -x + y, // Minecraft variant
+        15 => -y - z, // Minecraft variant (not -x-y)
         _ => unreachable!(),
     }
 }

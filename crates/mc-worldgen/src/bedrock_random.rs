@@ -15,7 +15,10 @@ pub struct MT19937 {
 
 impl MT19937 {
     pub fn new(seed: u32) -> Self {
-        let mut rng = Self { mt: [0; N], mti: N + 1 };
+        let mut rng = Self {
+            mt: [0; N],
+            mti: N + 1,
+        };
         rng.init_seed(seed);
         rng
     }
@@ -129,7 +132,9 @@ pub struct BedrockRandom {
 
 impl BedrockRandom {
     pub fn new(seed: i32) -> Self {
-        Self { rng: MT19937::new(seed as u32) }
+        Self {
+            rng: MT19937::new(seed as u32),
+        }
     }
 
     pub fn set_seed(&mut self, seed: i32) {

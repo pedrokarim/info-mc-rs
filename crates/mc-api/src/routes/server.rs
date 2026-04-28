@@ -89,7 +89,10 @@ pub async fn get_server(
 
     // Check cache
     if let Some(cached) = state.server_cache.get(&cache_key).await {
-        return Ok(([(header::CACHE_CONTROL, "public, max-age=60")], Json((*cached).clone())));
+        return Ok((
+            [(header::CACHE_CONTROL, "public, max-age=60")],
+            Json((*cached).clone()),
+        ));
     }
 
     // Resolve DNS
@@ -137,7 +140,10 @@ pub async fn get_server(
     // Cache the response
     state.server_cache.insert(cache_key, response.clone()).await;
 
-    Ok(([(header::CACHE_CONTROL, "public, max-age=60")], Json(response)))
+    Ok((
+        [(header::CACHE_CONTROL, "public, max-age=60")],
+        Json(response),
+    ))
 }
 
 async fn ping_java(

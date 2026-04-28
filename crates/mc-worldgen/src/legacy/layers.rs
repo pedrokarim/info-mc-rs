@@ -90,11 +90,25 @@ impl LegacyBiomeSource {
         let noise = (hash % 100) as f64 / 100.0 * 0.3;
         let temp = (base + noise).clamp(0.0, 1.0);
 
-        if temp < 0.15 { 0 }       // frozen
-        else if temp < 0.35 { 1 }   // cold
-        else if temp < 0.65 { 2 }   // temperate
-        else if temp < 0.85 { 3 }   // warm
-        else { 4 }                   // hot
+        if temp < 0.15 {
+            0
+        }
+        // frozen
+        else if temp < 0.35 {
+            1
+        }
+        // cold
+        else if temp < 0.65 {
+            2
+        }
+        // temperate
+        else if temp < 0.85 {
+            3
+        }
+        // warm
+        else {
+            4
+        } // hot
     }
 
     /// Biome selection based on continent and climate.
@@ -108,19 +122,24 @@ impl LegacyBiomeSource {
 
         // Biome IDs are legacy Minecraft numeric IDs
         match climate {
-            0 => { // Frozen
+            0 => {
+                // Frozen
                 [12, 12, 30, 12, 30, 12][variant] // snowy_tundra, snowy_taiga
             }
-            1 => { // Cold
+            1 => {
+                // Cold
                 [5, 32, 5, 3, 5, 32][variant] // taiga, giant_tree_taiga, mountains
             }
-            2 => { // Temperate
+            2 => {
+                // Temperate
                 [4, 29, 1, 27, 4, 1][variant] // forest, dark_forest, plains, birch_forest
             }
-            3 => { // Warm
+            3 => {
+                // Warm
                 [35, 1, 4, 35, 21, 1][variant] // savanna, plains, forest, jungle
             }
-            4 => { // Hot
+            4 => {
+                // Hot
                 [2, 2, 35, 21, 37, 2][variant] // desert, savanna, jungle, badlands
             }
             _ => 1, // plains fallback
@@ -212,13 +231,25 @@ impl LegacyBiomeSource {
     /// Reproduces Minecraft's layer seed mixing.
     fn layer_hash(&self, layer_salt: i64, x: i32, z: i32) -> u64 {
         let mut seed = self.world_seed;
-        seed = seed.wrapping_mul(seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407));
+        seed = seed.wrapping_mul(
+            seed.wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407),
+        );
         seed = seed.wrapping_add(layer_salt);
-        seed = seed.wrapping_mul(seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407));
+        seed = seed.wrapping_mul(
+            seed.wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407),
+        );
         seed = seed.wrapping_add(x as i64);
-        seed = seed.wrapping_mul(seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407));
+        seed = seed.wrapping_mul(
+            seed.wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407),
+        );
         seed = seed.wrapping_add(z as i64);
-        seed = seed.wrapping_mul(seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407));
+        seed = seed.wrapping_mul(
+            seed.wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407),
+        );
         seed = seed.wrapping_add(layer_salt);
         (seed >> 24) as u64
     }

@@ -45,7 +45,8 @@ pub async fn render_skin_3d(
     };
 
     // Check render cache first
-    let render_key = format!("{cache_key}_{width}_{height}_{theta_deg}_{phi_deg}_{time}_{back_str}");
+    let render_key =
+        format!("{cache_key}_{width}_{height}_{theta_deg}_{phi_deg}_{time}_{back_str}");
     if let Some(cached_png) = state.render3d_cache.get(&render_key).await {
         return Ok((
             [
@@ -103,7 +104,9 @@ pub async fn render_skin_3d(
         .unwrap_or(false);
 
     // Fetch skin texture (with cache)
-    let skin_rgba = fetch_skin(&state.http, &skin_url).await.map_err(ApiError::from)?;
+    let skin_rgba = fetch_skin(&state.http, &skin_url)
+        .await
+        .map_err(ApiError::from)?;
 
     // Fetch cape texture if needed (with cache)
     let cape_rgba = if back_equipment != BackEquipment::None {
@@ -136,7 +139,10 @@ pub async fn render_skin_3d(
     .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     // Cache the rendered PNG
-    state.render3d_cache.insert(render_key, png_bytes.clone()).await;
+    state
+        .render3d_cache
+        .insert(render_key, png_bytes.clone())
+        .await;
 
     Ok((
         [

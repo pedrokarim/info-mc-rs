@@ -60,8 +60,8 @@ self.onmessage = async (e: MessageEvent) => {
 			const structData = worldgen.find_structures(blockX, blockZ, tileBlockW, tileBlockW);
 
 			// Transfer the buffers (zero-copy)
-			const rgbaBuf = rgba.buffer;
-			const idsBuf = biomeIds.buffer;
+			const rgbaBuf = rgba.buffer as ArrayBuffer;
+			const idsBuf = biomeIds.buffer as ArrayBuffer;
 			const transfers: ArrayBuffer[] = [rgbaBuf, idsBuf];
 
 			const msg: any = {
@@ -75,7 +75,7 @@ self.onmessage = async (e: MessageEvent) => {
 			};
 
 			if (slimeData) {
-				const slimeBuf = slimeData.buffer;
+				const slimeBuf = slimeData.buffer as ArrayBuffer;
 				msg.slimeChunkX = chunkX0;
 				msg.slimeChunkZ = chunkZ0;
 				msg.slimeW = chunkW;

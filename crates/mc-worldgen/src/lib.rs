@@ -1,24 +1,24 @@
-pub mod java_random;
 pub mod bedrock_random;
-pub mod xoroshiro;
-pub mod perlin;
-pub mod octave_noise;
-pub mod slime;
-pub mod biomes;
 pub mod biome_tree;
+pub mod biomes;
+pub mod end;
+pub mod end_city;
+pub mod java_random;
+pub mod legacy;
 pub mod multinoise;
 pub mod nether;
-pub mod end;
+pub mod octave_noise;
+pub mod perlin;
+pub mod slime;
 pub mod structures;
-pub mod end_city;
-pub mod legacy;
+pub mod xoroshiro;
 
-use wasm_bindgen::prelude::*;
 use biomes::Biome;
-use multinoise::MultiNoiseBiomeSource;
-use nether::NetherBiomeSource;
 use end::EndBiomeSource;
 use legacy::LegacyBiomeSource;
+use multinoise::MultiNoiseBiomeSource;
+use nether::NetherBiomeSource;
+use wasm_bindgen::prelude::*;
 
 /// Version threshold: versions >= 1.18 use multi-noise, older use legacy layers.
 fn is_modern(version: &str) -> bool {
@@ -54,7 +54,13 @@ impl WorldGen {
     /// - `dimension`: "overworld", "nether", or "end"
     /// - `edition`: "java" or "bedrock"
     #[wasm_bindgen(constructor)]
-    pub fn new(seed_hi: i32, seed_lo: i32, version: &str, dimension: &str, edition: &str) -> WorldGen {
+    pub fn new(
+        seed_hi: i32,
+        seed_lo: i32,
+        version: &str,
+        dimension: &str,
+        edition: &str,
+    ) -> WorldGen {
         let seed = ((seed_hi as i64) << 32) | (seed_lo as u32 as i64);
 
         let inner = match dimension {
@@ -75,7 +81,12 @@ impl WorldGen {
             _ => structures::Edition::Java,
         };
 
-        WorldGen { inner, seed, dimension: dimension.to_string(), edition: ed }
+        WorldGen {
+            inner,
+            seed,
+            dimension: dimension.to_string(),
+            edition: ed,
+        }
     }
 
     /// Helper: get biome at block coords for any dimension.
@@ -98,7 +109,12 @@ impl WorldGen {
     ///
     /// Returns a flat Uint8Array of width*height*4 bytes (RGBA).
     pub fn get_biome_area_rgba(
-        &self, x: i32, z: i32, width: u32, height: u32, step: u32,
+        &self,
+        x: i32,
+        z: i32,
+        width: u32,
+        height: u32,
+        step: u32,
     ) -> Vec<u8> {
         let step = step.max(1) as i32;
         let total = (width * height) as usize;
@@ -111,9 +127,9 @@ impl WorldGen {
                 let biome = self.biome_at(bx, bz);
                 let color = biome.color();
                 rgba.push(((color >> 16) & 0xFF) as u8); // R
-                rgba.push(((color >> 8) & 0xFF) as u8);  // G
-                rgba.push((color & 0xFF) as u8);          // B
-                rgba.push(255);                           // A
+                rgba.push(((color >> 8) & 0xFF) as u8); // G
+                rgba.push((color & 0xFF) as u8); // B
+                rgba.push(255); // A
             }
         }
 
@@ -122,9 +138,7 @@ impl WorldGen {
 
     /// Compute biome IDs for an area (without RGBA conversion).
     /// Returns width*height biome IDs.
-    pub fn get_biome_area(
-        &self, x: i32, z: i32, width: u32, height: u32, step: u32,
-    ) -> Vec<u8> {
+    pub fn get_biome_area(&self, x: i32, z: i32, width: u32, height: u32, step: u32) -> Vec<u8> {
         let step = step.max(1) as i32;
         let total = (width * height) as usize;
         let mut ids = Vec::with_capacity(total);
@@ -142,9 +156,7 @@ impl WorldGen {
     }
 
     /// Compute slime chunks for an area. Returns 1 byte per chunk (0 or 1).
-    pub fn get_slime_area(
-        &self, chunk_x: i32, chunk_z: i32, width: u32, height: u32,
-    ) -> Vec<u8> {
+    pub fn get_slime_area(&self, chunk_x: i32, chunk_z: i32, width: u32, height: u32) -> Vec<u8> {
         let total = (width * height) as usize;
         let mut result = Vec::with_capacity(total);
 
@@ -152,7 +164,11 @@ impl WorldGen {
             for dx in 0..width as i32 {
                 let cx = chunk_x + dx;
                 let cz = chunk_z + dz;
-                result.push(if slime::is_slime_chunk(self.seed, cx, cz) { 1 } else { 0 });
+                result.push(if slime::is_slime_chunk(self.seed, cx, cz) {
+                    1
+                } else {
+                    0
+                });
             }
         }
 
@@ -181,7 +197,11 @@ impl WorldGen {
                 BiomeSourceInner::Legacy(src) => src.get_chunk_biomes(cx, cz, step),
             };
             result.extend_from_slice(&biomes);
-            result.push(if slime::is_slime_chunk(self.seed, cx, cz) { 1 } else { 0 });
+            result.push(if slime::is_slime_chunk(self.seed, cx, cz) {
+                1
+            } else {
+                0
+            });
         }
 
         result
@@ -194,7 +214,13 @@ impl WorldGen {
     /// Find structures in a block-coordinate area.
     /// Returns a flat array: [type_id, block_x_hi, block_x_lo, block_z_hi, block_z_lo, ...]
     /// (Using hi/lo i16 pairs because wasm-bindgen doesn't support tuples easily)
-    pub fn find_structures(&self, block_x: i32, block_z: i32, block_w: i32, block_h: i32) -> Vec<i32> {
+    pub fn find_structures(
+        &self,
+        block_x: i32,
+        block_z: i32,
+        block_w: i32,
+        block_h: i32,
+    ) -> Vec<i32> {
         let mut result = Vec::new();
 
         let types = match self.dimension.as_str() {
@@ -204,7 +230,13 @@ impl WorldGen {
         };
         for &st in types {
             let positions = structures::find_structures_in_area(
-                self.seed, st, block_x, block_z, block_w, block_h, self.edition,
+                self.seed,
+                st,
+                block_x,
+                block_z,
+                block_w,
+                block_h,
+                self.edition,
             );
             for (bx, bz) in positions {
                 // End Cities spawn on End Midlands or End Highlands.
@@ -247,14 +279,37 @@ impl WorldGen {
     pub fn structure_name(type_id: u8) -> String {
         // Map back from u8 to StructureType
         let names = [
-            "village", "desert-temple", "jungle-temple", "witch-hut",
-            "igloo", "ocean-monument", "mansion", "pillager-outpost",
-            "stronghold", "ocean-ruin", "shipwreck", "buried-treasure",
-            "ruined-portal", "ancient-city", "trail-ruin", "trial-chamber",
-            "nether-fortress", "bastion-treasure", "mineshaft", "dungeon",
-            "desert-well", "fossil", "spawn", "end-city", "end-gateway", "end-city-ship",
+            "village",
+            "desert-temple",
+            "jungle-temple",
+            "witch-hut",
+            "igloo",
+            "ocean-monument",
+            "mansion",
+            "pillager-outpost",
+            "stronghold",
+            "ocean-ruin",
+            "shipwreck",
+            "buried-treasure",
+            "ruined-portal",
+            "ancient-city",
+            "trail-ruin",
+            "trial-chamber",
+            "nether-fortress",
+            "bastion-treasure",
+            "mineshaft",
+            "dungeon",
+            "desert-well",
+            "fossil",
+            "spawn",
+            "end-city",
+            "end-gateway",
+            "end-city-ship",
         ];
-        names.get(type_id as usize).unwrap_or(&"unknown").to_string()
+        names
+            .get(type_id as usize)
+            .unwrap_or(&"unknown")
+            .to_string()
     }
 
     pub fn biome_name(id: u8) -> String {

@@ -1,8 +1,7 @@
+use crate::biome_tree;
 /// Multi-noise biome source for Minecraft 1.18+.
 /// Correct seeding via Xoroshiro128++ and MD5 hashes (matches cubiomes exactly).
-
 use crate::biomes::Biome;
-use crate::biome_tree;
 use crate::octave_noise::DoublePerlinNoise;
 use crate::xoroshiro::{Xoroshiro, climate_md5};
 
@@ -57,15 +56,28 @@ impl MultiNoiseBiomeSource {
         // Step 2: Each climate parameter gets its own RNG = (xlo ^ md5_lo, xhi ^ md5_hi)
         let temperature = Self::create_noise(xlo, xhi, climate_md5::TEMPERATURE, &TEMPERATURE);
         let humidity = Self::create_noise(xlo, xhi, climate_md5::HUMIDITY, &HUMIDITY);
-        let continentalness = Self::create_noise(xlo, xhi, climate_md5::CONTINENTALNESS, &CONTINENTALNESS);
+        let continentalness =
+            Self::create_noise(xlo, xhi, climate_md5::CONTINENTALNESS, &CONTINENTALNESS);
         let erosion = Self::create_noise(xlo, xhi, climate_md5::EROSION, &EROSION);
         let weirdness = Self::create_noise(xlo, xhi, climate_md5::WEIRDNESS, &WEIRDNESS);
         let shift = Self::create_noise(xlo, xhi, climate_md5::SHIFT, &SHIFT);
 
-        Self { temperature, humidity, continentalness, erosion, weirdness, shift }
+        Self {
+            temperature,
+            humidity,
+            continentalness,
+            erosion,
+            weirdness,
+            shift,
+        }
     }
 
-    fn create_noise(xlo: u64, xhi: u64, md5: (u64, u64), params: &NoiseParams) -> DoublePerlinNoise {
+    fn create_noise(
+        xlo: u64,
+        xhi: u64,
+        md5: (u64, u64),
+        params: &NoiseParams,
+    ) -> DoublePerlinNoise {
         let mut rng = Xoroshiro::from_raw(xlo ^ md5.0, xhi ^ md5.1);
         DoublePerlinNoise::new(&mut rng, params.first_octave, params.amplitudes)
     }

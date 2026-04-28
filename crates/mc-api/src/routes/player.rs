@@ -46,7 +46,10 @@ pub async fn get_player(
     // Check cache
     let cache_key = identifier.to_lowercase();
     if let Some(cached) = state.player_cache.get(&cache_key).await {
-        return Ok(([(header::CACHE_CONTROL, "public, max-age=60")], Json((*cached).clone())));
+        return Ok((
+            [(header::CACHE_CONTROL, "public, max-age=60")],
+            Json((*cached).clone()),
+        ));
     }
 
     let profile = state
@@ -121,7 +124,10 @@ pub async fn get_player(
 
     state.player_cache.insert(cache_key, response.clone()).await;
 
-    Ok(([(header::CACHE_CONTROL, "public, max-age=60")], Json(response)))
+    Ok((
+        [(header::CACHE_CONTROL, "public, max-age=60")],
+        Json(response),
+    ))
 }
 
 /// Upsert player into the persistent index and return popularity stats.

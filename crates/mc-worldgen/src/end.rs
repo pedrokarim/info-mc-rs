@@ -1,13 +1,12 @@
 /// End biome generation — exact port of cubiomes mapEndBiome + getEndBiome.
 /// Reference: cubiomes/biomenoise.c lines 379-488.
-
 use crate::biomes::Biome;
 use crate::java_random::JavaRandom;
 
 /// Squared distance lookup table — cubiomes ds[26]: (25-2*i)² for i in 0..26.
 const DS: [u32; 26] = [
-    625, 529, 441, 361, 289, 225, 169, 121, 81, 49, 25, 9, 1,
-    1, 9, 25, 49, 81, 121, 169, 225, 289, 361, 441, 529, 625,
+    625, 529, 441, 361, 289, 225, 169, 121, 81, 49, 25, 9, 1, 1, 9, 25, 49, 81, 121, 169, 225, 289,
+    361, 441, 529, 625,
 ];
 
 pub struct EndNoise {
@@ -94,22 +93,22 @@ fn simplex_grad(idx: i32, x: f64, y: f64, d: f64) -> f64 {
     t *= t;
     // indexedLerp(idx, x, y, 0) — cubiomes' 16-case gradient with z=0
     let dot = match idx & 0xF {
-        0 => x + y,        // a + b
-        1 => -x + y,       // -a + b
-        2 => x - y,        // a - b
-        3 => -x - y,       // -a - b
-        4 => x,            // a + c (c=0)
-        5 => -x,           // -a + c
-        6 => x,            // a - c
-        7 => -x,           // -a - c
-        8 => y,            // b + c
-        9 => -y,           // -b + c
-        10 => y,           // b - c
-        11 => -y,          // -b - c
-        12 => x + y,       // a + b (variant)
-        13 => -y,          // -b + c
-        14 => -x + y,      // -a + b (variant)
-        15 => -y,          // -b - c
+        0 => x + y,   // a + b
+        1 => -x + y,  // -a + b
+        2 => x - y,   // a - b
+        3 => -x - y,  // -a - b
+        4 => x,       // a + c (c=0)
+        5 => -x,      // -a + c
+        6 => x,       // a - c
+        7 => -x,      // -a - c
+        8 => y,       // b + c
+        9 => -y,      // -b + c
+        10 => y,      // b - c
+        11 => -y,     // -b - c
+        12 => x + y,  // a + b (variant)
+        13 => -y,     // -b + c
+        14 => -x + y, // -a + b (variant)
+        15 => -y,     // -b - c
         _ => 0.0,
     };
     t * t * dot
@@ -121,7 +120,9 @@ pub struct EndBiomeSource {
 
 impl EndBiomeSource {
     pub fn new(seed: i64) -> Self {
-        Self { noise: EndNoise::new(seed) }
+        Self {
+            noise: EndNoise::new(seed),
+        }
     }
 
     /// Get biome at block coordinates.
@@ -182,8 +183,12 @@ impl EndBiomeSource {
 
         // result = clamp(100 - 8 * sqrt(initial_dist_sq), -100, 80)
         let mut result = 100.0_f32 - 8.0 * initial_dist_sq.sqrt();
-        if result < -100.0 { result = -100.0; }
-        if result > 80.0 { result = 80.0; }
+        if result < -100.0 {
+            result = -100.0;
+        }
+        if result > 80.0 {
+            result = 80.0;
+        }
 
         // Iterate 25x25 window: outer (X dir) ∈ [-12, 12], inner (Z dir) ∈ [-12, 12]
         for outer in -12_i32..=12 {
@@ -207,7 +212,9 @@ impl EndBiomeSource {
                 }
 
                 // Sample simplex noise at (outer+half_x, inner+half_z)
-                let simplex = self.noise.sample_simplex_2d(outer_plus_half_x_f64, inner_plus_half_z as f64);
+                let simplex = self
+                    .noise
+                    .sample_simplex_2d(outer_plus_half_x_f64, inner_plus_half_z as f64);
                 if simplex >= -0.9 {
                     continue;
                 }
@@ -226,8 +233,12 @@ impl EndBiomeSource {
 
                 // height = 100 - dist * elev_factor, clamped to [-100, 80]
                 let mut new_height = 100.0_f32 - dist * elev_factor;
-                if new_height < -100.0 { new_height = -100.0; }
-                if new_height > 80.0 { new_height = 80.0; }
+                if new_height < -100.0 {
+                    new_height = -100.0;
+                }
+                if new_height > 80.0 {
+                    new_height = 80.0;
+                }
 
                 // Take MAX of result and new_height
                 // (closest island = highest height = highlands)

@@ -1,6 +1,5 @@
 /// Octave noise and DoublePerlinNoise for Minecraft 1.18+.
 /// Matches cubiomes' xOctaveInit / xDoublePerlinInit / sampleDoublePerlin exactly.
-
 use crate::perlin::ImprovedNoise;
 use crate::xoroshiro::{Xoroshiro, octave_md5};
 
@@ -101,7 +100,11 @@ impl DoublePerlinNoise {
         // Compute effective_len: trim leading and trailing zero amplitudes
         let first_nonzero = amplitudes.iter().position(|&a| a != 0.0).unwrap_or(0);
         let last_nonzero = amplitudes.iter().rposition(|&a| a != 0.0).unwrap_or(0);
-        let effective_len = if amplitudes.is_empty() { 0 } else { last_nonzero - first_nonzero + 1 };
+        let effective_len = if amplitudes.is_empty() {
+            0
+        } else {
+            last_nonzero - first_nonzero + 1
+        };
 
         // Amplitude = (5/3) * effective_len / (effective_len + 1)
         let amplitude = if effective_len > 0 {
@@ -110,7 +113,11 @@ impl DoublePerlinNoise {
             0.0
         };
 
-        Self { oct_a, oct_b, amplitude }
+        Self {
+            oct_a,
+            oct_b,
+            amplitude,
+        }
     }
 
     pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {

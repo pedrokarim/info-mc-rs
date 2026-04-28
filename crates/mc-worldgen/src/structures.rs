@@ -1,8 +1,7 @@
+use crate::bedrock_random::BedrockRandom;
 /// Minecraft structure placement — exact chunkbase algorithm.
 /// Supports Java and Bedrock editions with different RNG and configs.
-
 use crate::java_random::JavaRandom;
-use crate::bedrock_random::BedrockRandom;
 use crate::xoroshiro::Xoroshiro;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -14,10 +13,10 @@ pub enum Edition {
 #[derive(Debug, Clone, Copy)]
 pub struct StructureConfig {
     pub salt: i32,
-    pub region_size: i32,   // = spacing in chunks
-    pub chunk_range: i32,   // random range within region (= spacing - separation)
+    pub region_size: i32, // = spacing in chunks
+    pub chunk_range: i32, // random range within region (= spacing - separation)
     pub placement: PlacementType,
-    pub rarity: f32,        // for DecoratorRarity placement (e.g. 1/700 for End Gateway)
+    pub rarity: f32, // for DecoratorRarity placement (e.g. 1/700 for End Gateway)
     pub linear_separation: bool, // true = single nextInt, false = triangular (double + avg)
     /// Force a specific RNG type regardless of edition.
     /// None = use edition's default. Some(Java) = always Java LCG. Some(Bedrock) = always MT.
@@ -70,84 +69,119 @@ impl StructureType {
 
         // Helpers for concise definitions
         let feature = |salt, spacing, sep, linear: bool| StructureConfig {
-            salt, region_size: spacing, chunk_range: spacing - sep,
-            placement: Feature, rarity: 0.0,
-            linear_separation: linear, force_rng: None,
+            salt,
+            region_size: spacing,
+            chunk_range: spacing - sep,
+            placement: Feature,
+            rarity: 0.0,
+            linear_separation: linear,
+            force_rng: None,
         };
         let feature_force_java = |salt, spacing, sep, linear: bool| StructureConfig {
-            salt, region_size: spacing, chunk_range: spacing - sep,
-            placement: Feature, rarity: 0.0,
-            linear_separation: linear, force_rng: Some(Edition::Java),
+            salt,
+            region_size: spacing,
+            chunk_range: spacing - sep,
+            placement: Feature,
+            rarity: 0.0,
+            linear_separation: linear,
+            force_rng: Some(Edition::Java),
         };
         let none = StructureConfig {
-            salt: 0, region_size: 1, chunk_range: 0,
-            placement: Feature, rarity: 0.0,
-            linear_separation: false, force_rng: None,
+            salt: 0,
+            region_size: 1,
+            chunk_range: 0,
+            placement: Feature,
+            rarity: 0.0,
+            linear_separation: false,
+            force_rng: None,
         };
 
         let is_bedrock = edition == Edition::Bedrock;
 
         match self {
             // Village — standard feature, same for both editions
-            Self::Village =>         feature(10387312,  34, 8,  true),
-            Self::DesertTemple =>    feature(14357617,  32, 8,  true),
-            Self::JungleTemple =>    feature(14357619,  32, 8,  true),
-            Self::SwampHut =>        feature(14357620,  32, 8,  true),
-            Self::Igloo =>           feature(14357618,  32, 8,  true),
+            Self::Village => feature(10387312, 34, 8, true),
+            Self::DesertTemple => feature(14357617, 32, 8, true),
+            Self::JungleTemple => feature(14357619, 32, 8, true),
+            Self::SwampHut => feature(14357620, 32, 8, true),
+            Self::Igloo => feature(14357618, 32, 8, true),
             // Ocean Monument — triangular
-            Self::OceanMonument =>   feature(10387313,  32, 5,  false),
+            Self::OceanMonument => feature(10387313, 32, 5, false),
             // Woodland Mansion — triangular
-            Self::WoodlandMansion => feature(10387319,  80, 20, false),
+            Self::WoodlandMansion => feature(10387319, 80, 20, false),
             // Pillager Outpost — different configs per edition!
-            Self::PillagerOutpost => if is_bedrock {
-                feature(165745296, 80, 24, false)
-            } else {
-                feature(165745296, 32, 8,  true)
-            },
+            Self::PillagerOutpost => {
+                if is_bedrock {
+                    feature(165745296, 80, 24, false)
+                } else {
+                    feature(165745296, 32, 8, true)
+                }
+            }
             // Ocean Ruin — Java has {12, 7, triangular}, Bedrock has {20, 8, linear}
-            Self::OceanRuin => if is_bedrock {
-                feature(14357621, 20, 8, true)
-            } else {
-                feature(14357621, 12, 7, false)
-            },
+            Self::OceanRuin => {
+                if is_bedrock {
+                    feature(14357621, 20, 8, true)
+                } else {
+                    feature(14357621, 12, 7, false)
+                }
+            }
             // Shipwreck
-            Self::Shipwreck =>       feature(165745295, 24, 4,  true),
+            Self::Shipwreck => feature(165745295, 24, 4, true),
             // Ruined Portal — different salt per edition!
-            Self::RuinedPortal => if is_bedrock {
-                feature(40552231, 40, 15, true)
-            } else {
-                feature(34222645, 40, 15, true)
-            },
+            Self::RuinedPortal => {
+                if is_bedrock {
+                    feature(40552231, 40, 15, true)
+                } else {
+                    feature(34222645, 40, 15, true)
+                }
+            }
             // Ancient City — triangular on Bedrock, linear on Java
-            Self::AncientCity =>     feature(20083232,  24, 8,  !is_bedrock),
+            Self::AncientCity => feature(20083232, 24, 8, !is_bedrock),
             // Trail Ruin — linear on Java (force Java RNG)
             Self::TrailRuin => feature_force_java(83469867, 34, 8, true),
             // Trial Chamber — always forces Java RNG regardless of edition
             Self::TrialChamber => feature_force_java(94251327, 34, 12, true),
             // Nether structures
-            Self::NetherFortress =>  feature(30084232,  27, 4,  true),
-            Self::Bastion =>         feature(30084232,  27, 4,  true),
+            Self::NetherFortress => feature(30084232, 27, 4, true),
+            Self::Bastion => feature(30084232, 27, 4, true),
             // End City — triangular, same for both editions
             Self::EndCity => StructureConfig {
-                salt: 10387313, region_size: 20, chunk_range: 9,
-                placement: LargeEndCity, rarity: 0.0,
-                linear_separation: false, force_rng: None,
+                salt: 10387313,
+                region_size: 20,
+                chunk_range: 9,
+                placement: LargeEndCity,
+                rarity: 0.0,
+                linear_separation: false,
+                force_rng: None,
             },
             // End City Ship — same placement as EndCity
             Self::EndCityShip => StructureConfig {
-                salt: 10387313, region_size: 20, chunk_range: 9,
-                placement: LargeEndCity, rarity: 0.0,
-                linear_separation: false, force_rng: None,
+                salt: 10387313,
+                region_size: 20,
+                chunk_range: 9,
+                placement: LargeEndCity,
+                rarity: 0.0,
+                linear_separation: false,
+                force_rng: None,
             },
             // End Gateway — decorator with rarity (1.18+ Xoroshiro)
             Self::EndGateway => StructureConfig {
-                salt: 40000, region_size: 1, chunk_range: 1,
-                placement: DecoratorRarity, rarity: 1.0 / 700.0,
-                linear_separation: false, force_rng: None,
+                salt: 40000,
+                region_size: 1,
+                chunk_range: 1,
+                placement: DecoratorRarity,
+                rarity: 1.0 / 700.0,
+                linear_separation: false,
+                force_rng: None,
             },
             // Unimplemented (special): strongholds, mineshafts, dungeons, etc.
-            Self::Stronghold | Self::BuriedTreasure | Self::Mineshaft
-            | Self::Dungeon | Self::DesertWell | Self::Fossil | Self::Spawn => none,
+            Self::Stronghold
+            | Self::BuriedTreasure
+            | Self::Mineshaft
+            | Self::Dungeon
+            | Self::DesertWell
+            | Self::Fossil
+            | Self::Spawn => none,
         }
     }
 
@@ -184,10 +218,22 @@ impl StructureType {
 
     pub fn overworld_types() -> &'static [StructureType] {
         &[
-            Self::Village, Self::DesertTemple, Self::JungleTemple, Self::SwampHut,
-            Self::Igloo, Self::OceanMonument, Self::WoodlandMansion, Self::PillagerOutpost,
-            Self::OceanRuin, Self::Shipwreck, Self::RuinedPortal, Self::AncientCity,
-            Self::TrailRuin, Self::TrialChamber, Self::DesertWell, Self::Fossil,
+            Self::Village,
+            Self::DesertTemple,
+            Self::JungleTemple,
+            Self::SwampHut,
+            Self::Igloo,
+            Self::OceanMonument,
+            Self::WoodlandMansion,
+            Self::PillagerOutpost,
+            Self::OceanRuin,
+            Self::Shipwreck,
+            Self::RuinedPortal,
+            Self::AncientCity,
+            Self::TrailRuin,
+            Self::TrialChamber,
+            Self::DesertWell,
+            Self::Fossil,
         ]
     }
 
@@ -278,13 +324,20 @@ fn get_population_seed(world_seed: i64, x: i32, z: i32) -> i64 {
     let mut b = xr.next_long_j();
     a |= 1;
     b |= 1;
-    ((x as i64).wrapping_mul(a as i64).wrapping_add((z as i64).wrapping_mul(b as i64)))
+    ((x as i64)
+        .wrapping_mul(a as i64)
+        .wrapping_add((z as i64).wrapping_mul(b as i64)))
         ^ world_seed
 }
 
 /// Decorator placement (per-chunk with rarity check).
 /// Used for End Gateway, Geode, Desert Well, etc. in 1.18+.
-fn get_decorator_pos(config: &StructureConfig, seed: i64, chunk_x: i32, chunk_z: i32) -> Option<(i32, i32)> {
+fn get_decorator_pos(
+    config: &StructureConfig,
+    seed: i64,
+    chunk_x: i32,
+    chunk_z: i32,
+) -> Option<(i32, i32)> {
     let block_x = chunk_x * 16;
     let block_z = chunk_z * 16;
 
@@ -314,7 +367,9 @@ pub fn get_structure_pos(
     edition: Edition,
 ) -> Option<(i32, i32)> {
     let config = structure.config(edition);
-    if config.chunk_range <= 0 { return None; }
+    if config.chunk_range <= 0 {
+        return None;
+    }
 
     let (bx, bz) = match config.placement {
         PlacementType::Feature => get_region_pos(&config, seed, region_x, region_z, edition),
@@ -347,7 +402,9 @@ pub fn find_structures_in_area(
     edition: Edition,
 ) -> Vec<(i32, i32)> {
     let config = structure.config(edition);
-    if config.chunk_range <= 0 { return vec![]; }
+    if config.chunk_range <= 0 {
+        return vec![];
+    }
 
     // Decorator features (End Gateway, etc.) iterate per-chunk
     if config.placement == PlacementType::DecoratorRarity {
@@ -359,8 +416,10 @@ pub fn find_structures_in_area(
         for cx in cx0..=cx1 {
             for cz in cz0..=cz1 {
                 if let Some((bx, bz)) = get_decorator_pos(&config, seed, cx, cz) {
-                    if bx >= block_x && bx < block_x + block_w
-                        && bz >= block_z && bz < block_z + block_h
+                    if bx >= block_x
+                        && bx < block_x + block_w
+                        && bz >= block_z
+                        && bz < block_z + block_h
                     {
                         results.push((bx, bz));
                     }
@@ -382,8 +441,10 @@ pub fn find_structures_in_area(
     for rx in region_x0..=region_x1 {
         for rz in region_z0..=region_z1 {
             if let Some((bx, bz)) = get_structure_pos(seed, structure, rx, rz, edition) {
-                if bx >= block_x && bx < block_x + block_w
-                    && bz >= block_z && bz < block_z + block_h
+                if bx >= block_x
+                    && bx < block_x + block_w
+                    && bz >= block_z
+                    && bz < block_z + block_h
                 {
                     results.push((bx, bz));
                 }

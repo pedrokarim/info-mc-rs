@@ -229,17 +229,16 @@ impl Biome {
             Self::WarpedForest => 0x49907B,
             Self::BasaltDeltas => 0x403636,
             // End — colors matching chunkbase
-            Self::TheEnd => 0x8080FF,          // central island = purple/lavender
-            Self::EndHighlands => 0xD5CE8E,    // outer islands = light yellow
-            Self::EndMidlands => 0xB5AE6E,     // outer islands edge = darker yellow
-            Self::EndBarrens => 0x706848,       // sparse island fringe = dark olive
-            Self::SmallEndIslands => 0x000000,  // void = pure black
+            Self::TheEnd => 0x8080FF, // central island = purple/lavender
+            Self::EndHighlands => 0xD5CE8E, // outer islands = light yellow
+            Self::EndMidlands => 0xB5AE6E, // outer islands edge = darker yellow
+            Self::EndBarrens => 0x706848, // sparse island fringe = dark olive
+            Self::SmallEndIslands => 0x000000, // void = pure black
 
             Self::Unknown => 0xFF00FF,
         }
     }
 }
-
 
 /// Legacy biome IDs used by the pre-1.18 layer system.
 /// These map to our Biome enum but use the old numeric IDs.

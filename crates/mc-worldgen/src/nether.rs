@@ -3,7 +3,6 @@
 /// Uses Java Random (NOT Xoroshiro) for noise seeding.
 /// Two DoublePerlin noises: temperature (seed) and humidity (seed+1).
 /// 5 biome climate points with distance offsets.
-
 use crate::biomes::Biome;
 use crate::java_random::JavaRandom;
 use crate::perlin::ImprovedNoise;
@@ -73,7 +72,11 @@ impl LegacyDoublePerlin {
         // Amplitude normalization: (5/3) * len / (len + 1)
         let amplitude = (5.0 / 3.0) * len as f64 / (len + 1) as f64;
 
-        Self { oct_a, oct_b, amplitude }
+        Self {
+            oct_a,
+            oct_b,
+            amplitude,
+        }
     }
 
     /// perlinInit using JavaRandom (matches cubiomes exactly).
@@ -128,11 +131,11 @@ pub struct NetherBiomeSource {
 /// Nether biome climate points with distance offsets (from cubiomes).
 /// Format: (temp, humidity, offset_sq, biome)
 const NETHER_POINTS: [(f64, f64, f64, Biome); 5] = [
-    (0.0,  0.0,  0.0,            Biome::NetherWastes),
-    (0.0, -0.5,  0.0,            Biome::SoulSandValley),
-    (0.4,  0.0,  0.0,            Biome::CrimsonForest),
-    (0.0,  0.5,  0.375 * 0.375,  Biome::WarpedForest),   // offset!
-    (-0.5, 0.0,  0.175 * 0.175,  Biome::BasaltDeltas),    // offset!
+    (0.0, 0.0, 0.0, Biome::NetherWastes),
+    (0.0, -0.5, 0.0, Biome::SoulSandValley),
+    (0.4, 0.0, 0.0, Biome::CrimsonForest),
+    (0.0, 0.5, 0.375 * 0.375, Biome::WarpedForest), // offset!
+    (-0.5, 0.0, 0.175 * 0.175, Biome::BasaltDeltas), // offset!
 ];
 
 impl NetherBiomeSource {
@@ -141,7 +144,10 @@ impl NetherBiomeSource {
         let temperature = LegacyDoublePerlin::new(seed, -7, 2);
         let humidity = LegacyDoublePerlin::new(seed.wrapping_add(1), -7, 2);
 
-        Self { temperature, humidity }
+        Self {
+            temperature,
+            humidity,
+        }
     }
 
     pub fn get_biome(&self, block_x: i32, block_z: i32) -> Biome {

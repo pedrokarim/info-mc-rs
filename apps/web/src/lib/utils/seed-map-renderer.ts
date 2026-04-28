@@ -104,7 +104,7 @@ function drawTile(
 	tilePx: number,
 ) {
 	// Create ImageData from RGBA buffer
-	const clamped = new Uint8ClampedArray(tile.rgba.buffer, tile.rgba.byteOffset, tile.rgba.byteLength);
+	const clamped = new Uint8ClampedArray(tile.rgba.buffer as ArrayBuffer, tile.rgba.byteOffset, tile.rgba.byteLength);
 	const imgData = new ImageData(clamped, TILE_SIZE, TILE_SIZE);
 
 	// Use a temporary canvas to draw at native resolution then scale

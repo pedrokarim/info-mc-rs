@@ -1,6 +1,5 @@
 /// End City piece generation — exact port of cubiomes finders.c.
 /// Used to determine if an End City contains an End Ship.
-
 use crate::java_random::JavaRandom;
 
 #[derive(Debug, Clone, Copy)]
@@ -84,13 +83,25 @@ fn chunk_generate_rnd(world_seed: i64, chunk_x: i32, chunk_z: i32) -> i64 {
 }
 
 /// Add an end city piece. Returns the index of the new piece.
-fn add_piece(env: &mut PieceEnv, prev_idx: Option<usize>, rot: i32, px: i32, py: i32, pz: i32, typ: i32) -> usize {
+fn add_piece(
+    env: &mut PieceEnv,
+    prev_idx: Option<usize>,
+    rot: i32,
+    px: i32,
+    py: i32,
+    pz: i32,
+    typ: i32,
+) -> usize {
     let info = PIECE_INFO[typ as usize];
 
     let mut pos = if let Some(pi) = prev_idx {
         env.list[pi].pos
     } else {
-        Pos3 { x: px, y: py, z: pz }
+        Pos3 {
+            x: px,
+            y: py,
+            z: pz,
+        }
     };
 
     let mut bb0 = pos;
@@ -98,10 +109,22 @@ fn add_piece(env: &mut PieceEnv, prev_idx: Option<usize>, rot: i32, px: i32, py:
     bb1.y += info.1;
 
     match rot {
-        0 => { bb1.x += info.0; bb1.z += info.2; }
-        1 => { bb0.x -= info.2; bb1.z += info.0; }
-        2 => { bb0.x -= info.0; bb0.z -= info.2; }
-        3 => { bb1.x += info.2; bb0.z -= info.0; }
+        0 => {
+            bb1.x += info.0;
+            bb1.z += info.2;
+        }
+        1 => {
+            bb0.x -= info.2;
+            bb1.z += info.0;
+        }
+        2 => {
+            bb0.x -= info.0;
+            bb0.z -= info.2;
+        }
+        3 => {
+            bb1.x += info.2;
+            bb0.z -= info.0;
+        }
         _ => unreachable!(),
     }
 
@@ -109,27 +132,55 @@ fn add_piece(env: &mut PieceEnv, prev_idx: Option<usize>, rot: i32, px: i32, py:
         let prev = env.list[pi];
         let (mut dx, dy, mut dz) = (0i32, py, 0i32);
         match prev.rot {
-            0 => { dx += px; dz += pz; }
-            1 => { dx -= pz; dz += px; }
-            2 => { dx -= px; dz -= pz; }
-            3 => { dx += pz; dz -= px; }
+            0 => {
+                dx += px;
+                dz += pz;
+            }
+            1 => {
+                dx -= pz;
+                dz += px;
+            }
+            2 => {
+                dx -= px;
+                dz -= pz;
+            }
+            3 => {
+                dx += pz;
+                dz -= px;
+            }
             _ => unreachable!(),
         }
-        pos.x += dx; pos.y += dy; pos.z += dz;
-        bb0.x += dx; bb0.y += dy; bb0.z += dz;
-        bb1.x += dx; bb1.y += dy; bb1.z += dz;
+        pos.x += dx;
+        pos.y += dy;
+        pos.z += dz;
+        bb0.x += dx;
+        bb0.y += dy;
+        bb0.z += dz;
+        bb1.x += dx;
+        bb1.y += dy;
+        bb1.z += dz;
     }
 
-    let piece = Piece { typ, rot, depth: 0, pos, bb0, bb1 };
+    let piece = Piece {
+        typ,
+        rot,
+        depth: 0,
+        pos,
+        bb0,
+        bb1,
+    };
     env.list.push(piece);
     env.list.len() - 1
 }
 
 /// Check if two pieces' bounding boxes intersect.
 fn boxes_intersect(p: &Piece, q: &Piece) -> bool {
-    q.bb1.x >= p.bb0.x && q.bb0.x <= p.bb1.x &&
-    q.bb1.z >= p.bb0.z && q.bb0.z <= p.bb1.z &&
-    q.bb1.y >= p.bb0.y && q.bb0.y <= p.bb1.y
+    q.bb1.x >= p.bb0.x
+        && q.bb0.x <= p.bb1.x
+        && q.bb1.z >= p.bb0.z
+        && q.bb0.z <= p.bb1.z
+        && q.bb1.y >= p.bb0.y
+        && q.bb0.y <= p.bb1.y
 }
 
 type GenFn = fn(&mut PieceEnv, usize, i32, &mut JavaRandom) -> bool;
@@ -187,7 +238,11 @@ fn gen_tower(env: &mut PieceEnv, current_idx: usize, depth: i32, rng: &mut JavaR
     base_idx = add_piece(env, Some(base_idx), rot, x, -3, z, TOWER_BASE);
     base_idx = add_piece(env, Some(base_idx), rot, 0, 7, 0, TOWER_PIECE);
 
-    let floor_idx = if rng.next_int(3) == 0 { Some(base_idx) } else { None };
+    let floor_idx = if rng.next_int(3) == 0 {
+        Some(base_idx)
+    } else {
+        None
+    };
     let mut current_floor_idx = floor_idx;
 
     let floorcnt = 1 + rng.next_int(3);
@@ -199,18 +254,21 @@ fn gen_tower(env: &mut PieceEnv, current_idx: usize, depth: i32, rng: &mut JavaR
     }
 
     if let Some(_floor) = current_floor_idx {
-        const BINFO: [[i32; 4]; 4] = [
-            [0, 1, -1, 0],
-            [1, 6, -1, 1],
-            [3, 0, -1, 5],
-            [2, 5, -1, 6],
-        ];
+        const BINFO: [[i32; 4]; 4] = [[0, 1, -1, 0], [1, 6, -1, 1], [3, 0, -1, 5], [2, 5, -1, 6]];
         for i in 0..4 {
             if rng.next(1) == 0 {
                 continue;
             }
             let brot = (rot + BINFO[i][0]) & 3;
-            let bridge_idx = add_piece(env, Some(base_idx), brot, BINFO[i][1], BINFO[i][2], BINFO[i][3], BRIDGE_END);
+            let bridge_idx = add_piece(
+                env,
+                Some(base_idx),
+                brot,
+                BINFO[i][1],
+                BINFO[i][2],
+                BINFO[i][3],
+                BRIDGE_END,
+            );
             gen_pieces_recursively(gen_bridge, env, bridge_idx, depth + 1, rng);
         }
     } else if depth != 7 {
@@ -263,8 +321,15 @@ fn gen_bridge(env: &mut PieceEnv, current_idx: usize, depth: i32, rng: &mut Java
 }
 
 /// genHouseTower — generates a house tower at the end of a bridge.
-fn gen_house_tower(env: &mut PieceEnv, current_idx: usize, depth: i32, rng: &mut JavaRandom) -> bool {
-    if depth > 8 { return false; }
+fn gen_house_tower(
+    env: &mut PieceEnv,
+    current_idx: usize,
+    depth: i32,
+    rng: &mut JavaRandom,
+) -> bool {
+    if depth > 8 {
+        return false;
+    }
     let rot = env.list[current_idx].rot;
 
     let mut base_idx = current_idx;
@@ -297,20 +362,27 @@ fn gen_fat_tower(env: &mut PieceEnv, current_idx: usize, depth: i32, rng: &mut J
     base_idx = add_piece(env, Some(base_idx), rot, -3, 4, -3, FAT_TOWER_BASE);
     base_idx = add_piece(env, Some(base_idx), rot, 0, 4, 0, FAT_TOWER_MIDDLE);
 
-    const BINFO: [[i32; 4]; 4] = [
-        [0, 4, -1, 0],
-        [1, 12, -1, 4],
-        [3, 0, -1, 8],
-        [2, 8, -1, 12],
-    ];
+    const BINFO: [[i32; 4]; 4] = [[0, 4, -1, 0], [1, 12, -1, 4], [3, 0, -1, 8], [2, 8, -1, 12]];
 
     for _ in 0..2 {
-        if rng.next_int(3) == 0 { break; }
+        if rng.next_int(3) == 0 {
+            break;
+        }
         base_idx = add_piece(env, Some(base_idx), rot, 0, 8, 0, FAT_TOWER_MIDDLE);
         for i in 0..4 {
-            if rng.next(1) == 0 { continue; }
+            if rng.next(1) == 0 {
+                continue;
+            }
             let brot = (rot + BINFO[i][0]) & 3;
-            let bridge_idx = add_piece(env, Some(base_idx), brot, BINFO[i][1], BINFO[i][2], BINFO[i][3], BRIDGE_END);
+            let bridge_idx = add_piece(
+                env,
+                Some(base_idx),
+                brot,
+                BINFO[i][1],
+                BINFO[i][2],
+                BINFO[i][3],
+                BRIDGE_END,
+            );
             gen_pieces_recursively(gen_bridge, env, bridge_idx, depth + 1, rng);
         }
     }
