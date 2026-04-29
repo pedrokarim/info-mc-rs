@@ -66,19 +66,15 @@ pub async fn update_config(
 
         // Validate specific keys
         match key.as_str() {
-            "maintenance_mode" => {
-                if value != "true" && value != "false" {
-                    return Err(ApiError::InvalidAddress(
-                        "maintenance_mode must be 'true' or 'false'".into(),
-                    ));
-                }
+            "maintenance_mode" if value != "true" && value != "false" => {
+                return Err(ApiError::InvalidAddress(
+                    "maintenance_mode must be 'true' or 'false'".into(),
+                ));
             }
-            "like_alert_threshold" => {
-                if value.parse::<i64>().is_err() {
-                    return Err(ApiError::InvalidAddress(
-                        "like_alert_threshold must be a number".into(),
-                    ));
-                }
+            "like_alert_threshold" if value.parse::<i64>().is_err() => {
+                return Err(ApiError::InvalidAddress(
+                    "like_alert_threshold must be a number".into(),
+                ));
             }
             _ => {}
         }
