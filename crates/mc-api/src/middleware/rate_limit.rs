@@ -70,15 +70,13 @@ fn is_trusted_proxy(ip: IpAddr) -> bool {
 
 /// Extract real client IP from X-Forwarded-For header or fall back to ConnectInfo.
 fn real_ip(headers: &axum::http::HeaderMap, connect_ip: IpAddr) -> IpAddr {
-    if is_trusted_proxy(connect_ip) {
-        if let Some(xff) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
-            // First IP in X-Forwarded-For is the original client
-            if let Some(first) = xff.split(',').next() {
-                if let Ok(ip) = first.trim().parse::<IpAddr>() {
-                    return ip;
-                }
-            }
-        }
+    if is_trusted_proxy(connect_ip)
+        && let Some(xff) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok())
+        && let Some(first) = xff.split(',').next()
+        && let Ok(ip) = first.trim().parse::<IpAddr>()
+    {
+        // First IP in X-Forwarded-For is the original client
+        return ip;
     }
     connect_ip
 }

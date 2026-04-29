@@ -1,3 +1,5 @@
+#![allow(warnings, clippy::all)]
+
 pub mod bedrock_random;
 pub mod biome_tree;
 pub mod biomes;
