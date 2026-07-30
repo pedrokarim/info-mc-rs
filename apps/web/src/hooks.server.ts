@@ -6,7 +6,15 @@ const API_UPSTREAM = env.API_BASE_INTERNAL || publicEnv.PUBLIC_API_BASE || 'http
 
 export const handle: Handle = async ({ event, resolve }) => {
   // Proxy /api/* requests to the Rust API
-  if (event.url.pathname.startsWith('/api')) {
+  //
+  // `/health` est servi à la racine de l'API, pas sous `/api`, et le proxy ne
+  // réécrit pas les chemins : sans cette exception la route est injoignable
+  // depuis le navigateur. La sonde de `AppHeader` interrogeait donc l'origine
+  // web, recevait le 404 de SvelteKit et affichait « API DOWN » en permanence,
+  // alors que l'API répondait 200 — d'où aussi la version absente du tooltip.
+  const isApiPath = event.url.pathname.startsWith('/api') || event.url.pathname === '/health';
+
+  if (isApiPath) {
     const upstream = `${API_UPSTREAM}${event.url.pathname}${event.url.search}`;
 
     const headers = new Headers();
