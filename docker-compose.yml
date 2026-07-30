@@ -26,6 +26,12 @@ services:
       - PUBLIC_API_BASE=
       - PORT=3000
       - ORIGIN=http://localhost:${WEB_PORT:-3000}
+      # Mesure d'audience. Lues à l'exécution par `$env/dynamic/public`, donc
+      # inutile de reconstruire l'image pour les changer : un
+      # `docker compose up -d --no-deps web` suffit. Jeton vide = aucune
+      # collecte et aucune requête.
+      - PUBLIC_SARUTOBI_PROJECT_TOKEN=${PUBLIC_SARUTOBI_PROJECT_TOKEN:-}
+      - PUBLIC_SARUTOBI_ENVIRONMENT=${PUBLIC_SARUTOBI_ENVIRONMENT:-production}
     depends_on:
       - api
     restart: unless-stopped
