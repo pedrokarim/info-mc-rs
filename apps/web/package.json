@@ -40,6 +40,7 @@
 		"vitest": "^4.0.18"
 	},
 	"dependencies": {
+		"@ascencia/sarutobi-svelte": "^0.1.0-rc.2",
 		"pako": "^2.1.0",
 		"three": "^0.183.2"
 	}

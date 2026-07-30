@@ -1,8 +1,13 @@
 <script lang="ts">
   import '../app.css';
   import AppHeader from '$lib/components/AppHeader.svelte';
+  import { startAnalytics } from '$lib/analytics';
 
   let { children } = $props();
+
+  // Sans effet au rendu serveur et sans jeton configuré. Ne collecte rien tant
+  // que le consentement n'a pas été accordé — voir `$lib/analytics`.
+  startAnalytics();
 </script>
 
 <div class="app-shell">

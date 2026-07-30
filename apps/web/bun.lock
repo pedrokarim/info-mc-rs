@@ -5,6 +5,7 @@
     "": {
       "name": "web",
       "dependencies": {
+        "@ascencia/sarutobi-svelte": "^0.1.0-rc.2",
         "pako": "^2.1.0",
         "three": "^0.183.2",
       },
@@ -38,6 +39,10 @@
   },
   "packages": {
     "@adobe/css-tools": ["@adobe/css-tools@4.4.4", "", {}, "sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg=="],
+
+    "@ascencia/sarutobi-js": ["@ascencia/sarutobi-js@0.1.0-rc.2", "", {}, "sha512-ngj/iBcZHKj69D/bB+gz85jZ05c69aDLbscsXDKjw9QZ/wTuTDKvaWjtZIGV89e24RtvWWKriLWgXdVqNZrEjg=="],
+
+    "@ascencia/sarutobi-svelte": ["@ascencia/sarutobi-svelte@0.1.0-rc.2", "", { "dependencies": { "@ascencia/sarutobi-js": "0.1.0-rc.2" } }, "sha512-+GR+ADRe0WLxQYjz4AW+1u9DybAlPfGUBv1xZtok6m3i5oeRx54RTkaXjQQxP9QXEz3z43/SdV1LnBohuOxnhA=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.29.0", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.28.5", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw=="],
 
