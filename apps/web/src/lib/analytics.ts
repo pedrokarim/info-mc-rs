@@ -95,12 +95,23 @@ export function analyticsDenied(): boolean {
  * au-delà de la connexion, donc les visites publiques d'un administrateur
  * cessent de gonfler les chiffres comme celles d'un visiteur de plus.
  *
- * Aucune donnée personnelle : l'identifiant du compte, rien d'autre. Ni email
- * ni pseudo — ils n'ajouteraient rien sur une population de quelques comptes et
- * sortiraient du minimum nécessaire annoncé par la page Confidentialité.
+ * **Sans propriétés, et c'est une contrainte, pas un oubli.** `identify()`
+ * fait deux choses : il fixe l'identifiant localement, et il émet un événement
+ * `$identify` qui porte les propriétés. La connexion a lieu sur
+ * `/admin/login`, que `CHEMINS_EXCLUS` filtre — l'événement est donc jeté, et
+ * toute propriété passée ici n'arriverait jamais.
+ *
+ * Le rattachement, lui, fonctionne : chaque envoi porte l'identifiant dans son
+ * enveloppe, pas seulement l'événement `$identify`. Le premier passage sur une
+ * page publique suffit à relier la personne et à fusionner son historique
+ * anonyme.
+ *
+ * Aucune donnée personnelle non plus : l'identifiant du compte, rien d'autre.
+ * Ni email ni pseudo — ils n'ajouteraient rien sur une population de quelques
+ * comptes et sortiraient du minimum annoncé par la page Confidentialité.
  */
 export function identifyAdmin(userId: string): void {
-	useSarutobi().identify(userId, { role: 'admin' });
+	useSarutobi().identify(userId);
 }
 
 /**
