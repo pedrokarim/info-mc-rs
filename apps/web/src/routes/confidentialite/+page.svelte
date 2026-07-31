@@ -1,5 +1,25 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import SEO from '$lib/components/SEO.svelte';
+  import { analyticsDenied, denyAnalytics, grantAnalytics } from '$lib/analytics';
+
+  // L'état vit dans le stockage local du visiteur : il n'existe pas au rendu
+  // serveur. On part donc de « accepté », qui est le défaut du site, et on
+  // corrige au montage plutôt que d'afficher une bascule vide le temps de
+  // l'hydratation.
+  let refuse = $state(false);
+  let pret = $state(false);
+
+  onMount(() => {
+    refuse = analyticsDenied();
+    pret = true;
+  });
+
+  function basculer() {
+    if (refuse) grantAnalytics();
+    else denyAnalytics();
+    refuse = !refuse;
+  }
 </script>
 
 <SEO
@@ -25,7 +45,37 @@
       <li><strong>Données de navigation</strong> — adresse IP, user-agent, pages visitées. Ces données sont utilisées à des fins de statistiques anonymes et de sécurité.</li>
       <li><strong>Recherches</strong> — les pseudos joueurs et adresses de serveurs recherchés sont temporairement mis en cache pour améliorer les performances. Ces données sont publiques par nature (API Mojang, protocole Minecraft).</li>
       <li><strong>Cookies</strong> — MCInfo utilise uniquement des cookies techniques essentiels au fonctionnement du site. Aucun cookie publicitaire ou de tracking tiers n'est utilisé.</li>
+      <li><strong>Mesure d'audience</strong> — les pages consultées et les outils utilisés sont comptabilisés par <a href="https://sarutobi.ascencia.re/" target="_blank" rel="noreferrer">Sarutobi</a>, une instance auto-hébergée par Ascencia. Aucune donnée n'est transmise à un tiers, et un identifiant anonyme est conservé dans votre navigateur pour ne pas compter deux fois la même visite. Vous pouvez la refuser ci-dessous.</li>
     </ul>
+  </section>
+
+  <section class="legal-section">
+    <h2>Refuser la mesure d'audience</h2>
+    <p>
+      La mesure démarre dès la première visite, sans bandeau : elle ne sert qu'à savoir quelles pages
+      et quels outils sont consultés. Vous pouvez vous y opposer à tout moment, et ce choix est
+      conservé dans ce navigateur.
+    </p>
+
+    <div class="optout">
+      <p class="optout-state" aria-live="polite">
+        {#if !pret}
+          Chargement de votre choix…
+        {:else if refuse}
+          La mesure d'audience est <strong>désactivée</strong> sur ce navigateur.
+        {:else}
+          La mesure d'audience est <strong>active</strong> sur ce navigateur.
+        {/if}
+      </p>
+      <button type="button" class="optout-button" onclick={basculer} disabled={!pret}>
+        {refuse ? 'Réactiver la mesure' : 'Refuser la mesure'}
+      </button>
+    </div>
+
+    <p class="optout-note">
+      Ce réglage est enregistré localement : il ne suit pas votre compte et devra être refait sur un
+      autre navigateur ou après effacement des données du site.
+    </p>
   </section>
 
   <section class="legal-section">
@@ -129,5 +179,59 @@
 
   .legal-section a:hover {
     color: #0e3a62;
+  }
+
+  .optout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin: 0.9rem 0 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(72, 112, 156, 0.25);
+    border-radius: 10px;
+    background: rgba(72, 112, 156, 0.05);
+  }
+
+  .optout-state {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--ink-1, #2a4a66);
+  }
+
+  .optout-button {
+    flex-shrink: 0;
+    padding: 0.5rem 0.95rem;
+    border: 1px solid #2a6faa;
+    border-radius: 8px;
+    background: #2a6faa;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .optout-button:hover:not(:disabled) {
+    background: #0e3a62;
+  }
+
+  .optout-button:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .optout-button:focus-visible {
+    outline: 2px solid #0e3a62;
+    outline-offset: 2px;
+  }
+
+  .optout-note {
+    font-size: 0.8rem !important;
+    color: var(--ink-2, #5a7894) !important;
+    margin-top: 0.6rem !important;
   }
 </style>

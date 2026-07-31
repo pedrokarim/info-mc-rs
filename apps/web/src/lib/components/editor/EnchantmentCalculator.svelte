@@ -1,5 +1,6 @@
 <script lang="ts">
   import Card from '$lib/components/ui/Card.svelte';
+  import { captureToolUsed } from '$lib/analytics';
   import {
     ITEM_CATEGORIES, ENCHANTMENTS, getCompatibleEnchants, isCompatible,
     calculateAnvilCost, optimizeOrder, toGiveCommand,
@@ -44,6 +45,10 @@
       await navigator.clipboard.writeText(command);
       copied = true;
       setTimeout(() => { copied = false; }, 2000);
+      captureToolUsed('enchantment-calculator', {
+        category: selectedCategory,
+        enchants: selectedEnchants.length,
+      });
     } catch { /* fail */ }
   }
 

@@ -7,6 +7,7 @@
   import StructureViewer3D from './StructureViewer3D.svelte';
   import { parseNbt, nbtToTree, extractStructure } from '$lib/utils/nbt-parser';
   import type { NbtTag, StructureData } from '$lib/utils/nbt-parser';
+  import { captureToolUsed } from '$lib/analytics';
 
   let tree = $state<NbtTag | null>(null);
   let structure = $state<StructureData | null>(null);
@@ -31,6 +32,10 @@
       tree = nbtToTree(parsed);
       structure = extractStructure(parsed);
       if (structure) layerY = -1;
+      // L'ouverture réussie *est* l'usage : ce visualiseur n'a pas d'autre
+      // sortie que ce qu'il affiche. En cas d'échec de parsing, rien n'est
+      // émis — un fichier illisible n'est pas une utilisation.
+      captureToolUsed('nbt-viewer', { source: 'preset', structure: structure !== null });
     } catch (e: any) {
       error = `Erreur : ${e.message || 'format invalide'}`;
     } finally {
@@ -62,6 +67,13 @@
       if (structure) {
         layerY = -1; // Show all layers
       }
+      // Le nom du fichier n'est pas transmis : c'est une donnée du poste du
+      // visiteur. Seule son extension dit quelque chose d'utile.
+      captureToolUsed('nbt-viewer', {
+        source: 'file',
+        extension: file.name.slice(file.name.lastIndexOf('.')),
+        structure: structure !== null,
+      });
     } catch (e: any) {
       error = `Erreur de parsing : ${e.message || 'format invalide'}`;
     } finally {

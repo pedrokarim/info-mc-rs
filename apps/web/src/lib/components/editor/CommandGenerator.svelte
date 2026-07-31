@@ -1,6 +1,7 @@
 <script lang="ts">
   import Card from '$lib/components/ui/Card.svelte';
   import Input from '$lib/components/ui/Input.svelte';
+  import { captureToolUsed } from '$lib/analytics';
   import {
     COMMANDS, ITEMS, BLOCKS, ENTITIES, PARTICLES, EFFECTS,
     GAMEMODES, WEATHER_TYPES, TIME_PRESETS, TARGETS,
@@ -62,6 +63,10 @@
       await navigator.clipboard.writeText(command);
       copied = true;
       setTimeout(() => { copied = false; }, 2000);
+      // `command` porte la sous-commande choisie, pas la commande
+      // construite : celle-ci contient des coordonnées et des noms saisis
+      // à la main, qui n'ont rien à faire dans un événement.
+      captureToolUsed('command-generator', { command: activeCmd });
     } catch { /* fail */ }
   }
 </script>

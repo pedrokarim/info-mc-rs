@@ -13,6 +13,7 @@
   import GradientPicker from '$lib/components/ui/GradientPicker.svelte';
   import ColorPicker from '$lib/components/ui/ColorPicker.svelte';
   import MotdEditorInput from '$lib/components/editor/MotdEditorInput.svelte';
+  import { captureToolUsed } from '$lib/analytics';
 
   // ── State ──
   let line = $state<EditorLine>({ chars: [] });
@@ -119,12 +120,16 @@
       await navigator.clipboard.writeText(commandOutput);
       copied = true;
       setTimeout(() => { copied = false; }, 2000);
+      // `commandType` est une valeur parmi quatre ; le texte composé, lui,
+      // est de la saisie libre et ne sort pas du navigateur.
+      captureToolUsed('tellraw-generator', { output: 'command', command: commandType });
     } catch { /* clipboard fail */ }
   }
 
   async function copyJson() {
     try {
       await navigator.clipboard.writeText(jsonOutput);
+      captureToolUsed('tellraw-generator', { output: 'json', command: commandType });
     } catch { /* clipboard fail */ }
   }
 

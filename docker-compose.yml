@@ -28,8 +28,10 @@ services:
       - ORIGIN=http://localhost:${WEB_PORT:-3000}
       # Mesure d'audience. Lues à l'exécution par `$env/dynamic/public`, donc
       # inutile de reconstruire l'image pour les changer : un
-      # `docker compose up -d --no-deps web` suffit. Jeton vide = aucune
+      # `docker compose up -d --no-deps web` suffit. Clé vide = aucune
       # collecte et aucune requête.
+      - PUBLIC_SARUTOBI_SITE_ID=${PUBLIC_SARUTOBI_SITE_ID:-}
+      # Ancien nom, transmis tant que des environnements le portent encore.
       - PUBLIC_SARUTOBI_PROJECT_TOKEN=${PUBLIC_SARUTOBI_PROJECT_TOKEN:-}
       - PUBLIC_SARUTOBI_ENVIRONMENT=${PUBLIC_SARUTOBI_ENVIRONMENT:-production}
     depends_on:

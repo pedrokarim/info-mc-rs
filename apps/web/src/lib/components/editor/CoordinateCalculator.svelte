@@ -4,6 +4,7 @@
   import Card from '$lib/components/ui/Card.svelte';
   import Input from '$lib/components/ui/Input.svelte';
   import Tabs from '$lib/components/ui/Tabs.svelte';
+  import { captureToolUsedOnce } from '$lib/analytics';
   import {
     createSeedMapStore, TILE_SIZE, randomSeed,
     type SeedMapStore,
@@ -96,6 +97,25 @@
       lazyFrom: { x: (ccx - 11) * 16, z: (ccz - 11) * 16 },
       lazyTo: { x: (ccx + 11) * 16 + 15, z: (ccz + 11) * 16 + 15 },
     };
+  });
+
+  /**
+   * Usage des quatre calculs, une fois chacun par visite.
+   *
+   * Ces calculs sont des `$derived` : ils se réévaluent à chaque frappe.
+   * Y brancher un événement direct produirait une trentaine d'envois pour
+   * une seule utilisation, et mesurerait la longueur du nombre saisi plutôt
+   * que l'usage. `captureToolUsedOnce` ne garde que le premier résultat
+   * valide par onglet — la seule chose qu'on cherchait à savoir.
+   *
+   * Aucune coordonnée n'est transmise : ce sont les positions du monde du
+   * visiteur, et l'onglet suffit à dire quel calcul a servi.
+   */
+  $effect(() => {
+    if (converted) captureToolUsedOnce('coordinate-calculator', 'converter', { mode: 'converter' });
+    if (chunkInfo) captureToolUsedOnce('coordinate-calculator', 'chunk', { mode: 'chunk' });
+    if (distance) captureToolUsedOnce('coordinate-calculator', 'distance', { mode: 'distance' });
+    if (spawnChunks) captureToolUsedOnce('coordinate-calculator', 'spawn', { mode: 'spawn' });
   });
 
   const tabs = [

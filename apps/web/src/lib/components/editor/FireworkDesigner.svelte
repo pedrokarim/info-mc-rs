@@ -1,5 +1,6 @@
 <script lang="ts">
   import Card from '$lib/components/ui/Card.svelte';
+  import { captureToolUsed } from '$lib/analytics';
   import {
     SHAPES, FIREWORK_COLORS, createExplosion, toGiveCommand, renderFireworkPreview,
     type FireworkState, type FireworkExplosion,
@@ -65,6 +66,7 @@
       await navigator.clipboard.writeText(command);
       copied = true;
       setTimeout(() => { copied = false; }, 2000);
+      captureToolUsed('firework-designer', { explosions: explosions.length });
     } catch { /* fail */ }
   }
 

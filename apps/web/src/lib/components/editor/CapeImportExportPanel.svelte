@@ -1,10 +1,13 @@
 <script lang="ts">
   import FileDropZone from '$lib/components/ui/FileDropZone.svelte';
   import { capeState, loadFromImage, loadFromUrl, exportAsPng } from '$lib/stores/cape-editor.svelte';
+  import { captureToolUsed } from '$lib/analytics';
 
   let { apiBase = '' }: { apiBase?: string } = $props();
 
   let username = $state('');
+  // Comment la cape est arrivée, jamais laquelle : le pseudo saisi reste ici.
+  let source = $state<'file' | 'username' | 'blank'>('blank');
   let loading = $state(false);
   let error = $state('');
 
@@ -18,6 +21,7 @@
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
+    source = 'file';
   }
 
   async function loadFromUsername() {
@@ -26,9 +30,16 @@
     try {
       const capeUrl = `${apiBase}/api/v1/cape/optifine/${encodeURIComponent(username.trim())}`;
       await loadFromUrl(capeUrl);
+      source = 'username';
     } catch (e: any) {
       error = e.message || 'Cape introuvable';
     } finally { loading = false; }
+  }
+
+  /** Comme pour le skin : c'est le téléchargement qui fait l'usage. */
+  function exporter() {
+    exportAsPng();
+    captureToolUsed('cape-editor', { source });
   }
 </script>
 
@@ -44,7 +55,7 @@
 
   {#if error}<span class="error-msg">{error}</span>{/if}
 
-  <button class="action-btn action-btn--primary" onclick={exportAsPng}>Télécharger PNG</button>
+  <button class="action-btn action-btn--primary" onclick={exporter}>Télécharger PNG</button>
 </div>
 
 <style>

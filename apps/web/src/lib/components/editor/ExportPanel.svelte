@@ -3,6 +3,7 @@
   import { toLegacy, toJsonComponent, toMiniMessage, DEFAULT_STYLE } from '$lib/utils/motd';
   import type { StyledChar } from '$lib/utils/motd';
   import Tabs from '$lib/components/ui/Tabs.svelte';
+  import { captureToolUsed } from '$lib/analytics';
 
   let {
     lines,
@@ -68,6 +69,12 @@
       copied = true;
       setTimeout(() => { copied = false; }, 1500);
     }
+
+    // Après le `try`/`catch`, et non dans chacune des deux branches : elles se
+    // distinguent par la technique de copie, pas par ce que le visiteur a fait.
+    // Le format exporté est la seule chose qui sépare deux usages de l'outil ;
+    // le texte du MOTD, lui, est de la saisie libre.
+    captureToolUsed('motd-editor', { format: selectedTab });
   }
 </script>
 

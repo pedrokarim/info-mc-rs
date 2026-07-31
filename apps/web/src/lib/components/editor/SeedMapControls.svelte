@@ -1,6 +1,7 @@
 <script lang="ts">
   import Select from '$lib/components/ui/Select.svelte';
   import Switch from '$lib/components/ui/Switch.svelte';
+  import { captureToolUsed } from '$lib/analytics';
   import {
     mapState, setSeed, setVersion, setDimension, setEdition, setCenter, zoomIn, zoomOut,
   } from '$lib/stores/seed-map.svelte';
@@ -98,9 +99,27 @@
     { value: '1.7',  label: '1.7 — The Update that Changed the World' },
   ];
 
+  /**
+   * La seed elle-même n'est pas transmise.
+   *
+   * C'est une valeur saisie par le visiteur, et une seed est un identifiant
+   * de monde : deux personnes qui explorent la même sont reliables. La
+   * version, l'édition et la dimension suffisent à savoir comment l'outil
+   * sert, et ne désignent personne.
+   */
+  function emettreUsage(origine: 'saisie' | 'aleatoire') {
+    captureToolUsed('seed-map', {
+      origine,
+      version: mapState.mcVersion,
+      edition: mapState.edition,
+      dimension: mapState.dimension,
+    });
+  }
+
   function handleSeedSubmit() {
     if (seedInput.trim()) {
       setSeed(seedInput.trim());
+      emettreUsage('saisie');
     }
   }
 
@@ -133,6 +152,7 @@
     const seed = BigInt(hi) * BigInt(0x100000000) + BigInt(lo >>> 0);
     seedInput = seed.toString();
     setSeed(seedInput);
+    emettreUsage('aleatoire');
   }
 </script>
 

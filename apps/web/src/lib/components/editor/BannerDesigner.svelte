@@ -1,5 +1,6 @@
 <script lang="ts">
   import Card from '$lib/components/ui/Card.svelte';
+  import { captureToolUsed } from '$lib/analytics';
   import {
     DYE_COLORS, PATTERNS, renderBanner, toGiveCommand,
     type BannerState, type BannerLayer,
@@ -42,6 +43,9 @@
       await navigator.clipboard.writeText(command);
       copied = true;
       setTimeout(() => { copied = false; }, 2000);
+      // Après l'écriture, pas avant : une copie refusée par le navigateur
+      // n'est pas un usage, et c'est le seul cas où l'outil ne rend rien.
+      captureToolUsed('banner-designer', { layers: layers.length });
     } catch { /* fail */ }
   }
 

@@ -3,6 +3,7 @@
   import {
     editorState, loadFromImage, loadFromUrl, exportAsPng, loadTemplate,
   } from '$lib/stores/skin-editor.svelte';
+  import { captureToolUsed } from '$lib/analytics';
 
   let {
     apiBase = '',
@@ -11,6 +12,9 @@
   } = $props();
 
   let username = $state('');
+  // Comment le skin est entré dans l'éditeur, et surtout pas *lequel* :
+  // un pseudo de joueur est une donnée saisie, elle ne sort pas d'ici.
+  let source = $state<'file' | 'username' | 'template' | 'blank'>('blank');
   let loading = $state(false);
   let error = $state('');
 
@@ -27,6 +31,7 @@
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
+    source = 'file';
   }
 
   async function loadFromUsername() {
@@ -40,11 +45,26 @@
       if (!data.skin?.url) throw new Error('Aucun skin trouvé');
       editorState.slim = data.skin.model === 'slim';
       await loadFromUrl(data.skin.url);
+      source = 'username';
     } catch (e: any) {
       error = e.message || 'Erreur lors du chargement';
     } finally {
       loading = false;
     }
+  }
+
+  function choisirModele(nom: 'steve' | 'alex' | 'pedrokarim' | 'blank') {
+    loadTemplate(nom);
+    source = nom === 'blank' ? 'blank' : 'template';
+  }
+
+  /**
+   * Le téléchargement est le moment où l'outil a servi : charger un skin pour
+   * le regarder tourner est fréquent et ne prouve rien.
+   */
+  function exporter() {
+    exportAsPng();
+    captureToolUsed('skin-editor', { source, slim: editorState.slim });
   }
 </script>
 
@@ -74,17 +94,17 @@
     <span class="error-msg">{error}</span>
   {/if}
 
-  <button class="action-btn action-btn--primary" onclick={exportAsPng}>
+  <button class="action-btn action-btn--primary" onclick={exporter}>
     Télécharger PNG
   </button>
 
   <div class="template-section">
     <span class="sub-title">Templates</span>
     <div class="template-row">
-      <button class="action-btn" onclick={() => loadTemplate('steve')}>Steve</button>
-      <button class="action-btn" onclick={() => loadTemplate('alex')}>Alex</button>
-      <button class="action-btn" onclick={() => loadTemplate('pedrokarim')}>PedroKarim</button>
-      <button class="action-btn" onclick={() => loadTemplate('blank')}>Vierge</button>
+      <button class="action-btn" onclick={() => choisirModele('steve')}>Steve</button>
+      <button class="action-btn" onclick={() => choisirModele('alex')}>Alex</button>
+      <button class="action-btn" onclick={() => choisirModele('pedrokarim')}>PedroKarim</button>
+      <button class="action-btn" onclick={() => choisirModele('blank')}>Vierge</button>
     </div>
   </div>
 
