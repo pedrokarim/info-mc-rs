@@ -18,8 +18,8 @@ export const handle: Handle = async ({ event, resolve }) => {
     const upstream = `${API_UPSTREAM}${event.url.pathname}${event.url.search}`;
 
     const headers = new Headers();
-    // Forward relevant headers
-    for (const key of ['authorization', 'content-type', 'accept', 'x-forwarded-for']) {
+    // Transmet les en-têtes utiles, dont le cookie de session et l'origine CSRF.
+    for (const key of ['content-type', 'accept', 'cookie', 'origin', 'x-forwarded-for']) {
       const val = event.request.headers.get(key);
       if (val) headers.set(key, val);
     }

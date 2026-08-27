@@ -4,9 +4,10 @@ use std::time::Duration;
 
 use mc_cache::TtlCache;
 use mc_mojang::MojangClient;
-use rand::Rng;
 use sqlx::SqlitePool;
+use tokio::sync::Mutex;
 
+use crate::ascencia::AscenciaConfig;
 use crate::routes::player::PlayerResponse;
 use crate::routes::server::ServerResponse;
 
@@ -23,10 +24,8 @@ pub struct AppState {
     pub admin_http: reqwest::Client,
     pub db: SqlitePool,
     pub ip_salt: String,
-    pub jwt_secret: String,
-    pub discord_client_id: String,
-    pub discord_client_secret: String,
-    pub discord_redirect_uri: String,
+    pub ascencia: AscenciaConfig,
+    pub ascencia_refresh_lock: Arc<Mutex<()>>,
     pub maintenance_mode: Arc<AtomicBool>,
 }
 
@@ -54,25 +53,9 @@ impl AppState {
         let ip_salt =
             std::env::var("IP_HASH_SALT").unwrap_or_else(|_| "mcinfo-default-salt".to_string());
 
-        let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
-            let secret: String = rand::thread_rng()
-                .sample_iter(&rand::distributions::Alphanumeric)
-                .take(32)
-                .map(char::from)
-                .collect();
-            tracing::warn!(
-                "JWT_SECRET not set, using random secret (sessions won't survive restarts)"
-            );
-            secret
-        });
-
-        let discord_client_id = std::env::var("DISCORD_CLIENT_ID").unwrap_or_default();
-        let discord_client_secret = std::env::var("DISCORD_CLIENT_SECRET").unwrap_or_default();
-        let discord_redirect_uri = std::env::var("DISCORD_REDIRECT_URI")
-            .unwrap_or_else(|_| "http://127.0.0.1:3001/api/v1/admin/auth/callback".to_string());
-
-        if discord_client_id.is_empty() {
-            tracing::warn!("DISCORD_CLIENT_ID not set, admin OAuth will be unavailable");
+        let ascencia = AscenciaConfig::from_env();
+        if !ascencia.is_configured() {
+            tracing::warn!("Ascencia ID is not configured; admin sign-in will be unavailable");
         }
 
         // Create tables
@@ -141,35 +124,35 @@ impl AppState {
         .expect("failed to create likes table");
 
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS admin_users (
-                discord_id TEXT PRIMARY KEY,
-                discord_username TEXT NOT NULL,
-                discord_avatar TEXT,
-                role TEXT NOT NULL DEFAULT 'admin',
+            "CREATE TABLE IF NOT EXISTS ascencia_admin_sessions (
+                token_hash TEXT PRIMARY KEY,
+                account_id TEXT NOT NULL,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT,
+                access_expires_at TEXT NOT NULL,
+                session_expires_at TEXT NOT NULL,
+                claims TEXT NOT NULL,
+                profile TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                last_login_at TEXT
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
             )",
         )
         .execute(&db)
         .await
-        .expect("failed to create admin_users table");
+        .expect("failed to create Ascencia admin sessions table");
 
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS admin_sessions (
-                id TEXT PRIMARY KEY,
-                discord_id TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                expires_at TEXT NOT NULL
-            )",
+            "CREATE INDEX IF NOT EXISTS ascencia_admin_sessions_account_idx
+             ON ascencia_admin_sessions (account_id)",
         )
         .execute(&db)
         .await
-        .expect("failed to create admin_sessions table");
+        .expect("failed to index Ascencia admin sessions");
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS admin_audit_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                discord_id TEXT NOT NULL,
+                account_id TEXT NOT NULL,
                 action TEXT NOT NULL,
                 detail TEXT,
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -208,24 +191,24 @@ impl AppState {
         .await
         .expect("failed to create admin_alerts table");
 
-        // Migrations (ALTER TABLE, safe to re-run)
-        sqlx::query("ALTER TABLE admin_users ADD COLUMN totp_secret TEXT")
-            .execute(&db)
-            .await
-            .ok();
+        // Migration de l'ancien journal Discord, conservé sans perdre l'historique.
+        let audit_columns: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM pragma_table_info('admin_audit_log')")
+                .fetch_all(&db)
+                .await
+                .unwrap_or_default();
+        if audit_columns.iter().any(|column| column == "discord_id")
+            && !audit_columns.iter().any(|column| column == "account_id")
+        {
+            sqlx::query("ALTER TABLE admin_audit_log RENAME COLUMN discord_id TO account_id")
+                .execute(&db)
+                .await
+                .expect("failed to migrate the admin audit identity column");
+        }
         sqlx::query("ALTER TABLE servers ADD COLUMN motd_html TEXT")
             .execute(&db)
             .await
             .ok();
-
-        // Seed super admin
-        sqlx::query(
-            "INSERT OR IGNORE INTO admin_users (discord_id, discord_username, role)
-             VALUES ('319842407829078016', 'owner', 'super_admin')",
-        )
-        .execute(&db)
-        .await
-        .expect("failed to seed super admin");
 
         // Seed default config values
         for (key, value) in [
@@ -266,10 +249,8 @@ impl AppState {
             admin_http,
             db,
             ip_salt,
-            jwt_secret,
-            discord_client_id,
-            discord_client_secret,
-            discord_redirect_uri,
+            ascencia,
+            ascencia_refresh_lock: Arc::new(Mutex::new(())),
             maintenance_mode: Arc::new(AtomicBool::new(maintenance_mode)),
         }
     }

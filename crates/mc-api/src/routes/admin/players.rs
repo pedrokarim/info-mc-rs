@@ -256,7 +256,7 @@ pub async fn moderate_player(
     if !actions.is_empty() {
         let detail = format!("player={uuid} actions={}", actions.join(","));
         sqlx::query(
-            "INSERT INTO admin_audit_log (discord_id, action, detail) VALUES (?, 'moderate_player', ?)",
+            "INSERT INTO admin_audit_log (account_id, action, detail) VALUES (?, 'moderate_player', ?)",
         )
         .bind(&claims.sub)
         .bind(&detail)
@@ -293,7 +293,7 @@ pub async fn delete_player(
 
     // Audit log
     sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action, detail) VALUES (?, 'delete_player', ?)",
+        "INSERT INTO admin_audit_log (account_id, action, detail) VALUES (?, 'delete_player', ?)",
     )
     .bind(&claims.sub)
     .bind(format!("player={uuid}"))

@@ -111,7 +111,7 @@ pub async fn resolve_alert(
     }
 
     sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action, detail) VALUES (?, 'resolve_alert', ?)",
+        "INSERT INTO admin_audit_log (account_id, action, detail) VALUES (?, 'resolve_alert', ?)",
     )
     .bind(&claims.sub)
     .bind(format!("alert_id={id}"))

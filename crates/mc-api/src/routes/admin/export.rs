@@ -68,7 +68,7 @@ pub async fn export_players(
 
     // Audit
     sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action, detail) VALUES (?, 'export_players', ?)",
+        "INSERT INTO admin_audit_log (account_id, action, detail) VALUES (?, 'export_players', ?)",
     )
     .bind(&claims.sub)
     .bind(format!("{} rows", rows.len()))
@@ -146,7 +146,7 @@ pub async fn export_servers(
     }
 
     sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action, detail) VALUES (?, 'export_servers', ?)",
+        "INSERT INTO admin_audit_log (account_id, action, detail) VALUES (?, 'export_servers', ?)",
     )
     .bind(&claims.sub)
     .bind(format!("{} rows", rows.len()))

@@ -29,7 +29,7 @@
     try {
       const params = new URLSearchParams({ limit: String(limit), offset: String(offset), sort });
       if (search.trim()) params.set('search', search.trim());
-      const res = await adminFetch(`/api/v1/admin/players?${params}`, sess.token);
+      const res = await adminFetch(`/api/v1/admin/players?${params}`);
       if (!res.ok) throw new Error('Erreur serveur');
       const data = await res.json();
       players = data.data;
@@ -49,7 +49,7 @@
     if (!sess) return;
     if (!confirm(`Confirmer l'action sur ${uuid} ?`)) return;
     try {
-      const res = await adminFetch(`/api/v1/admin/players/${uuid}`, sess.token, {
+      const res = await adminFetch(`/api/v1/admin/players/${uuid}`, {
         method: 'PATCH',
         body: JSON.stringify(action),
       });
@@ -66,7 +66,7 @@
     if (!sess) return;
     if (!confirm(`Supprimer ${uuid} de l'index ?`)) return;
     try {
-      const res = await adminFetch(`/api/v1/admin/players/${uuid}`, sess.token, { method: 'DELETE' });
+      const res = await adminFetch(`/api/v1/admin/players/${uuid}`, { method: 'DELETE' });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
       addToast('Joueur supprimé', 'success');
     } catch (e: any) {

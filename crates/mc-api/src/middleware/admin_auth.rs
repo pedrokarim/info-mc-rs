@@ -4,19 +4,15 @@ use axum::extract::{ConnectInfo, State};
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
-use jsonwebtoken::{DecodingKey, Validation};
-use serde::{Deserialize, Serialize};
 
+use crate::ascencia::{AdminUserInfo, cookie_value, load_session};
 use crate::state::SharedState;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct AdminClaims {
     pub sub: String,
-    pub jti: String,
-    pub username: String,
-    pub role: String,
-    pub exp: usize,
-    pub iat: usize,
+    pub session_token_hash: String,
+    pub user: AdminUserInfo,
 }
 
 pub async fn admin_auth_middleware(
@@ -28,20 +24,19 @@ pub async fn admin_auth_middleware(
     let unauthorized = || {
         let body = serde_json::json!({
             "error": "unauthorized",
-            "message": "Missing or invalid authentication token"
+            "message": "Session Ascencia ID absente ou invalide"
         });
         (axum::http::StatusCode::UNAUTHORIZED, axum::Json(body)).into_response()
     };
 
-    let forbidden = |msg: &str| {
+    let forbidden = |message: &str| {
         let body = serde_json::json!({
             "error": "forbidden",
-            "message": msg
+            "message": message
         });
         (axum::http::StatusCode::FORBIDDEN, axum::Json(body)).into_response()
     };
 
-    // IP whitelist check
     let whitelist = sqlx::query_scalar::<_, String>(
         "SELECT value FROM admin_config WHERE key = 'admin_ip_whitelist'",
     )
@@ -53,47 +48,36 @@ pub async fn admin_auth_middleware(
 
     if !whitelist.is_empty() {
         let client_ip = addr.ip().to_string();
-        let allowed: Vec<&str> = whitelist.split(',').map(|s| s.trim()).collect();
+        let allowed: Vec<&str> = whitelist.split(',').map(str::trim).collect();
         if !allowed.iter().any(|ip| *ip == client_ip) {
-            return forbidden("IP address not in admin whitelist");
+            return forbidden("Adresse IP absente de la liste d’administration");
         }
     }
 
-    // Extract Bearer token from Authorization header
-    let token = match request
-        .headers()
-        .get(axum::http::header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "))
-    {
-        Some(t) => t.to_string(),
-        None => return unauthorized(),
-    };
+    if request.method() != axum::http::Method::GET {
+        let valid_origin = request
+            .headers()
+            .get(axum::http::header::ORIGIN)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|origin| origin == state.ascencia.allowed_origin);
+        if !valid_origin {
+            return forbidden("Origine de la requête refusée");
+        }
+    }
 
-    // Decode & verify JWT
-    let claims = match jsonwebtoken::decode::<AdminClaims>(
-        &token,
-        &DecodingKey::from_secret(state.jwt_secret.as_bytes()),
-        &Validation::default(),
-    ) {
-        Ok(data) => data.claims,
+    let Some(raw_token) = cookie_value(request.headers()) else {
+        return unauthorized();
+    };
+    let session = match load_session(&state, raw_token).await {
+        Ok(session) => session,
         Err(_) => return unauthorized(),
     };
 
-    // Verify session still exists in DB (allows revocation via logout)
-    let session_exists = sqlx::query_scalar::<_, i32>(
-        "SELECT COUNT(*) FROM admin_sessions WHERE id = ? AND expires_at > datetime('now')",
-    )
-    .bind(&claims.jti)
-    .fetch_one(&state.db)
-    .await
-    .unwrap_or(0);
-
-    if session_exists == 0 {
-        return unauthorized();
-    }
-
-    // Inject claims into request extensions for handlers
+    let claims = AdminClaims {
+        sub: session.user.account_id.clone(),
+        session_token_hash: session.token_hash,
+        user: session.user,
+    };
     request.extensions_mut().insert(claims);
     next.run(request).await
 }

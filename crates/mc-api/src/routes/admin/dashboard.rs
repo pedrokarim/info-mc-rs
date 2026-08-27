@@ -36,7 +36,8 @@ pub async fn dashboard(
             (SELECT COUNT(*) FROM favorites) as total_favorites,
             (SELECT COUNT(*) FROM players WHERE last_seen_at > datetime('now', '-1 day')) as players_last_24h,
             (SELECT COUNT(*) FROM servers WHERE last_seen_at > datetime('now', '-1 day')) as servers_last_24h,
-            (SELECT COUNT(*) FROM admin_users) as admin_count",
+            (SELECT COUNT(DISTINCT account_id) FROM ascencia_admin_sessions
+             WHERE datetime(session_expires_at) > datetime('now')) as admin_count",
     )
     .fetch_one(&state.db)
     .await
