@@ -41,13 +41,12 @@ pub async fn exchange(
     if !state.ascencia.accepts_redirect_uri(&body.redirect_uri) {
         return Err(ApiError::InvalidAddress("invalid redirect_uri".into()));
     }
-    if let Some(origin) = headers
+    if headers
         .get(axum::http::header::ORIGIN)
         .and_then(|value| value.to_str().ok())
+        .is_some_and(|origin| origin != state.ascencia.allowed_origin)
     {
-        if origin != state.ascencia.allowed_origin {
-            return Err(ApiError::Forbidden("invalid origin".into()));
-        }
+        return Err(ApiError::Forbidden("invalid origin".into()));
     }
 
     let session =
