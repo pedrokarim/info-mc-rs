@@ -1,154 +1,127 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { browser } from '$app/environment';
-  import { adminSession, saveSession, API_BASE } from '$lib/stores/admin';
+  import { env } from '$env/dynamic/public';
+  import { onMount } from 'svelte';
+  import { adminSession, loadAdminSession } from '$lib/stores/admin';
+
+  interface AscenciaWidget {
+    signIn(): Promise<unknown>;
+    handleRedirectCallback(): Promise<unknown>;
+    on(event: 'signin' | 'error' | 'cancelled', listener: (payload?: unknown) => void): () => void;
+  }
 
   let loading = $state(false);
+  let widgetReady = $state(false);
   let error = $state('');
-  let needs2fa = $state(false);
-  let tempToken = $state('');
-  let totpCode = $state('');
-  let pendingUser = $state<any>(null);
 
-  // If already logged in, redirect to dashboard
+  function getWidget(): AscenciaWidget | undefined {
+    return (window as Window & { AscenciaID?: AscenciaWidget }).AscenciaID;
+  }
+
   $effect(() => {
-    if (browser && $adminSession) {
-      goto('/admin');
-    }
+    if ($adminSession) goto('/admin');
   });
 
-  // Handle OAuth callback code
-  $effect(() => {
-    if (!browser) return;
-    const code = $page.url.searchParams.get('code');
-    if (code) {
-      handleCallback(code);
+  onMount(() => {
+    let dispose: (() => void)[] = [];
+
+    const bindWidget = async () => {
+      const widget = getWidget();
+      if (!widget) return;
+      widgetReady = true;
+      dispose = [
+        widget.on('signin', () => void finishSignIn()),
+        widget.on('error', (payload) => showWidgetError(payload)),
+        widget.on('cancelled', () => {
+          loading = false;
+        })
+      ];
+      try {
+        await widget.handleRedirectCallback();
+      } catch {
+        error = 'Le retour de connexion Ascencia ID n’a pas abouti.';
+      }
+    };
+
+    if (getWidget()) {
+      void bindWidget();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.ascencia.re/id.js?v=4e97c9a259241d5901d94d992aa7a1e73c1ab1ad';
+      script.async = true;
+      script.dataset.clientId = env.PUBLIC_ASCENCIA_CLIENT_ID || '';
+      script.dataset.issuer = env.PUBLIC_ASCENCIA_ISSUER || 'https://id.ascencia.re';
+      script.dataset.redirectUri = env.PUBLIC_ASCENCIA_REDIRECT_URI || `${window.location.origin}/admin/login`;
+      script.dataset.exchangeUrl = '/api/v1/admin/auth/exchange';
+      script.dataset.scopes = 'openid profile email offline_access ascencia.roles';
+      script.dataset.siteName = 'MCInfo';
+      script.addEventListener('load', () => void bindWidget(), { once: true });
+      script.addEventListener('error', () => {
+        error = 'Le module Ascencia ID est indisponible.';
+      }, { once: true });
+      document.head.append(script);
     }
+
+    return () => {
+      for (const unsubscribe of dispose) unsubscribe();
+    };
   });
 
-  async function startLogin() {
+  async function startLogin(): Promise<void> {
+    const widget = getWidget();
+    if (!widget) return;
     loading = true;
     error = '';
     try {
-      const res = await fetch(`${API_BASE}/api/v1/admin/auth/login`);
-      const data = await res.json();
-      if (!res.ok) {
-        error = data.message || 'Erreur lors de la connexion';
-        return;
-      }
-      // Redirect to Discord
-      window.location.href = data.url;
-    } catch (e) {
-      error = 'Impossible de contacter l\'API';
-    } finally {
+      await widget.signIn();
+    } catch {
+      error = 'La connexion Ascencia ID a échoué.';
       loading = false;
     }
   }
 
-  async function handleCallback(code: string) {
-    loading = true;
-    error = '';
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/admin/auth/callback?code=${encodeURIComponent(code)}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        error = data.message || 'Authentification refusée';
-        // Clean URL
-        window.history.replaceState({}, '', '/admin/login');
-        return;
-      }
-
-      if (data.requires_2fa) {
-        needs2fa = true;
-        tempToken = data.token;
-        pendingUser = data.user;
-        window.history.replaceState({}, '', '/admin/login');
-        return;
-      }
-
-      saveSession({
-        token: data.token,
-        expires_at: data.expires_at,
-        user: data.user,
-      });
-      goto('/admin');
-    } catch (e) {
-      error = 'Erreur de callback';
-    } finally {
-      loading = false;
+  async function finishSignIn(): Promise<void> {
+    const session = await loadAdminSession();
+    loading = false;
+    if (session) {
+      await goto('/admin');
+    } else {
+      error = 'La session MCInfo n’a pas pu être créée.';
     }
   }
 
-  async function verify2fa() {
-    if (!totpCode.trim() || totpCode.length !== 6) {
-      error = 'Entrez un code à 6 chiffres';
-      return;
-    }
-    loading = true;
-    error = '';
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/admin/auth/2fa/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ temp_token: tempToken, code: totpCode }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        error = data.message || 'Code invalide';
-        return;
-      }
-
-      saveSession({
-        token: data.token,
-        expires_at: data.expires_at,
-        user: pendingUser,
-      });
-      goto('/admin');
-    } catch (e) {
-      error = 'Erreur de vérification';
-    } finally {
-      loading = false;
+  function showWidgetError(payload: unknown): void {
+    loading = false;
+    const code = (payload as { error?: unknown } | null)?.error;
+    if (code === 'access_request_pending') {
+      error = 'Ta demande a été envoyée. Tu pourras entrer dès qu’elle aura été approuvée.';
+    } else if (code === 'access_denied') {
+      error = 'Ce compte n’est pas autorisé à administrer MCInfo.';
+    } else {
+      error = 'La connexion Ascencia ID n’a pas abouti.';
     }
   }
 </script>
 
+<svelte:head>
+  <title>Administration — MCInfo</title>
+  <meta name="robots" content="noindex,nofollow" />
+</svelte:head>
+
 <div class="login-page">
   <div class="login-card">
+    <p class="eyebrow">ASCENCIA ID</p>
     <h1>MCInfo Admin</h1>
-    <p class="login-sub">Panneau d'administration</p>
+    <p class="login-sub">Connecte-toi avec le compte autorisé pour administrer MCInfo.</p>
 
     {#if error}
-      <div class="login-error">{error}</div>
+      <div class="login-error" role="alert">{error}</div>
     {/if}
 
-    {#if needs2fa}
-      <p class="login-2fa-label">Authentification 2FA requise</p>
-      <form onsubmit={(e) => { e.preventDefault(); verify2fa(); }}>
-        <input
-          class="login-input"
-          type="text"
-          inputmode="numeric"
-          pattern="[0-9]*"
-          maxlength="6"
-          placeholder="Code à 6 chiffres"
-          bind:value={totpCode}
-          autofocus
-        />
-        <button class="login-btn" type="submit" disabled={loading}>
-          {loading ? 'Vérification...' : 'Vérifier'}
-        </button>
-      </form>
-    {:else}
-      <button class="login-btn login-btn--discord" onclick={startLogin} disabled={loading}>
-        <svg width="20" height="20" viewBox="0 0 71 55" fill="currentColor">
-          <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.4 37.4 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9a.2.2 0 00-.1.1C1.5 18.7-.9 32.2.3 45.5v.1a58.7 58.7 0 0017.7 9a.2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.6 38.6 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .3 36.3 36.3 0 01-5.5 2.7.2.2 0 00-.1.3 47.1 47.1 0 003.6 5.8.2.2 0 00.3.1A58.5 58.5 0 0070.4 45.6v-.1c1.4-14.8-2.3-27.7-9.8-39.1a.2.2 0 00-.1 0zM23.7 37.3c-3.4 0-6.2-3.1-6.2-7s2.7-7 6.2-7 6.3 3.2 6.2 7-2.7 7-6.2 7zm22.9 0c-3.4 0-6.2-3.1-6.2-7s2.7-7 6.2-7 6.3 3.2 6.2 7-2.8 7-6.2 7z"/>
-        </svg>
-        {loading ? 'Connexion...' : 'Se connecter avec Discord'}
-      </button>
-    {/if}
+    <button class="login-btn" onclick={startLogin} disabled={loading || !widgetReady}>
+      {loading ? 'Connexion en cours…' : widgetReady ? 'Continuer avec Ascencia ID' : 'Chargement d’Ascencia ID…'}
+    </button>
+    <p class="access-note">Les accès sont gérés depuis Ascencia ID. Les superadmins de la plateforme sont également autorisés.</p>
   </div>
 </div>
 
@@ -158,92 +131,74 @@
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: #0d1117;
+    padding: 1.5rem;
+    background: radial-gradient(circle at top, rgba(88, 166, 255, 0.12), transparent 42%), #0d1117;
   }
 
   .login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 2.5rem 2rem;
+    text-align: center;
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 12px;
-    padding: 2.5rem 2rem;
-    width: 100%;
-    max-width: 380px;
-    text-align: center;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  }
+
+  .eyebrow {
+    margin: 0 0 0.4rem;
+    color: #58a6ff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
   }
 
   h1 {
     margin: 0;
+    color: #e6edf3;
     font-family: 'Teko', sans-serif;
-    font-size: 2rem;
-    color: #58a6ff;
+    font-size: 2.2rem;
   }
 
   .login-sub {
+    margin: 0.35rem auto 1.5rem;
     color: #8b949e;
-    font-size: 0.85rem;
-    margin: 0.3rem 0 1.5rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
 
   .login-error {
+    margin-bottom: 1rem;
+    padding: 0.7rem 0.85rem;
+    color: #ff7b72;
+    font-size: 0.82rem;
+    line-height: 1.4;
     background: rgba(248, 81, 73, 0.1);
     border: 1px solid rgba(248, 81, 73, 0.4);
-    color: #f85149;
-    border-radius: 6px;
-    padding: 0.5rem 0.8rem;
-    font-size: 0.82rem;
-    margin-bottom: 1rem;
+    border-radius: 7px;
   }
 
   .login-btn {
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.7rem 1rem;
-    border: none;
+    min-height: 46px;
+    padding: 0.75rem 1rem;
+    color: #ffffff;
+    font-size: 0.92rem;
+    font-weight: 700;
+    background: #1f6feb;
+    border: 1px solid #388bfd;
     border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
     cursor: pointer;
-    transition: opacity 100ms;
-    color: #fff;
-    background: #238636;
   }
 
-  .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .login-btn:hover:not(:disabled) { background: #388bfd; }
+  .login-btn:disabled { cursor: wait; opacity: 0.62; }
 
-  .login-btn--discord {
-    background: #5865f2;
-  }
-
-  .login-btn--discord:hover:not(:disabled) {
-    background: #4752c4;
-  }
-
-  .login-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.6rem 0.8rem;
-    border: 1px solid #30363d;
-    background: #0d1117;
-    color: #e6edf3;
-    border-radius: 6px;
-    font-size: 1.2rem;
-    text-align: center;
-    letter-spacing: 0.3em;
-    font-family: 'JetBrains Mono', monospace;
-    margin-bottom: 0.8rem;
-  }
-
-  .login-input:focus {
-    outline: none;
-    border-color: #58a6ff;
-  }
-
-  .login-2fa-label {
-    color: #e6edf3;
-    font-size: 0.88rem;
-    margin-bottom: 1rem;
+  .access-note {
+    margin: 1rem 0 0;
+    color: #6e7681;
+    font-size: 0.75rem;
+    line-height: 1.45;
   }
 </style>

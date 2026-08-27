@@ -17,7 +17,7 @@
     error = '';
     try {
       const params = new URLSearchParams({ limit: String(limit), offset: String(offset), filter });
-      const res = await adminFetch(`/api/v1/admin/alerts?${params}`, sess.token);
+      const res = await adminFetch(`/api/v1/admin/alerts?${params}`);
       if (!res.ok) throw new Error('Erreur serveur');
       const data = await res.json();
       alerts = data.data;
@@ -33,7 +33,7 @@
     const sess = $adminSession;
     if (!sess) return;
     try {
-      const res = await adminFetch(`/api/v1/admin/alerts/${id}`, sess.token, { method: 'PATCH' });
+      const res = await adminFetch(`/api/v1/admin/alerts/${id}`, { method: 'PATCH' });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
       addToast('Alerte résolue', 'success');
     } catch (e: any) {

@@ -6,10 +6,13 @@ services:
     environment:
       - PORT=3001
       - RUST_LOG=info
-      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
-      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
-      - DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI:-}
-      - JWT_SECRET=${JWT_SECRET:-}
+      - ASCENCIA_ISSUER=${ASCENCIA_ISSUER:-https://id.ascencia.re}
+      - ASCENCIA_CLIENT_ID=${ASCENCIA_CLIENT_ID:-}
+      - ASCENCIA_CLIENT_SECRET=${ASCENCIA_CLIENT_SECRET:-}
+      - ASCENCIA_REDIRECT_URI=${ASCENCIA_REDIRECT_URI:-http://localhost:3000/admin/login}
+      - ASCENCIA_ALLOWED_ORIGIN=${ASCENCIA_ALLOWED_ORIGIN:-http://localhost:3000}
+      - ASCENCIA_SESSION_SECRET=${ASCENCIA_SESSION_SECRET:-}
+      - ASCENCIA_COOKIE_SECURE=${ASCENCIA_COOKIE_SECURE:-false}
       - IP_HASH_SALT=${IP_HASH_SALT:-}
     volumes:
       - api-data:/app/data
@@ -24,8 +27,11 @@ services:
     environment:
       - API_BASE_INTERNAL=http://api:3001
       - PUBLIC_API_BASE=
+      - PUBLIC_ASCENCIA_ISSUER=${PUBLIC_ASCENCIA_ISSUER:-https://id.ascencia.re}
+      - PUBLIC_ASCENCIA_CLIENT_ID=${PUBLIC_ASCENCIA_CLIENT_ID:-}
+      - PUBLIC_ASCENCIA_REDIRECT_URI=${PUBLIC_ASCENCIA_REDIRECT_URI:-http://localhost:3000/admin/login}
       - PORT=3000
-      - ORIGIN=http://localhost:${WEB_PORT:-3000}
+      - ORIGIN=${WEB_ORIGIN:-http://localhost:3000}
       # Mesure d'audience. Lues à l'exécution par `$env/dynamic/public`, donc
       # inutile de reconstruire l'image pour les changer : un
       # `docker compose up -d --no-deps web` suffit. Clé vide = aucune

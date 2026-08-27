@@ -20,7 +20,7 @@
   onMount(() => {
     const sess = $adminSession;
     if (!sess) return;
-    adminFetch('/api/v1/admin/dashboard', sess.token)
+    adminFetch('/api/v1/admin/dashboard')
       .then(r => {
         if (!r.ok) throw new Error('Erreur serveur');
         return r.json();

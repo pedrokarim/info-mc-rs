@@ -25,7 +25,7 @@ fn default_limit() -> i64 {
 #[derive(Serialize, sqlx::FromRow)]
 pub struct AuditEntry {
     pub id: i64,
-    pub discord_id: String,
+    pub account_id: String,
     pub action: String,
     pub detail: Option<String>,
     pub created_at: String,
@@ -46,7 +46,7 @@ pub async fn list_audit(
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
     let rows: Vec<AuditEntry> = sqlx::query_as(
-        "SELECT id, discord_id, action, detail, created_at
+        "SELECT id, account_id, action, detail, created_at
          FROM admin_audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?",
     )
     .bind(limit)

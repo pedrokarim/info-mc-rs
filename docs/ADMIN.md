@@ -14,21 +14,22 @@ Le panneau admin est une interface web protégée permettant de gérer l'ensembl
 
 | Élément | Détail |
 |---------|--------|
-| **Méthode** | Login/password avec sessions JWT |
-| **Stockage** | Table `admin_users` (username, password_hash bcrypt, role, created_at) |
-| **Sessions** | JWT signé (HS256), expiration 24h, refresh token optionnel |
-| **2FA** | TOTP (Google Authenticator / Authy) — optionnel mais recommandé |
-| **Rate limit** | 5 tentatives / 15 min par IP sur `/admin/login` |
-| **Brute force** | Lockout temporaire après 10 échecs consécutifs |
+| **Méthode** | Widget Ascencia ID, OAuth 2.0 Authorization Code avec PKCE |
+| **Autorisation** | Rôle applicatif `admin`, ou rôle plateforme `superadmin` |
+| **Sessions** | Cookie opaque HttpOnly, Secure et SameSite=Lax, expiration 7 jours |
+| **Jetons** | Échange côté API ; access token et refresh token chiffrés en AES-256-GCM dans SQLite |
+| **Renouvellement** | Les claims sont revérifiées à chaque renouvellement du jeton d’accès |
+| **2FA** | Portée par Ascencia ID, sans second mécanisme local |
 
 ### 1.2 Rôles & Permissions
 
 | Rôle | Permissions |
 |------|------------|
-| **super_admin** | Tout — gestion des admins, config, purge données |
-| **admin** | Modération, analytics, gestion contenu |
-| **moderator** | Modération uniquement (ban, suppression likes abusifs) |
-| **viewer** | Lecture seule — dashboard et analytics |
+| **super_admin** | Rôle plateforme Ascencia `superadmin`, accès complet |
+| **admin** | Rôle applicatif MCInfo `admin`, accès à l’administration |
+
+Les attributions se gèrent dans la console Ascencia ID, sur l’application
+`mcinfo`. MCInfo ne conserve aucune liste parallèle de comptes autorisés.
 
 ### 1.3 Audit Log
 
@@ -37,14 +38,10 @@ Chaque action admin est loguée :
 ```sql
 CREATE TABLE admin_audit_log (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    admin_id    INTEGER NOT NULL,
-    action      TEXT NOT NULL,        -- "ban_player", "delete_server", "update_config"...
-    target_type TEXT,                 -- "player", "server", "admin_user", "config"
-    target_id   TEXT,                 -- UUID, address, ou ID
-    details     TEXT,                 -- JSON avec les détails de l'action
-    ip_address  TEXT NOT NULL,
-    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (admin_id) REFERENCES admin_users(id)
+    account_id  TEXT NOT NULL,
+    action      TEXT NOT NULL,
+    detail      TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 
@@ -270,27 +267,18 @@ GET /api/v1/admin/export/servers?format=csv   → Export serveurs
 ## 9. Tables SQL Admin
 
 ```sql
--- Comptes admin
-CREATE TABLE admin_users (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    username      TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role          TEXT NOT NULL DEFAULT 'viewer',
-    totp_secret   TEXT,                              -- NULL = 2FA désactivé
-    is_active     BOOLEAN NOT NULL DEFAULT 1,
-    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-    last_login_at TEXT
-);
-
--- Sessions admin (si JWT stateless pas suffisant)
-CREATE TABLE admin_sessions (
-    id         TEXT PRIMARY KEY,                     -- UUID de session
-    admin_id   INTEGER NOT NULL,
-    ip_address TEXT NOT NULL,
-    user_agent TEXT,
-    expires_at TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (admin_id) REFERENCES admin_users(id)
+-- Sessions applicatives Ascencia ID
+CREATE TABLE ascencia_admin_sessions (
+    token_hash        TEXT PRIMARY KEY,
+    account_id        TEXT NOT NULL,
+    access_token      TEXT NOT NULL,
+    refresh_token     TEXT,
+    access_expires_at TEXT NOT NULL,
+    session_expires_at TEXT NOT NULL,
+    claims            TEXT NOT NULL,
+    profile           TEXT NOT NULL,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Audit log (voir section 1.3)
@@ -321,9 +309,9 @@ CREATE TABLE admin_alerts (
 
 ### Auth
 ```
-POST /api/v1/admin/login                      → Login (retourne JWT)
-POST /api/v1/admin/logout                     → Invalide la session
-GET  /api/v1/admin/me                         → Profil admin courant
+POST /api/v1/admin/auth/exchange              → Échange le code PKCE et pose le cookie
+POST /api/v1/admin/auth/logout                → Révoque la session et efface le cookie
+GET  /api/v1/admin/auth/me                    → Profil Ascencia courant
 ```
 
 ### Dashboard
@@ -394,20 +382,14 @@ GET /api/v1/admin/export/servers?format=csv
 ## 11. Middleware Admin
 
 ```rust
-// Middleware qui vérifie le JWT admin sur toutes les routes /api/v1/admin/*
-// Extrait le rôle et le rend disponible dans les handlers
+// Middleware de session sur toutes les routes /api/v1/admin/* protégées.
 async fn admin_auth_middleware(req: Request, next: Next) -> Response {
-    // 1. Extraire le token du header Authorization: Bearer <token>
-    // 2. Vérifier la signature JWT
-    // 3. Vérifier l'expiration
-    // 4. Charger l'admin_user depuis la DB
-    // 5. Vérifier que is_active = true
-    // 6. Injecter AdminUser dans les extensions de la request
-    // 7. next.run(req).await
+    // 1. Lire le cookie HttpOnly.
+    // 2. Hasher sa valeur et charger la session SQLite.
+    // 3. Renouveler le jeton Ascencia expirant, puis revérifier ses rôles.
+    // 4. Injecter l'identité Ascencia dans les extensions de la requête.
+    // 5. Continuer vers le handler.
 }
-
-// Guard par rôle — utilisé dans les handlers
-fn require_role(admin: &AdminUser, min_role: Role) -> Result<(), ApiError> { ... }
 ```
 
 ---
@@ -426,7 +408,7 @@ fn require_role(admin: &AdminUser, min_role: Role) -> Result<(), ApiError> { ...
 /admin/likes                → Modération des likes
 /admin/favorites            → Gestion des favoris
 /admin/config               → Configuration runtime
-/admin/users                → Gestion des admins (super_admin)
+/admin/users                → Raccourci vers la gestion des accès Ascencia ID
 /admin/audit-log            → Historique des actions
 /admin/alerts               → Alertes automatiques
 /admin/export               → Exports CSV
@@ -448,12 +430,12 @@ fn require_role(admin: &AdminUser, min_role: Role) -> Result<(), ApiError> { ...
 |--------|--------|
 | **HTTPS only** | Le panneau admin doit être servi en HTTPS |
 | **CORS restreint** | Les routes `/admin/*` n'acceptent que l'origine du frontend |
-| **CSRF** | Token CSRF dans les formulaires (ou Double Submit Cookie) |
+| **CSRF** | SameSite=Lax et contrôle strict de l’origine sur toutes les mutations protégées |
 | **Content-Security-Policy** | Strict pour les pages admin |
 | **IP Whitelist** | Option de restreindre l'accès admin à certaines IPs |
-| **Session invalidation** | Déconnexion côté serveur (blacklist JWT ou sessions DB) |
-| **Password policy** | Min 12 chars, complexité requise |
-| **Audit complet** | Toute action loguée avec IP + timestamp |
+| **Session invalidation** | Suppression immédiate de la session SQLite à la déconnexion |
+| **Identifiants** | Aucun mot de passe n’est traité ni stocké par MCInfo |
+| **Audit complet** | Toute action administrative est associée au compte Ascencia et horodatée |
 
 ---
 
@@ -461,8 +443,8 @@ fn require_role(admin: &AdminUser, min_role: Role) -> Result<(), ApiError> { ...
 
 | Phase | Fonctionnalités |
 |-------|----------------|
-| **Phase 1** | Auth admin (login/JWT), dashboard basique, liste joueurs/serveurs en lecture seule |
+| **Phase 1** | Auth admin Ascencia ID, dashboard basique, liste joueurs/serveurs en lecture seule |
 | **Phase 2** | Actions de modération (ban, reset, delete), audit log |
 | **Phase 3** | Config runtime, mode maintenance, alertes |
 | **Phase 4** | Analytics avancées, graphiques, exports |
-| **Phase 5** | 2FA, gestion multi-admins, IP whitelist |
+| **Phase 5** | Gestion centralisée des accès Ascencia ID, IP whitelist |

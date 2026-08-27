@@ -245,7 +245,7 @@ pub async fn moderate_server(
     if !actions.is_empty() {
         let detail = format!("server={address} actions={}", actions.join(","));
         sqlx::query(
-            "INSERT INTO admin_audit_log (discord_id, action, detail) VALUES (?, 'moderate_server', ?)",
+            "INSERT INTO admin_audit_log (account_id, action, detail) VALUES (?, 'moderate_server', ?)",
         )
         .bind(&claims.sub)
         .bind(&detail)
@@ -280,7 +280,7 @@ pub async fn delete_server(
         .ok();
 
     sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action, detail) VALUES (?, 'delete_server', ?)",
+        "INSERT INTO admin_audit_log (account_id, action, detail) VALUES (?, 'delete_server', ?)",
     )
     .bind(&claims.sub)
     .bind(format!("server={address}"))

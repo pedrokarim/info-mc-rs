@@ -3,43 +3,50 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
-  import { adminSession, clearSession, adminFetch } from '$lib/stores/admin';
+  import { onMount } from 'svelte';
+  import {
+    adminSession,
+    adminSessionReady,
+    clearSession,
+    loadAdminSession,
+    adminFetch
+  } from '$lib/stores/admin';
   import Avatar from '$lib/components/ui/Avatar.svelte';
   import Toast from '$lib/components/ui/Toast.svelte';
 
   let { children } = $props();
 
   const navItems = [
-    { label: 'Dashboard', href: '/admin', icon: '📊' },
-    { label: 'Joueurs', href: '/admin/players', icon: '👤' },
-    { label: 'Serveurs', href: '/admin/servers', icon: '🖥' },
-    { label: 'Admins', href: '/admin/users', icon: '🔑' },
-    { label: 'Config', href: '/admin/config', icon: '⚙' },
-    { label: 'Alertes', href: '/admin/alerts', icon: '🔔' },
-    { label: 'Audit', href: '/admin/audit', icon: '📋' },
+    { label: 'Dashboard', href: '/admin' },
+    { label: 'Joueurs', href: '/admin/players' },
+    { label: 'Serveurs', href: '/admin/servers' },
+    { label: 'Accès', href: '/admin/users' },
+    { label: 'Config', href: '/admin/config' },
+    { label: 'Alertes', href: '/admin/alerts' },
+    { label: 'Audit', href: '/admin/audit' },
   ];
 
-  // Redirect to login if not authenticated (except on login page)
+  onMount(() => {
+    loadAdminSession();
+  });
+
   $effect(() => {
     if (!browser) return;
-    const sess = $adminSession;
+    if (!$adminSessionReady) return;
     const path = $page.url.pathname;
-    if (!sess && path !== '/admin/login') {
+    if (!$adminSession && path !== '/admin/login') {
       goto('/admin/login');
     }
   });
 
   async function logout() {
-    const sess = $adminSession;
-    if (sess) {
-      await adminFetch('/api/v1/admin/auth/logout', sess.token, { method: 'POST' }).catch(() => {});
-    }
+    await adminFetch('/api/v1/admin/auth/logout', { method: 'POST' }).catch(() => {});
     clearSession();
     goto('/admin/login');
   }
 </script>
 
-{#if !$adminSession && $page.url.pathname !== '/admin/login'}
+{#if (!$adminSessionReady || !$adminSession) && $page.url.pathname !== '/admin/login'}
   <div class="admin-loading">Redirection...</div>
 {:else if $page.url.pathname === '/admin/login'}
   {@render children()}
@@ -58,7 +65,6 @@
               class="admin-nav-link"
               class:active={$page.url.pathname === item.href}
             >
-              <span class="nav-icon">{item.icon}</span>
               {item.label}
             </a>
           </li>
@@ -69,19 +75,19 @@
         {#if $adminSession?.user}
           <div class="admin-user">
             <Avatar
-              src={$adminSession.user.discord_avatar ? `https://cdn.discordapp.com/avatars/${$adminSession.user.discord_id}/${$adminSession.user.discord_avatar}.png?size=64` : ''}
-              alt={$adminSession.user.discord_username}
-              fallback={$adminSession.user.discord_username}
+              src={$adminSession.user.avatar_url ?? ''}
+              alt={$adminSession.user.display_name ?? $adminSession.user.username ?? 'Compte Ascencia'}
+              fallback={$adminSession.user.display_name ?? $adminSession.user.username ?? $adminSession.user.email ?? 'A'}
               size="sm"
             />
             <div class="admin-user-info">
-              <span class="admin-username">{$adminSession.user.discord_username}</span>
+              <span class="admin-username">{$adminSession.user.display_name ?? $adminSession.user.username ?? $adminSession.user.email}</span>
               <span class="admin-role">{$adminSession.user.role}</span>
             </div>
           </div>
         {/if}
         <button class="admin-logout" onclick={logout}>Déconnexion</button>
-        <a class="admin-back" href="/">← Retour au site</a>
+        <a class="admin-back" href="/">Retour au site</a>
       </div>
     </nav>
 
@@ -152,8 +158,6 @@
     background: rgba(88, 166, 255, 0.1);
     border-left-color: #58a6ff;
   }
-
-  .nav-icon { font-size: 1rem; }
 
   .admin-sidebar-footer {
     padding: 0.8rem 1.2rem;

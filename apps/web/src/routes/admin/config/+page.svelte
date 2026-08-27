@@ -12,7 +12,7 @@
     const sess = $adminSession;
     if (!sess) return;
     try {
-      const res = await adminFetch('/api/v1/admin/config', sess.token);
+      const res = await adminFetch('/api/v1/admin/config');
       if (res.ok) {
         configs = await res.json();
         editValues = Object.fromEntries(configs.map(c => [c.key, c.value]));
@@ -40,7 +40,7 @@
     }
     if (Object.keys(changed).length === 0) { message = 'Aucun changement'; saving = false; return; }
     try {
-      const res = await adminFetch('/api/v1/admin/config', sess.token, {
+      const res = await adminFetch('/api/v1/admin/config', {
         method: 'PATCH',
         body: JSON.stringify({ values: changed }),
       });

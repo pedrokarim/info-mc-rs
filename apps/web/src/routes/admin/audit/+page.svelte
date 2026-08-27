@@ -17,7 +17,7 @@
     error = '';
     try {
       const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-      const res = await adminFetch(`/api/v1/admin/audit?${params}`, sess.token);
+      const res = await adminFetch(`/api/v1/admin/audit?${params}`);
       if (!res.ok) throw new Error('Erreur serveur');
       const data = await res.json();
       entries = data.data;
@@ -53,7 +53,7 @@
         {#each entries as e}
           <tr>
             <td class="mono">{e.created_at.slice(0, 16).replace('T', ' ')}</td>
-            <td class="mono">{e.discord_id.slice(0, 8)}...</td>
+            <td class="mono">{e.account_id.slice(0, 8)}…</td>
             <td><Badge label={e.action} variant="info" size="sm" /></td>
             <td class="detail">{e.detail ?? '—'}</td>
           </tr>

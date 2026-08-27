@@ -101,7 +101,7 @@ pub async fn update_config(
 
     // Audit log
     sqlx::query(
-        "INSERT INTO admin_audit_log (discord_id, action, detail) VALUES (?, 'update_config', ?)",
+        "INSERT INTO admin_audit_log (account_id, action, detail) VALUES (?, 'update_config', ?)",
     )
     .bind(&claims.sub)
     .bind(updated_keys.join(", "))

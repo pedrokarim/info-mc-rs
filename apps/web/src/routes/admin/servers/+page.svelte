@@ -29,7 +29,7 @@
     try {
       const params = new URLSearchParams({ limit: String(limit), offset: String(offset), sort });
       if (search.trim()) params.set('search', search.trim());
-      const res = await adminFetch(`/api/v1/admin/servers?${params}`, sess.token);
+      const res = await adminFetch(`/api/v1/admin/servers?${params}`);
       if (!res.ok) throw new Error('Erreur serveur');
       const data = await res.json();
       servers = data.data;
@@ -49,7 +49,7 @@
     if (!sess) return;
     if (!confirm(`Confirmer l'action sur ${address} ?`)) return;
     try {
-      const res = await adminFetch(`/api/v1/admin/servers/${encodeURIComponent(address)}`, sess.token, {
+      const res = await adminFetch(`/api/v1/admin/servers/${encodeURIComponent(address)}`, {
         method: 'PATCH',
         body: JSON.stringify(action),
       });
@@ -66,7 +66,7 @@
     if (!sess) return;
     if (!confirm(`Supprimer ${address} de l'index ?`)) return;
     try {
-      const res = await adminFetch(`/api/v1/admin/servers/${encodeURIComponent(address)}`, sess.token, { method: 'DELETE' });
+      const res = await adminFetch(`/api/v1/admin/servers/${encodeURIComponent(address)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Erreur');
       addToast('Serveur supprimé', 'success');
     } catch (e: any) {

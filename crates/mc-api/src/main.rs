@@ -1,3 +1,4 @@
+mod ascencia;
 mod error;
 mod middleware;
 mod routes;
@@ -49,37 +50,18 @@ async fn main() {
     let state = Arc::new(AppState::new().await);
     let rate_limiter = RateLimiter::from_env();
 
-    // Admin routes — public (no auth required)
-    let admin_public = Router::new()
-        .route("/api/v1/admin/auth/login", get(routes::admin::auth::login))
-        .route(
-            "/api/v1/admin/auth/callback",
-            get(routes::admin::auth::callback),
-        )
-        .route(
-            "/api/v1/admin/auth/2fa/verify",
-            post(routes::admin::totp::verify_2fa),
-        );
+    // Routes publiques de l'authentification d'administration.
+    let admin_public = Router::new().route(
+        "/api/v1/admin/auth/exchange",
+        post(routes::admin::auth::exchange),
+    );
 
-    // Admin routes — protected (JWT auth required)
+    // Routes protégées par la session Ascencia ID côté serveur.
     let admin_protected = Router::new()
         .route("/api/v1/admin/auth/me", get(routes::admin::auth::me))
         .route(
             "/api/v1/admin/auth/logout",
             post(routes::admin::auth::logout),
-        )
-        // 2FA management (protected)
-        .route(
-            "/api/v1/admin/auth/2fa/setup",
-            post(routes::admin::totp::setup_2fa),
-        )
-        .route(
-            "/api/v1/admin/auth/2fa/confirm",
-            post(routes::admin::totp::confirm_2fa),
-        )
-        .route(
-            "/api/v1/admin/auth/2fa",
-            axum::routing::delete(routes::admin::totp::disable_2fa),
         )
         .route(
             "/api/v1/admin/dashboard",
@@ -104,16 +86,6 @@ async fn main() {
             "/api/v1/admin/servers/{address}",
             axum::routing::patch(routes::admin::servers::moderate_server)
                 .delete(routes::admin::servers::delete_server),
-        )
-        // Admin users — CRUD (super_admin only, enforced in handlers)
-        .route(
-            "/api/v1/admin/users",
-            get(routes::admin::users::list_admins).post(routes::admin::users::add_admin),
-        )
-        .route(
-            "/api/v1/admin/users/{discord_id}",
-            axum::routing::patch(routes::admin::users::update_admin)
-                .delete(routes::admin::users::delete_admin),
         )
         // Audit log
         .route("/api/v1/admin/audit", get(routes::admin::audit::list_audit))
